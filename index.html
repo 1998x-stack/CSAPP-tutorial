@@ -6,10 +6,14 @@
     <title>课程目录</title>
     <link rel="stylesheet" href="theme.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
-            background: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 50%, #f8fafc 100%);
+            background: linear-gradient(145deg, #f9fcf5 0%, #e8f3e8 100%);
             font-family: 'Segoe UI', 'PingFang SC', Roboto, 'Helvetica Neue', system-ui, -apple-system, sans-serif;
             padding: 2rem 1.5rem 1rem;
             min-height: 100vh;
@@ -21,12 +25,12 @@
         .container {
             max-width: 1400px;
             width: 100%;
-            background: rgba(255, 255, 255, 0.80);
-            backdrop-filter: blur(4px);
+            background: rgba(255, 255, 255, 0.70);
+            backdrop-filter: blur(2px);
             border-radius: 48px 48px 32px 32px;
             padding: 2rem 2rem 1.5rem;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.06), 0 8px 20px rgba(0, 0, 0, 0.04);
-            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 20px 40px rgba(90, 140, 100, 0.15), 0 8px 20px rgba(0, 30, 20, 0.08);
+            border: 1px solid rgba(255, 245, 200, 0.5);
         }
 
         .header {
@@ -35,7 +39,7 @@
             align-items: baseline;
             justify-content: space-between;
             margin-bottom: 2rem;
-            border-bottom: 4px solid #6366f1;
+            border-bottom: 4px solid #f7d44a;
             padding-bottom: 0.75rem;
         }
 
@@ -43,10 +47,11 @@
             font-size: 2.4rem;
             font-weight: 700;
             letter-spacing: -0.02em;
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            background: linear-gradient(135deg, #2b7a4b, #3f9e6b);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
+            text-shadow: 0 2px 8px rgba(60, 140, 80, 0.12);
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
@@ -54,18 +59,18 @@
 
         .header h1 .emoji {
             font-size: 2.2rem;
-            filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.3));
+            filter: drop-shadow(0 2px 4px rgba(255, 200, 50, 0.3));
         }
 
         .header .sub {
             font-size: 1rem;
-            background: #eef2ff;
+            background: #fef7e0;
             padding: 0.3rem 1.2rem;
             border-radius: 40px;
-            color: #4338ca;
+            color: #3f6b4a;
             font-weight: 600;
-            border: 1px solid #c7d2fe;
-            box-shadow: 0 2px 6px rgba(99, 102, 241, 0.08);
+            border: 1px solid #f3d98a;
+            box-shadow: 0 2px 6px rgba(200, 160, 50, 0.1);
             white-space: nowrap;
         }
 
@@ -79,19 +84,21 @@
         .card {
             background: #ffffff;
             border-radius: 28px;
-            padding: 1rem 1.2rem;
-            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.04), 0 2px 6px rgba(0, 0, 0, 0.02);
+            padding: 1rem 1.2rem 1rem 1.2rem;
+            box-shadow: 0 6px 14px rgba(70, 120, 80, 0.08), 0 2px 6px rgba(0, 0, 0, 0.02);
             transition: all 0.2s ease;
-            border: 1px solid rgba(148, 163, 184, 0.25);
+            border: 1px solid rgba(210, 230, 200, 0.5);
             display: flex;
             flex-direction: column;
+            position: relative;
+            backdrop-filter: blur(2px);
         }
 
         .card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 14px 24px rgba(99, 102, 241, 0.12), 0 4px 12px rgba(79, 70, 229, 0.06);
-            border-color: #a5b4fc;
-            background: #fefeff;
+            box-shadow: 0 14px 24px rgba(70, 140, 90, 0.15), 0 4px 12px rgba(40, 100, 60, 0.05);
+            border-color: #b8d9b0;
+            background: #fefefc;
         }
 
         .card-header {
@@ -105,13 +112,14 @@
         .chapter-num {
             font-size: 1.1rem;
             font-weight: 700;
-            background: #6366f1;
-            color: #fff;
+            background: #f5d142;
+            color: #2a5a3a;
             padding: 0 0.6rem;
             border-radius: 40px;
             line-height: 1.6;
             display: inline-block;
-            box-shadow: inset 0 -2px 0 #4f46e5;
+            box-shadow: inset 0 -2px 0 #dbb42c;
+            letter-spacing: 0.3px;
             min-width: 2.2rem;
             text-align: center;
         }
@@ -119,7 +127,7 @@
         .card-title {
             font-size: 1.2rem;
             font-weight: 650;
-            color: #1e1b4b;
+            color: #1f4d33;
             letter-spacing: -0.3px;
             line-height: 1.3;
             flex: 1;
@@ -136,44 +144,44 @@
 
         .topic-list li {
             font-size: 0.8rem;
-            color: #334155;
-            background: #f1f5f9;
+            color: #2d543a;
+            background: #f1f9ee;
             padding: 0.1rem 0.7rem 0.2rem 1.2rem;
             border-radius: 30px;
             line-height: 1.6;
             position: relative;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #dcebd4;
             box-shadow: inset 0 1px 2px white;
         }
 
         .topic-list li::before {
-            content: "▸";
+            content: "⚡";
             position: absolute;
             left: 4px;
             top: 0px;
             font-size: 0.7rem;
-            color: #6366f1;
+            color: #e5b13b;
         }
 
         .card-footer {
             margin-top: 0.6rem;
             display: flex;
             justify-content: flex-end;
-            border-top: 1px dashed #e2e8f0;
+            border-top: 1px dashed #d4e8d0;
             padding-top: 0.5rem;
         }
 
         .card-footer a {
-            background: #e0e7ff;
-            color: #3730a3;
+            background: #b7d8b0;
+            color: #1f452b;
             text-decoration: none;
             font-weight: 600;
             font-size: 0.85rem;
             padding: 0.2rem 1.2rem;
             border-radius: 40px;
             transition: 0.15s;
-            border: 1px solid #c7d2fe;
-            box-shadow: 0 2px 4px rgba(99, 102, 241, 0.1);
+            border: 1px solid #8fb88a;
+            box-shadow: 0 2px 4px rgba(60, 120, 60, 0.1);
             display: inline-flex;
             align-items: center;
             gap: 6px;
@@ -186,10 +194,10 @@
         }
 
         .card-footer a:hover {
-            background: #6366f1;
-            border-color: #4f46e5;
-            color: #fff;
-            box-shadow: 0 4px 8px rgba(99, 102, 241, 0.25);
+            background: #f7d44a;
+            border-color: #dbb42c;
+            color: #1f3d28;
+            box-shadow: 0 4px 8px rgba(200, 160, 40, 0.2);
             transform: scale(1.02);
         }
 
@@ -201,20 +209,20 @@
             margin-top: 2.5rem;
             text-align: center;
             font-size: 1rem;
-            color: #475569;
-            background: #f8fafc;
+            color: #3b6b47;
+            background: #f2fcee;
             padding: 0.8rem 2rem;
             border-radius: 60px;
             display: inline-block;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            border: 1px solid #c6dfbe;
+            box-shadow: 0 2px 8px rgba(80, 130, 70, 0.08);
             font-weight: 500;
             letter-spacing: 0.3px;
             backdrop-filter: blur(2px);
         }
 
         .footer span {
-            background: #eef2ff;
+            background: #f9eec1;
             padding: 0.1rem 0.8rem;
             border-radius: 30px;
             margin: 0 4px;
@@ -222,39 +230,7 @@
 
         .footer .wechat {
             font-weight: 700;
-            color: #4338ca;
-        }
-
-        .container::before {
-            content: "";
-            display: block;
-            height: 6px;
-            width: 120px;
-            background: linear-gradient(90deg, #6366f1, #8b5cf6, #a78bfa, #c4b5fd);
-            border-radius: 10px;
-            margin-bottom: 0.2rem;
-        }
-
-        /* Alternate chapter badge colors */
-        .card:nth-child(6n+1) .chapter-num { background: #f59e0b; color: #78350f; }
-        .card:nth-child(6n+2) .chapter-num { background: #10b981; color: #fff; }
-        .card:nth-child(6n+3) .chapter-num { background: #6366f1; color: #fff; }
-        .card:nth-child(6n+4) .chapter-num { background: #3b82f6; color: #fff; }
-        .card:nth-child(6n+5) .chapter-num { background: #ef4444; color: #fff; }
-        .card:nth-child(6n) .chapter-num { background: #8b5cf6; color: #fff; }
-
-        /* Loading / error states */
-        .state-msg {
-            text-align: center;
-            padding: 3rem;
-            color: #64748b;
-            font-size: 1.1rem;
-        }
-        .state-msg.error {
-            color: #dc2626;
-            background: #fef2f2;
-            border-radius: 20px;
-            margin: 1rem 0;
+            color: #1f5a33;
         }
 
         @media (max-width: 640px) {
@@ -269,6 +245,37 @@
 
         @media (min-width: 768px) and (max-width: 1024px) {
             .course-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .container::before {
+            content: "";
+            display: block;
+            height: 6px;
+            width: 120px;
+            background: linear-gradient(90deg, #f7d44a, #7fc47c, #4aa0b0, #f7b07a);
+            border-radius: 10px;
+            margin-bottom: 0.2rem;
+        }
+
+        /* Alternate chapter badge colors */
+        .card:nth-child(6n+1) .chapter-num { background: #f7b07a; color: #3d2e1a; }
+        .card:nth-child(6n+2) .chapter-num { background: #a7d4a0; color: #1f452b; }
+        .card:nth-child(6n+3) .chapter-num { background: #f5d44a; color: #2f4d2a; }
+        .card:nth-child(6n+4) .chapter-num { background: #b3d9e8; color: #1a3f4a; }
+        .card:nth-child(6n+5) .chapter-num { background: #f7c6c6; color: #5a2e2e; }
+        .card:nth-child(6n) .chapter-num { background: #c4b3e0; color: #2f2a4a; }
+
+        .state-msg {
+            text-align: center;
+            padding: 3rem;
+            color: #5f7f66;
+            font-size: 1.1rem;
+        }
+        .state-msg.error {
+            color: #b91c1c;
+            background: #fef2f2;
+            border-radius: 20px;
+            margin: 1rem 0;
         }
     </style>
 </head>
@@ -288,12 +295,11 @@
 
 <script>
     (function() {
-        const container = document.getElementById('cardContainer');
-        const emojiEl = document.querySelector('.header .emoji');
-        const titleEl = document.querySelector('.header .title-text');
-        const subEl = document.querySelector('.header .sub');
-        const footerEl = document.querySelector('.footer');
-        const titleTag = document.querySelector('title');
+        var container = document.getElementById('cardContainer');
+        var emojiEl = document.querySelector('.header .emoji');
+        var titleEl = document.querySelector('.header .title-text');
+        var subEl = document.querySelector('.header .sub');
+        var footerEl = document.querySelector('.footer');
 
         function showError(msg) {
             container.innerHTML = '<div class="state-msg error">' + msg + '</div>';
@@ -305,7 +311,6 @@
                 return res.json();
             })
             .then(function(data) {
-                // Set header
                 document.title = data.title + ' · 课程目录';
                 emojiEl.textContent = data.emoji;
                 titleEl.textContent = data.title;
@@ -366,7 +371,7 @@
 </script>
 
 <noscript>
-    <div style="background:#fef3c7; padding:1rem; border-radius:20px; text-align:center; color:#92400e;">
+    <div style="background:#fcf0d9; padding:1rem; border-radius:20px; text-align:center; color:#92400e;">
         请启用 JavaScript 以浏览课程目录。
     </div>
 </noscript>
