@@ -1,0 +1,314 @@
+{
+  "title": "深入理解计算机系统（CSAPP）",
+  "emoji": "💻",
+  "subtitle": "💻 28章 实战体系",
+  "chapterCount": 28,
+  "chapters": [
+    {
+      "num": "01",
+      "title": "计算机系统漫游",
+      "topics": [
+        "hello程序的一生",
+        "硬件组成与存储层次",
+        "操作系统三大抽象",
+        "Amdahl定律"
+      ],
+      "file": "01.html"
+    },
+    {
+      "num": "02",
+      "title": "信息的表示与处理——整数",
+      "topics": [
+        "大小端字节序",
+        "补码编码",
+        "有符号/无符号转换",
+        "整数溢出与安全"
+      ],
+      "file": "02.html"
+    },
+    {
+      "num": "03",
+      "title": "信息的表示与处理——浮点数",
+      "topics": [
+        "IEEE 754格式",
+        "规格化与非规格化",
+        "舍入策略",
+        "0.1+0.2≠0.3揭秘"
+      ],
+      "file": "03.html"
+    },
+    {
+      "num": "04",
+      "title": "程序的机器级表示——基础",
+      "topics": [
+        "x86-64寄存器全景",
+        "数据传送与算术指令",
+        "lea指令妙用",
+        "寻址模式详解"
+      ],
+      "file": "04.html"
+    },
+    {
+      "num": "05",
+      "title": "程序的机器级表示——控制流",
+      "topics": [
+        "条件码寄存器",
+        "条件跳转与CMP/TEST",
+        "if-else/switch实现",
+        "循环的三种汇编模式"
+      ],
+      "file": "05.html"
+    },
+    {
+      "num": "06",
+      "title": "程序的机器级表示——过程与栈",
+      "topics": [
+        "栈帧结构详解",
+        "call/ret微操作",
+        "x86-64调用惯例",
+        "递归的栈行为"
+      ],
+      "file": "06.html"
+    },
+    {
+      "num": "07",
+      "title": "程序的机器级表示——数据与进阶",
+      "topics": [
+        "数组与指针的汇编",
+        "结构体对齐与填充",
+        "缓冲区溢出原理",
+        "栈金丝雀与ROP防御"
+      ],
+      "file": "07.html"
+    },
+    {
+      "num": "08",
+      "title": "处理器体系结构——ISA设计",
+      "topics": [
+        "Y86-64指令集",
+        "HCL硬件控制语言",
+        "SEQ顺序处理器",
+        "CISC vs RISC设计哲学"
+      ],
+      "file": "08.html"
+    },
+    {
+      "num": "09",
+      "title": "处理器体系结构——流水线",
+      "topics": [
+        "流水线原理与性能",
+        "数据冒险与转发",
+        "控制冒险与分支预测",
+        "Spectre/Meltdown背景"
+      ],
+      "file": "09.html"
+    },
+    {
+      "num": "10",
+      "title": "优化程序性能",
+      "topics": [
+        "CPE性能度量",
+        "编译器优化与局限",
+        "代码移动与循环展开",
+        "指令级并行利用"
+      ],
+      "file": "10.html"
+    },
+    {
+      "num": "11",
+      "title": "存储器层次结构——技术",
+      "topics": [
+        "SRAM/DRAM/SSD对比",
+        "时间与空间局部性",
+        "存储山实验",
+        "SSD写放大陷阱"
+      ],
+      "file": "11.html"
+    },
+    {
+      "num": "12",
+      "title": "存储器层次结构——Cache",
+      "topics": [
+        "缓存组织结构(S/E/B)",
+        "直接映射/组相联",
+        "缓存未命中三类型",
+        "分块矩阵乘法优化"
+      ],
+      "file": "12.html"
+    },
+    {
+      "num": "13",
+      "title": "链接——静态链接",
+      "topics": [
+        "ELF目标文件格式",
+        "符号与符号表",
+        "静态库与ar工具",
+        "强符号与弱符号陷阱"
+      ],
+      "file": "13.html"
+    },
+    {
+      "num": "14",
+      "title": "链接——动态链接",
+      "topics": [
+        "共享库(.so)机制",
+        "GOT与PLT延迟绑定",
+        "位置无关代码(PIC)",
+        "LD_PRELOAD插桩技术"
+      ],
+      "file": "14.html"
+    },
+    {
+      "num": "15",
+      "title": "异常控制流——异常与进程",
+      "topics": [
+        "异常四种分类",
+        "fork写时复制",
+        "execve加载程序",
+        "孤儿与僵尸进程"
+      ],
+      "file": "15.html"
+    },
+    {
+      "num": "16",
+      "title": "异常控制流——信号",
+      "topics": [
+        "信号发送与接收",
+        "信号处理函数安全写法",
+        "sigaction与信号阻塞",
+        "setjmp/longjmp跳转"
+      ],
+      "file": "16.html"
+    },
+    {
+      "num": "17",
+      "title": "虚拟内存——地址翻译",
+      "topics": [
+        "虚拟寻址的动机",
+        "多级页表结构",
+        "TLB翻译后备缓冲",
+        "缺页与Demand Paging"
+      ],
+      "file": "17.html"
+    },
+    {
+      "num": "18",
+      "title": "虚拟内存——内存分配",
+      "topics": [
+        "mmap与munmap",
+        "显式分配器设计策略",
+        "碎片问题与合并",
+        "GC标记清除算法"
+      ],
+      "file": "18.html"
+    },
+    {
+      "num": "19",
+      "title": "系统级I/O",
+      "topics": [
+        "Unix I/O模型与FD",
+        "open/read/write调用",
+        "I/O重定向(dup2)",
+        "RIO鲁棒I/O包设计"
+      ],
+      "file": "19.html"
+    },
+    {
+      "num": "20",
+      "title": "网络编程——基础",
+      "topics": [
+        "TCP/IP协议栈",
+        "套接字接口详解",
+        "HTTP请求响应格式",
+        "getaddrinfo协议编程"
+      ],
+      "file": "20.html"
+    },
+    {
+      "num": "21",
+      "title": "网络编程——进阶",
+      "topics": [
+        "迭代/并发服务器模型",
+        "CGI动态内容生成",
+        "select I/O多路复用",
+        "网络调试工具链"
+      ],
+      "file": "21.html"
+    },
+    {
+      "num": "22",
+      "title": "并发编程——线程基础",
+      "topics": [
+        "线程vs进程对比",
+        "Pthreads API",
+        "竞态条件与互斥锁",
+        "条件变量与生产者消费者"
+      ],
+      "file": "22.html"
+    },
+    {
+      "num": "23",
+      "title": "并发编程——高阶模式",
+      "topics": [
+        "读写锁(rwlock)",
+        "线程池设计与实现",
+        "死锁预防与诊断",
+        "Helgrind/TSan调试"
+      ],
+      "file": "23.html"
+    },
+    {
+      "num": "24",
+      "title": "经典Lab实战(I)",
+      "topics": [
+        "Data Lab位运算挑战",
+        "Bomb Lab GDB拆弹",
+        "Attack Lab缓冲区攻击"
+      ],
+      "file": "24.html"
+    },
+    {
+      "num": "25",
+      "title": "经典Lab实战(II)",
+      "topics": [
+        "Cache Lab缓存模拟",
+        "Shell Lab进程管理",
+        "Malloc Lab分配器"
+      ],
+      "file": "25.html"
+    },
+    {
+      "num": "26",
+      "title": "经典Lab实战(III)——Proxy Lab",
+      "topics": [
+        "并发Web代理架构",
+        "生产者消费者模型",
+        "HTTP缓存层实现",
+        "ab压测性能调优"
+      ],
+      "file": "26.html"
+    },
+    {
+      "num": "27",
+      "title": "现代系统新趋势",
+      "topics": [
+        "RISC-V开放指令集",
+        "GPU异构计算CUDA",
+        "eBPF内核可编程",
+        "CXL新型互联技术"
+      ],
+      "file": "27.html"
+    },
+    {
+      "num": "28",
+      "title": "综合项目：手写高性能Web服务器",
+      "topics": [
+        "epoll事件驱动架构",
+        "线程池+任务队列",
+        "HTTP Keep-Alive",
+        "wrk压测与性能调优"
+      ],
+      "file": "28.html"
+    }
+  ]
+}
