@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>第10章 优化程序性能 — 深入理解计算机系统（CSAPP）</title>
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div class="double-border">
+<div class="container">
+    <div class="sidebar">
+        <h3>💻 课程目录</h3>
+        <ul class="chapter-list">
+            <li><a href="01.html">第1章 计算机系统漫游</a></li>
+            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
+            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
+            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
+            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
+            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
+            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
+            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
+            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
+            <li><a href="10.html" class="active">第10章 优化程序性能</a></li>
+            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
+            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
+            <li><a href="13.html">第13章 链接——静态链接</a></li>
+            <li><a href="14.html">第14章 链接——动态链接</a></li>
+            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
+            <li><a href="16.html">第16章 异常控制流——信号</a></li>
+            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
+            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
+            <li><a href="19.html">第19章 系统级I/O</a></li>
+            <li><a href="20.html">第20章 网络编程——基础</a></li>
+            <li><a href="21.html">第21章 网络编程——进阶</a></li>
+            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
+            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
+            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
+            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
+            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
+            <li><a href="27.html">第27章 现代系统新趋势</a></li>
+            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h2>第十章：优化程序性能</h2>
+
+        <p>前两章我们站在 CPU 设计者的角度思考问题。现在让我们切换回程序员视角——我们不需要设计 CPU，但我们需要让程序跑得更快。</p>
+
+        <p>你可能有这样的经历：同样是实现一个算法，别人写的代码跑得飞快，你的代码却慢了一个数量级。差异可能不在算法复杂度上，而在于你是否利用了处理器微体系结构的特点。一个不了解流水线和 Cache 的程序员，就像在不了解交通规则的情况下开车——速度上不去是小事，还可能撞车。</p>
+
+        <p>这一章我们不讨论算法优化（那是数据结构课的内容），而是聚焦于<strong>程序级优化</strong>——在算法不变的前提下，通过调整代码结构来榨干硬件的每一分性能。这些技巧不依赖于特定的编译器或平台，而是建立在处理器运作的底层规律之上。</p>
+
+        <h3>10.1 性能度量——CPE</h3>
+
+        <p>要优化程序，首先要能<strong>度量</strong>性能。CSAPP 中常用的度量单位是 CPE（Cycles Per Element，每元素周期数）。在处理向量、数组或循环时，CPE 比单纯的"总执行时间"更有意义——它消除了数据规模的影响，让你看到代码本身的"效率基线"。</p>
+
+        <p>举个例子，对一个长度为 n 的整数数组求和：</p>
+        <ul>
+            <li>最简单的 for 循环：CPE 约为 3-5（取决于处理器和编译器优化）</li>
+            <li>展开 2 次循环：CPE 可能降到 2-3</li>
+            <li>展开 4 次 + 4 路并行：CPE 可以接近 1</li>
+        </ul>
+
+        <p>下面是一些常见操作的 CPE 参考值（在 Intel Core i7 上测试）：</p>
+
+        <table>
+            <tr>
+                <th>操作</th>
+                <th>-O1 优化</th>
+                <th>-O2 优化</th>
+                <th>-O3 优化</th>
+                <th>极限</th>
+            </tr>
+            <tr>
+                <td>整数求和（连续内存）</td>
+                <td>~4.0</td>
+                <td>~2.5</td>
+                <td>~1.2</td>
+                <td>1.0</td>
+            </tr>
+            <tr>
+                <td>整数求和（链表遍历）</td>
+                <td>~10.0</td>
+                <td>~10.0</td>
+                <td>~10.0</td>
+                <td>~8.0</td>
+            </tr>
+            <tr>
+                <td>浮点乘法累加</td>
+                <td>~5.0</td>
+                <td>~3.0</td>
+                <td>~1.5</td>
+                <td>1.0</td>
+            </tr>
+            <tr>
+                <td>条件分支密集型</td>
+                <td>~12.0</td>
+                <td>~8.0</td>
+                <td>~7.0</td>
+                <td>~3.0</td>
+            </tr>
+        </table>
+
+        <p>测量 CPE 的工具：Linux 上的 <code>perf</code> 工具。使用 <code>perf stat ./your_program</code> 可以统计程序的周期数、指令数、Cache 命中率等数据，然后手动计算 CPE。更专业的可以用 <code>perf record</code> + <code>perf report</code> 来分析热点函数。</p>
+
+        <pre><code>$ perf stat ./sum_array 1000000
+
+ Performance counter stats for './sum_array 1000000':
+    2,500,000,000      cycles
+    4,000,000,000      instructions
+              ...      # 计算 CPE = cycles / 元素数 = 2500</code></pre>
+
+        <div class="tip">
+            <p><strong>先测量，再优化</strong>：这是性能优化的第一条法则。不要靠"感觉"来判断程序慢在哪里。你的直觉可能完全错误——热点可能在一个你完全没想到的小函数里。每次优化前后都要重新测量，让数据说话。</p>
+        </div>
+
+        <h3>10.2 编译器优化能力与局限</h3>
+
+        <p>编译器是你最强大的性能优化助手，但它不是万能的。GCC 的优化级别从 -O0（无优化）到 -O3（激进优化）再到 -Ofast（甚至违反标准），每一级都开启更多优化 pass。</p>
+
+        <pre><code># -O0: 最直接的翻译，每条 C 语句对应一组汇编，便于调试
+$ gcc -O0 -S sum.c -o sum_O0.s
+
+# -O1: 基本优化，删除死代码、常量折叠
+$ gcc -O1 -S sum.c -o sum_O1.s
+
+# -O2: 更激进的优化，循环优化、内联函数、指令调度
+$ gcc -O2 -S sum.c -o sum_O2.s
+
+# -O3: 包括向量化（auto-vectorization）、循环展开等
+$ gcc -O3 -S sum.c -o sum_O3.s</code></pre>
+
+        <p>编译器无法优化的两个典型场景：</p>
+        <p><strong>1. 内存别名（Memory Aliasing）</strong></p>
+
+        <pre><code>void twiddle1(long *xp, long *yp) {
+    *xp += *yp;  // 编译器可能认为 xp == yp，不能乱优化
+    *xp += *yp;  // 每次都必须重新读取 *yp
+}
+
+void twiddle2(long *xp, long *yp) {
+    *xp += 2 * (*yp);  // 等价但只读一次 *yp，更利于优化
+}</code></pre>
+
+        <p>当 xp 和 yp 指向同一块内存时，twiddle1 的两次读取必须都执行（因为第一次写入 *xp 后，*yp 的值可能变了）。这就是内存别名——指针指向的地址可能重叠，编译器为了正确性，不敢做优化。</p>
+
+        <p><strong>2. 函数调用副作用</strong></p>
+
+        <pre><code>int count = 0;
+
+int f(int x) {
+    count++;
+    return x * x;
+}
+
+// 编译器不能把 f(i) 外提出循环，因为 f 有副作用（修改全局 count）
+void loop(int n) {
+    int sum = 0;
+    for (int i = 0; i &lt; n; i++) {
+        sum += f(i);
+    }
+}</code></pre>
+
+        <p>如果 f 是纯函数（没有副作用），编译器可以把 f(i) 的结果缓存起来。但大多数情况下，编译器不能确定函数是否有副作用，所以保守地每次调用。</p>
+
+        <div class="highlight">
+            <p><strong>编译器优化的"安全"原则</strong>：编译器永远以<strong>正确性</strong>优先。如果一个优化可能改变程序的行为（哪怕是在极端的边缘情况），编译器会选择不做。因此，程序员需要帮助编译器——通过写"编译器友好"的代码，让优化可以安全地进行。最典型的方法就是用局部变量代替指针，消除内存别名的可能性。</p>
+        </div>
+
+        <h3>10.3 消除循环的低效率</h3>
+
+        <p>循环是程序性能最集中的地方——一个慢循环可能占据 90% 的执行时间。消除循环低效率的最有效手段之一是<strong>代码移动（Code Motion）</strong>：把循环不变量提取到循环外面。</p>
+
+        <p><strong>优化前：</strong></p>
+
+        <pre><code>// 每次迭代都调用 strlen，而字符串长度不会变化！
+void lower1(char *s) {
+    for (int i = 0; i &lt; strlen(s); i++) {
+        if (s[i] &gt;= 'A' &amp;&amp; s[i] &lt;= 'Z')
+            s[i] -= ('A' - 'a');
+    }
+}</code></pre>
+
+        <p>这个代码的问题是：strlen(s) 在每次循环迭代时都被调用，而字符串 s 的长度在循环过程中不会变！strlen 本身需要遍历整个字符串——结果这个函数的时间复杂度从 O(n) 变成了 O(n^2)。</p>
+
+        <p><strong>优化后：</strong></p>
+
+        <pre><code>// 把 strlen 结果提到循环外面
+void lower2(char *s) {
+    int len = strlen(s);
+    for (int i = 0; i &lt; len; i++) {
+        if (s[i] &gt;= 'A' &amp;&amp; s[i] &lt;= 'Z')
+            s[i] -= ('A' - 'a');
+    }
+}</code></pre>
+
+        <p>这个改动把 O(n^2) 变成了 O(n)。如果用 profiler 来分析 lower1，你会发现 strlen 占用了约 80% 的执行时间——仅仅因为一个代码移动的疏忽，性能差了上百倍（对于长字符串）。</p>
+
+        <p>还有一个常见的优化是<strong>减少过程调用</strong>。比如在循环中调用一个简单的 getter/setter 函数，不如直接访问数据结构。但这需要权衡封装性和性能——在性能关键路径上，打破封装是值得的。</p>
+
+        <div class="warning">
+            <p><strong>真实踩坑故事</strong>：我参与过一个实时视频处理系统，帧率始终达不到 30fps。翻遍代码，最后发现罪魁祸首是日志函数——每个像素的处理循环里都调用了 <code>log_debug()</code>，而 log_debug 内部又调用了 gettimeofday() 和 snprintf()。虽然每条日志只花几微秒，但乘以数百万像素，帧率直接腰斩。优化方法：把日志移到循环外面，或者只在 debug 模式下启用。这件事给我的教训是：不要在任何热点路径上做"看起来很小但会执行几百万次"的操作。</p>
+        </div>
+
+        <h3>10.4 指令级并行与循环展开</h3>
+
+        <p>现代 CPU 不仅流水线深，还<strong>超标量（Superscalar）</strong>——每个周期能发射多条指令。这意味着 CPU 内部有多个执行单元（ALU、FPU、load/store 单元等），可以并行执行独立的指令。</p>
+
+        <p>为了利用指令级并行（ILP, Instruction-Level Parallelism），我们可以对循环做<strong>展开（Loop Unrolling）</strong>——一次迭代处理多个元素，减少循环控制开销，同时也给编译器更多空间来调度指令。</p>
+
+        <p><strong>未展开版本：</strong></p>
+
+        <pre><code>float sum(float *a, int n) {
+    float result = 0;
+    for (int i = 0; i &lt; n; i++)
+        result += a[i];
+    return result;
+}</code></pre>
+
+        <p><strong>2×2 展开（两次展开 + 两次累积）：</strong></p>
+
+        <pre><code>float sum_unroll_2x2(float *a, int n) {
+    float result0 = 0, result1 = 0;
+    int i;
+    for (i = 0; i &lt; n-1; i += 2) {
+        result0 += a[i];
+        result1 += a[i+1];
+    }
+    for (; i &lt; n; i++)    // 处理剩余元素
+        result0 += a[i];
+    return result0 + result1;
+}</code></pre>
+
+        <p><strong>4×4 展开 + 4 路并行：</strong></p>
+
+        <pre><code>float sum_unroll_4x4(float *a, int n) {
+    float result0 = 0, result1 = 0, result2 = 0, result3 = 0;
+    int i;
+    for (i = 0; i &lt; n-3; i += 4) {
+        result0 += a[i];
+        result1 += a[i+1];
+        result2 += a[i+2];
+        result3 += a[i+3];
+    }
+    for (; i &lt; n; i++)
+        result0 += a[i];
+    return result0 + result1 + result2 + result3;
+}</code></pre>
+
+        <p>为什么分开累加比一个累加器更快？因为浮点加法是有延迟的（通常 3-5 个周期），每步加法必须等上一步完成（数据相关）。如果只用一个累加器，无论怎么展开循环，CPE 都受限于加法的延迟。但如果用多个累加器——每个加法链是独立的——CPU 的多个 FPU 可以并行工作，CPE 可以降到接近于加法延迟的倒数。</p>
+
+        <p>这就是<strong>reassociation 变换</strong>的核心思想：通过改变运算的关联方式，打破数据依赖链，让多条流水线并行工作。</p>
+
+        <div class="highlight">
+            <p><strong>从底层到上层的性能思维</strong>：当你理解了流水线和 ILP，你就能理解为什么"展开循环 + 多路并行"有效——不是因为代码更短了，而是因为你在利用 CPU 内部<strong>多个独立执行单元并行工作</strong>。每次你写一个循环，都应该想一想：这个循环的每两次迭代之间有数据依赖吗？如果有，能不能用多个累加器/多个临时变量来打破依赖？当然，这些优化在大多数情况下可以让编译器帮你做（-O3 会自动做循环展开和向量化），但你至少要能看懂编译器生成的汇编代码，确认它确实做了你期望的优化。使用 <code>perf top</code> 可以在程序运行时实时查看热点函数的汇编指令——这是性能调优的神器。</p>
+        </div>
+
+        <p>这一章我们建立了性能优化的完整框架：从 CPE 度量开始，理解了编译器优化的能力和局限，学会了代码移动消除循环低效，再到利用指令级并行做循环展开和多路累加。下一章，我们将进入计算机系统中对性能影响最大的部分之一——存储器层次结构。你会发现，很多时候程序慢不是因为 CPU 不够快，而是因为数据没在正确的地方。</p>
+
+        <div class="footer-nav">
+            <a href="09.html">← 上一章</a>
+            <a href="index.html">📖 返回目录</a>
+            <a href="11.html">下一章 →</a>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

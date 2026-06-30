@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>第22章 并发编程——线程基础 — 深入理解计算机系统（CSAPP）</title>
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div class="double-border">
+<div class="container">
+    <div class="sidebar">
+        <h3>💻 课程目录</h3>
+        <ul class="chapter-list">
+            <li><a href="01.html">第1章 计算机系统漫游</a></li>
+            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
+            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
+            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
+            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
+            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
+            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
+            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
+            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
+            <li><a href="10.html">第10章 优化程序性能</a></li>
+            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
+            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
+            <li><a href="13.html">第13章 链接——静态链接</a></li>
+            <li><a href="14.html">第14章 链接——动态链接</a></li>
+            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
+            <li><a href="16.html">第16章 异常控制流——信号</a></li>
+            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
+            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
+            <li><a href="19.html">第19章 系统级I/O</a></li>
+            <li><a href="20.html">第20章 网络编程——基础</a></li>
+            <li><a href="21.html">第21章 网络编程——进阶</a></li>
+            <li><a href="22.html" class="active">第22章 并发编程——线程基础</a></li>
+            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
+            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
+            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
+            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
+            <li><a href="27.html">第27章 现代系统新趋势</a></li>
+            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h2>第二十二章：并发编程——线程基础</h2>
+
+        <p>上一章中，我们介绍了用进程（fork-per-client）和 I/O 多路复用（select）来构建并发网络服务器。fork 的优点是隔离性好，但开销大；select 的效率高，但编程模型复杂——需要手动管理状态机，代码可读性差。有没有一种方案，既能像 fork 那样保持简洁的"每个连接一个执行流"的编程模型，又能像 select 那样轻量、高效？</p>
+
+        <p>答案是<strong>线程（thread）</strong>。</p>
+
+        <p>线程是并发编程中最核心的概念。从这一章开始，我们将系统学习线程的基础知识：如何创建和回收线程，线程之间如何共享数据，如何用互斥锁保护共享资源，以及如何用条件变量协调线程间的协作。这些内容不仅是 CSAPP 的核心考点，也是每一个系统工程师的必备技能。</p>
+
+        <h3>22.1 线程模型与 Pthreads API</h3>
+
+        <p><strong>线程</strong>是运行在<strong>进程</strong>上下文中的一条逻辑执行流。一个进程可以包含多个线程，这些线程共享进程的<strong>地址空间</strong>（代码、堆、全局数据、打开的文件描述符等），但每个线程有自己的<strong>栈</strong>、<strong>寄存器上下文</strong>和<strong>程序计数器</strong>。因此，线程之间的通信非常方便——直接读写全局变量即可——但也极其危险，因为不加保护的共享变量访问会导致竞态条件。</p>
+
+        <table>
+            <tr>
+                <th>比较维度</th>
+                <th>进程（fork）</th>
+                <th>线程（pthread）</th>
+            </tr>
+            <tr>
+                <td>地址空间</td>
+                <td>独立（各自一份完整副本）</td>
+                <td><strong>共享</strong>（同一进程的所有线程共享）</td>
+            </tr>
+            <tr>
+                <td>创建开销</td>
+                <td>大（复制页表、文件描述符表等）</td>
+                <td><strong>小</strong>（仅分配栈和线程上下文）</td>
+            </tr>
+            <tr>
+                <td>上下文切换</td>
+                <td>慢（涉及 TLB 刷新、页表切换）</td>
+                <td><strong>快</strong>（不切换地址空间，TLB 仍然有效）</td>
+            </tr>
+            <tr>
+                <td>通信方式</td>
+                <td>IPC（管道、共享内存、信号等）</td>
+                <td><strong>直接读写共享变量</strong></td>
+            </tr>
+            <tr>
+                <td>隔离性</td>
+                <td><strong>强</strong>（一个进程崩溃不影响其他）</td>
+                <td>弱（一个线程崩溃 = 整个进程崩溃）</td>
+            </tr>
+        </table>
+
+        <p>POSIX 线程（通常称为 <strong>Pthreads</strong>）是 Unix/Linux 上的线程标准接口。它包含约 60 个函数，但核心的也就那么几个：</p>
+
+        <pre><code>#include &lt;pthread.h&gt;
+
+// 创建一个线程，执行 func(arg)
+int pthread_create(pthread_t *tid,          // 输出：线程 ID
+                   const pthread_attr_t *attr, // 线程属性（NULL=默认）
+                   void *(*func)(void *),     // 线程函数
+                   void *arg);                // 传给线程函数的参数
+
+// 等待指定线程结束（类似 waitpid）
+int pthread_join(pthread_t tid, void **retval);
+
+// 将线程设置为"可分离"状态——结束后自动回收资源
+int pthread_detach(pthread_t tid);
+
+// 终止当前线程
+void pthread_exit(void *retval);</code></pre>
+
+        <p>来看一个简单的例子：创建两个线程，各自打印一条消息：</p>
+
+        <pre><code>#include &lt;stdio.h&gt;
+#include &lt;pthread.h&gt;
+#include &lt;stdlib.h&gt;
+
+void *print_msg(void *arg) {
+    int id = *(int *)arg;
+    printf("Thread %d: Hello from thread!\n", id);
+    return NULL;
+}
+
+int main() {
+    pthread_t tids[2];
+    int ids[2] = {1, 2};
+
+    for (int i = 0; i < 2; i++) {
+        pthread_create(&amp;tids[i], NULL, print_msg, &amp;ids[i]);
+    }
+
+    for (int i = 0; i < 2; i++) {
+        pthread_join(tids[i], NULL);
+    }
+
+    printf("Main: All threads done.\n");
+    return 0;
+}</code></pre>
+
+        <p>注意 <code>pthread_create</code> 的线程函数参数是 <code>void *</code>，如果你传一个 int 的地址，一定要确保这个内存在线程运行时仍然有效。在循环中传递 <code>&amp;ids[i]</code> 是安全的，因为主线程在 <code>pthread_join</code> 之前不会改变 ids 数组。</p>
+
+        <div class="tip">
+            <p><strong>小技巧</strong>：编译使用 Pthreads 的程序时，记得加 <code>-lpthread</code> 链接选项：<code>gcc -o myprog myprog.c -lpthread</code>。漏掉这个链接是初学者最常见的错误之一。</p>
+        </div>
+
+        <h3>22.2 竞态条件（Race Condition）</h3>
+
+        <p>线程共享地址空间让通信变得简单，但这也带来了并发编程中最大的敌人——<strong>竞态条件</strong>。当多个线程同时访问和修改同一个共享变量，且执行顺序取决于操作系统的线程调度时，程序的输出就不再确定。它的表现是"时好时坏"——大部分时间正常，偶尔出一个诡异的结果。</p>
+
+        <p>经典的例子是一个全局计数器的自增操作：</p>
+
+        <pre><code>#include &lt;stdio.h&gt;
+#include &lt;pthread.h&gt;
+
+int counter = 0;  // 共享全局变量
+
+void *worker(void *arg) {
+    for (int i = 0; i < 100000; i++) {
+        counter++;  // 看起来是一条语句，但...
+    }
+    return NULL;
+}
+
+int main() {
+    pthread_t t1, t2;
+    pthread_create(&amp;t1, NULL, worker, NULL);
+    pthread_create(&amp;t2, NULL, worker, NULL);
+    pthread_join(t1, NULL);
+    pthread_join(t2, NULL);
+
+    printf("Expected: 200000, Got: %d\n", counter);
+    return 0;
+}</code></pre>
+
+        <p>你运行一下，大概率看到的结果是 <strong>小于 200000</strong>（比如 183472、197651 等随机值），而且每次运行结果不一样。</p>
+
+        <p>为什么？因为 <code>counter++</code> 在底层不是一条指令，而是三条：</p>
+        <pre><code>mov  counter, %eax    ← 1. 从内存读到寄存器
+add  $1, %eax         ← 2. 寄存器加 1
+mov  %eax, counter    ← 3. 写回内存</code></pre>
+
+        <p>如果两个线程的这三个步骤交错执行，就可能出现这种情况：两个线程同时读到 counter=100，各自加 1，同时写回 101——结果本该是 102，却变成了 101。这就是一次<strong>更新丢失</strong>。</p>
+
+        <p>CSAPP 中引入了一个非常直观的分析工具——<strong>进度图（progress graph）</strong>。它把两个线程的执行轨迹画在一个二维平面上，横轴是线程 A 的指令执行次数，纵轴是线程 B 的。图中有些"不安全区域"（unsafe region）——当两个线程同时进入这些区域时，就必然产生竞态条件。安全编程的目标就是确保<strong>任意时刻最多只有一个线程在操作共享变量</strong>。</p>
+
+        <div class="highlight">
+            <p><strong>核心要点</strong>：counter++ 的三条指令不是原子的。如果你认为"一行代码"就是原子的，你在多线程编程中一定会踩坑。任何看起来很简单的一行赋值语句，在底层可能都是多条指令。多条指令就意味着可能被线程调度打断。</p>
+        </div>
+
+        <h3>22.3 互斥锁（Mutex）</h3>
+
+        <p>解决竞态条件的标准工具就是<strong>互斥锁（mutex）</strong>。它确保<strong>同时只有一个线程</strong>能进入被保护的<strong>临界区（critical section）</strong>。Pthreads 提供的互斥锁接口如下：</p>
+
+        <pre><code>#include &lt;pthread.h&gt;
+
+// 初始化互斥锁
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+// 或者：pthread_mutex_init(&amp;mutex, NULL);
+
+// 加锁：如果锁已被其他线程持有，当前线程阻塞等待
+int pthread_mutex_lock(pthread_mutex_t *mutex);
+
+// 解锁：释放锁，唤醒等待中的线程
+int pthread_mutex_unlock(pthread_mutex_t *mutex);
+
+// 尝试加锁（不阻塞）：锁可用则加锁成功，否则返回 EBUSY
+int pthread_mutex_trylock(pthread_mutex_t *mutex);</code></pre>
+
+        <p>用互斥锁修复上面的 counter 问题：</p>
+
+        <pre><code>int counter = 0;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void *worker(void *arg) {
+    for (int i = 0; i < 100000; i++) {
+        pthread_mutex_lock(&amp;mutex);
+        counter++;
+        pthread_mutex_unlock(&amp;mutex);
+    }
+    return NULL;
+}
+// 现在结果永远是 200000</code></pre>
+
+        <p>互斥锁的使用有一个重要权衡：<strong>锁的粒度</strong>。锁的范围越大（临界区越长），性能越差，因为其他线程等待的时间更长。锁的范围越小，并发度越高，但代码越复杂，而且可能因为锁的粒度过细导致死锁。一般来说，一个好的经验法则是：<strong>尽可能缩小临界区</strong>，但不要分割到影响正确性的程度。</p>
+
+        <div class="warning">
+            <p><strong>互斥锁的危险操作</strong>：<strong>double-unlock</strong>（对一个已经解锁的锁再次解锁）会导致未定义行为——可能破坏锁的内部状态，导致所有线程都无法继续。另外一个常见错误是<strong>死锁（deadlock）</strong>：线程 A 持有锁 1 等待锁 2，线程 B 持有锁 2 等待锁 1——两者互相等待，永远无法继续。避免死锁的黄金法则是<strong>固定加锁顺序</strong>：所有线程以相同的顺序获取锁（比如总是先锁 1 再锁 2）。</p>
+        </div>
+
+        <h3>22.4 条件变量与生产者-消费者</h3>
+
+        <p>互斥锁能解决数据竞争问题，但它解决不了<strong>等待</strong>的问题。考虑这样一个场景：你有一个共享的缓冲区，生产者线程往里面放数据，消费者线程从里面取数据。如果缓冲区空了，消费者应该等待，而不是空转（"忙等待"浪费 CPU）。如果缓冲区满了，生产者应该等待。这就是经典的<strong>生产者-消费者问题</strong>。</p>
+
+        <p>解决方案是<strong>条件变量（condition variable）</strong>。它允许一个线程在某个条件不满足时<strong>阻塞自己</strong>，等待其他线程来唤醒它。</p>
+
+        <pre><code>#include &lt;pthread.h&gt;
+
+// 初始化条件变量
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+
+// 阻塞当前线程，等待条件变量被唤醒
+// 注意：调用前必须持有 mutex
+int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
+
+// 唤醒一个等待该条件变量的线程
+int pthread_cond_signal(pthread_cond_t *cond);
+
+// 唤醒所有等待该条件变量的线程
+int pthread_cond_broadcast(pthread_cond_t *cond);</code></pre>
+
+        <p>下面是一个正确实现的生产者-消费者模型：</p>
+
+        <pre><code>#include &lt;pthread.h&gt;
+#include &lt;stdio.h&gt;
+
+#define MAX 10
+
+int buffer[MAX];
+int count = 0;  // 缓冲区中当前元素个数
+int put_index = 0, get_index = 0;
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cond_not_full  = PTHREAD_COND_INITIALIZER;
+pthread_cond_t cond_not_empty = PTHREAD_COND_INITIALIZER;
+
+void put(int value) {
+    pthread_mutex_lock(&amp;mutex);
+
+    // while 而不是 if：应对 spurious wakeup
+    while (count == MAX)
+        pthread_cond_wait(&amp;cond_not_full, &amp;mutex);
+
+    buffer[put_index] = value;
+    put_index = (put_index + 1) % MAX;
+    count++;
+
+    pthread_cond_signal(&amp;cond_not_empty);  // 唤醒消费者
+    pthread_mutex_unlock(&amp;mutex);
+}
+
+int get() {
+    pthread_mutex_lock(&amp;mutex);
+
+    while (count == 0)
+        pthread_cond_wait(&amp;cond_not_empty, &amp;mutex);
+
+    int value = buffer[get_index];
+    get_index = (get_index + 1) % MAX;
+    count--;
+
+    pthread_cond_signal(&amp;cond_not_full);  // 唤醒生产者
+    pthread_mutex_unlock(&amp;mutex);
+    return value;
+}</code></pre>
+
+        <p>这里有三个非常关键的细节需要理解。</p>
+
+        <p><strong>第一，为什么 <code>pthread_cond_wait</code> 需要 mutex 参数？</strong>在调用 <code>cond_wait</code> 时，线程必须已经持有 mutex 锁。进入 <code>cond_wait</code> 后，它会<strong>原子性地释放 mutex 并将线程放入等待队列</strong>。当被唤醒后，<code>cond_wait</code> 会重新获取 mutex 再返回。这个原子操作至关重要——否则在"检查条件为假"和"进入等待"之间会有一个时间窗，其他线程可能在这期间改变了条件，导致当前线程永远错过唤醒。</p>
+
+        <p><strong>第二，为什么用 <code>while</code> 而不是 <code>if</code>？</strong>因为存在<strong>虚假唤醒（spurious wakeup）</strong>——即使没有线程调用 <code>pthread_cond_signal</code>，等待的线程也可能被内核唤醒。操作系统标准允许这种情况发生，目的是让实现更灵活。使用 <code>while</code> 循环（而不是 <code>if</code>）可以确保线程在唤醒后重新检查条件，从而正确地处理虚假唤醒。</p>
+
+        <p><strong>第三，为什么需要两个条件变量？</strong>一个条件变量 <code>cond_not_full</code> 用于生产者等待"缓冲区不满"，另一个 <code>cond_not_empty</code> 用于消费者等待"缓冲区不空"。分开来用是为了效率——用 <code>signal</code> 唤醒正确的等待者，而不是用 <code>broadcast</code> 唤醒所有人（那会导致"惊群效应"，浪费 CPU）。</p>
+
+        <div class="highlight">
+            <p><strong>核心总结</strong>：条件变量的正确使用模式可以概括为一句话——<strong>lock + while(condition-not-met) { cond_wait } + critical section + signal + unlock</strong>。这个模式在几乎所有并发问题中都通用。如果你能把这个模式的每一个细节（为什么 while、为什么 cond_wait 需要 mutex、为什么 signal 通常在 unlock 前）都解释清楚，说明你已经真正理解了条件变量。</p>
+        </div>
+
+        <p>线程基础到这里就差不多了。你学会了创建和回收线程，理解了竞态条件的根源（非原子的低级指令），掌握了互斥锁保护临界区的方法，以及用条件变量实现线程间协调的技巧。这些知识是并发编程的基石。下一章，我们将在这个基础上更进一步，讨论更高级的并发模式：读者-写者锁、信号量、线程安全的数据结构、常见的并发 bug 模式，以及如何在多核处理器上写出高性能的并发程序。</p>
+
+        <div class="footer-nav">
+            <a href="21.html">← 上一章</a>
+            <a href="index.html">📖 返回目录</a>
+            <a href="23.html">下一章 →</a>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

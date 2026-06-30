@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>第12章 存储器层次结构——Cache — 深入理解计算机系统（CSAPP）</title>
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div class="double-border">
+<div class="container">
+    <div class="sidebar">
+        <h3>💻 课程目录</h3>
+        <ul class="chapter-list">
+            <li><a href="01.html">第1章 计算机系统漫游</a></li>
+            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
+            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
+            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
+            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
+            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
+            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
+            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
+            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
+            <li><a href="10.html">第10章 优化程序性能</a></li>
+            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
+            <li><a href="12.html" class="active">第12章 存储器层次结构——Cache</a></li>
+            <li><a href="13.html">第13章 链接——静态链接</a></li>
+            <li><a href="14.html">第14章 链接——动态链接</a></li>
+            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
+            <li><a href="16.html">第16章 异常控制流——信号</a></li>
+            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
+            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
+            <li><a href="19.html">第19章 系统级I/O</a></li>
+            <li><a href="20.html">第20章 网络编程——基础</a></li>
+            <li><a href="21.html">第21章 网络编程——进阶</a></li>
+            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
+            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
+            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
+            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
+            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
+            <li><a href="27.html">第27章 现代系统新趋势</a></li>
+            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h2>第十二章：存储器层次结构——Cache</h2>
+
+        <p>上一章我们讨论了存储技术的全景图，了解了局部性的概念。现在，我们要聚焦于整个存储层次中最关键的一环——Cache（缓存）。Cache 处在 CPU 和主存之间，是弥合处理器速度与内存速度之间巨大鸿沟的关键桥梁。</p>
+
+        <p>你可以把 Cache 想象成"CPU 的桌面"——你经常用的工具（螺丝刀、扳手）放在桌面上，伸手就能拿到（1ns）；不常用的收到抽屉里（100ns）；基本不用的放到车库（10μs+）。整理桌面（管理 Cache）的艺术，决定了你的工作效率。同样，你的程序如果让 Cache 保持高命中率，就能跑出接近处理器的理论峰值——而如果老是 Cache Miss，性能直接"跳水"到主存的速度。</p>
+
+        <p>这一章是 CSAPP 中实用性最强的章节之一。理解了 Cache 的设计和优化策略，你就能写出远超"语法正确但性能平庸"水平的代码。</p>
+
+        <h3>12.1 缓存组织结构</h3>
+
+        <p>一个 Cache 由什么组成？有三个核心参数：</p>
+        <ul>
+            <li><strong>S</strong>（组数）：Cache 分成 S 个组（Sets），每个组包含 E 行</li>
+            <li><strong>E</strong>（每组的行数）：关联度，E=1 是直接映射，E=S 是全相联</li>
+            <li><strong>B</strong>（块大小）：每行（Cache Line）存储的数据字节数，通常 64 字节</li>
+        </ul>
+
+        <p>总 Cache 容量：C = S × E × B。</p>
+
+        <p>每一行（Cache Line）的结构：</p>
+        <pre><code>| Valid bit (1 bit) | Tag (t bits) | Data Block (B bytes) |</code></pre>
+        <ul>
+            <li><strong>有效位（Valid Bit）</strong>：标记该行是否包含有效数据。刚上电时所有有效位为 0。</li>
+            <li><strong>标记位（Tag）</strong>：地址的高位部分，用来区分映射到同一 Cache 组的不同内存块。</li>
+            <li><strong>数据块（Data Block）</strong>：从内存中取来的数据，大小 B 字节。</li>
+        </ul>
+
+        <p>CPU 要访问一个内存地址时，地址被分解为三个部分：</p>
+        <pre><code>| Tag (t bits) | Set Index (s bits) | Block Offset (b bits) |</code></pre>
+
+        <p>其中：</p>
+        <ul>
+            <li><strong>Set Index</strong>：选择 Cache 中的哪个组（S = 2^s）</li>
+            <li><strong>Tag</strong>：与组内每个行的 Tag 比较，判断是否命中</li>
+            <li><strong>Block Offset</strong>：在数据块内的偏移量（B = 2^b）</li>
+        </ul>
+
+        <p>不同的 Cache 配置对比：</p>
+
+        <table>
+            <tr>
+                <th>Cache 类型</th>
+                <th>S（组数）</th>
+                <th>E（行数/组）</th>
+                <th>B（块大小）</th>
+                <th>C（总容量）</th>
+            </tr>
+            <tr>
+                <td>L1 i-Cache（Intel Core i7）</td>
+                <td>64</td>
+                <td>8（8 路组相联）</td>
+                <td>64 B</td>
+                <td>32 KB</td>
+            </tr>
+            <tr>
+                <td>L1 d-Cache（Intel Core i7）</td>
+                <td>64</td>
+                <td>8（8 路组相联）</td>
+                <td>64 B</td>
+                <td>32 KB</td>
+            </tr>
+            <tr>
+                <td>L2 Cache（Intel Core i7）</td>
+                <td>512</td>
+                <td>8（8 路组相联）</td>
+                <td>64 B</td>
+                <td>256 KB</td>
+            </tr>
+            <tr>
+                <td>L3 Cache（Intel Core i7）</td>
+                <td>8192</td>
+                <td>16（16 路组相联）</td>
+                <td>64 B</td>
+                <td>8 MB</td>
+            </tr>
+        </table>
+
+        <h3>12.2 从直接映射到全相联</h3>
+
+        <p>根据 E 的不同取值，Cache 有三种组织方式：</p>
+
+        <p><strong>1. 直接映射（Direct-Mapped Cache, E=1）</strong></p>
+        <p>每个组只有 1 行。地址分解后，set index 唯一决定该地址映射到哪个 Cache 行。硬件最简单（只需要一个比较器），但冲突不命中的概率最高——两个不同的地址如果映射到同一个组，就会互相驱逐，即使其他组还空着。这种情况称为"抖动（Thrashing）"。</p>
+
+        <p><strong>2. 组相联（Set-Associative Cache, 1 &lt; E &lt; C/B）</strong></p>
+        <p>每个组有多行。CPU 同时比较组内所有行的 Tag——全并行比较，需要 E 个比较器。这是最主流的 Cache 设计，在硬件成本和命中率之间取得了良好平衡。上面的 Intel Core i7 的 L1 到 L3 全部是组相联。</p>
+
+        <p><strong>3. 全相联（Fully-Associative Cache, E = C/B）</strong></p>
+        <p>只有一个组，包含所有行。任何内存地址可以放在任何一行。最灵活，冲突不命中最少，但硬件最复杂（需要全局比较所有 Tag），通常只用于 TLB（后面虚拟内存章节会讲）这种行数很少的缓存。</p>
+
+        <p>来看一个地址分解的具体例子。假设：</p>
+        <pre><code>内存地址 = 0x1234（二进制：0001 0010 0011 0100）
+参数：S = 4 组（s = 2 位），B = 16 字节（b = 4 位）
+地址分解：
+  Offset (bits 0-3):  0100 → offset = 4
+  Index  (bits 4-5):  1101 → index = 3（第 3 组）
+  Tag    (bits 6-15): 0001 0010 00 → tag = 0x048</code></pre>
+
+        <p>CPU 用 index=3 找到第 3 组，然后在该组的所有行中搜索 tag=0x048 且 valid=1 的行。找到则 Cache Hit，从该行的数据块的 offset=4 处读取数据；否则 Cache Miss，从主存加载整个块（16 字节）到 Cache 中。</p>
+
+        <h3>12.3 缓存未命中的三种类型</h3>
+
+        <p>"3C" 是理解 Cache 未命中的经典分类框架——三个以 C 开头的英文名词：</p>
+
+        <p><strong>1. 冷不命中（Compulsory Miss / Cold Miss）</strong></p>
+        <p>程序第一次访问某个数据时，该数据必然不在 Cache 中——Cache 刚上电时空的，没有任何数据。这种不命中是"不可避免"的。也称为"工作集首次加载"。</p>
+
+        <p><strong>2. 容量不命中（Capacity Miss）</strong></p>
+        <p>程序的工作集（活跃使用的数据总量）超过了 Cache 的容量。例如，你在一个只有 32KB L1 Cache 的 CPU 上处理一个 1MB 的数组，大部分数据注定放不进 Cache。以前访问过但已被驱逐出去的数据再次被访问时，就会发生容量不命中。</p>
+
+        <p><strong>3. 冲突不命中（Conflict Miss）</strong></p>
+        <p>数据明明可以在 Cache 中（工作集小于 Cache 容量），但因为映射到同一个 Cache 组而互相驱逐。直接映射 Cache 的冲突不命中最严重，组相联 Cache 可以缓解但无法完全消除。</p>
+
+        <p>一个经典的冲突不命中例子——两个大小恰好为 2 的幂的数组：</p>
+
+        <pre><code>float a[1024], b[1024];
+for (int i = 0; i &lt; 1024; i++) {
+    for (int j = 0; j &lt; 1024; j++) {
+        a[i] += b[j];  // a[i] 和 b[j] 地址相差 1024*4 = 4KB
+    }                  // 如果 Cache 组数 = 2^s，两个数组可能在 Cache 中冲突
+}</code></pre>
+
+        <p>当 a 和 b 的地址映射到相同的 Cache 组时，访问 b[j] 会把 a[i] 驱逐出去，下次循环 a[i] 又要重新加载。这种"乒乓效应"会让性能急剧下降。解决办法之一是"填充"——在数组间故意留出空隙，打破整数倍的对齐关系。</p>
+
+        <div class="tip">
+            <p><strong>如何判断 Cache Miss 的类型</strong>：用 <code>perf stat -e cache-misses,cache-references</code> 查看程序的 Cache Miss 率。如果 Miss 率异常高，可以用 <code>perf record -e cache-misses</code> 结合 <code>perf report</code> 定位是哪些指令导致的。冷不命中通常只在程序初始阶段出现（预热后消失），容量不命中在工作集缩小后自动解决，冲突不命中则需要改数据结构或对齐方式。</p>
+        </div>
+
+        <h3>12.4 编写 Cache 友好代码</h3>
+
+        <p>前面讲了很多理论，现在来点实际的——如何写出 Cache 友好的代码。CSAPP 中最经典的例子是矩阵乘法的优化。</p>
+
+        <p><strong>朴素的矩阵乘法（三重循环，i-j-k 顺序）：</strong></p>
+
+        <pre><code>void matmul_ijk(int n, float *A, float *B, float *C) {
+    for (int i = 0; i &lt; n; i++)
+        for (int j = 0; j &lt; n; j++) {
+            float sum = 0;
+            for (int k = 0; k &lt; n; k++)
+                sum += A[i*n + k] * B[k*n + j];  // B 按列访问！空间局部性差
+            C[i*n + j] = sum;
+        }
+}</code></pre>
+
+        <p>问题：B[k*n + j] 在 k 循环中按列访问 B 矩阵，跳着读，Cache Miss 率极高。</p>
+
+        <p><strong>优化：循环交换（i-k-j 顺序）：</strong></p>
+
+        <pre><code>void matmul_ikj(int n, float *A, float *B, float *C) {
+    for (int i = 0; i &lt; n; i++)
+        for (int k = 0; k &lt; n; k++) {
+            float a_ik = A[i*n + k];
+            for (int j = 0; j &lt; n; j++)
+                C[i*n + j] += a_ik * B[k*n + j];  // 内层 j 循环按行访问 B 和 C
+        }
+}</code></pre>
+
+        <p>内层 j 循环变成按行访问 B[k*n + j] 和 C[i*n + j]——空间局部性大大改善。仅仅改变了循环嵌套顺序，Cache Miss 率可能下降一个数量级。</p>
+
+        <p><strong>更进一步：分块（Tiling / Blocking）</strong></p>
+        <p>即使做了循环交换，当 n 很大时，矩阵的"行"仍然可能超出 Cache 容量。分块的核心思想是把矩阵切分成小块（block/tile），确保每个小块在 Cache 中完全"转完"再处理下一块。</p>
+
+        <pre><code>void matmul_block(int n, float *A, float *B, float *C, int BLOCK) {
+    for (int i = 0; i &lt; n; i += BLOCK)
+        for (int j = 0; j &lt; n; j += BLOCK)
+            for (int k = 0; k &lt; n; k += BLOCK)
+                // 处理一个小块 [i:i+BLOCK][j:j+BLOCK]
+                for (int ii = i; ii &lt; i+BLOCK &amp;&amp; ii &lt; n; ii++)
+                    for (int jj = j; jj &lt; j+BLOCK &amp;&amp; jj &lt; n; jj++) {
+                        float sum = C[ii*n + jj];
+                        for (int kk = k; kk &lt; k+BLOCK &amp;&amp; kk &lt; n; kk++)
+                            sum += A[ii*n + kk] * B[kk*n + jj];
+                        C[ii*n + jj] = sum;
+                    }
+}</code></pre>
+
+        <div class="highlight">
+            <p><strong>分块优化的实际效果</strong>：在我的实际测试中，对于 n=1024 的 float 矩阵乘法（矩阵大小为 4MB），朴素 ijk 版本的 CPE 约为 8-10（主要花在等待 B 矩阵的行数据上）。通过 i-k-j 循环交换，CPE 降到 3-4。再加上分块优化（BLOCK=64，让块完全放进 L1 Cache），CPE 可以进一步降到 1-2，总体加速比达到 5-10 倍。注意 BLOCK 大小的选择——太小则块数太多（循环开销大），太大则放不进 Cache。通常选择 BLOCK 使得三个小矩阵的尺寸总和不超过 L1 Cache 的一半。</p>
+        </div>
+
+        <p>Cache 友好代码的几个实用原则：</p>
+        <ol>
+            <li><strong>步长 1 优先</strong>：尽量按存储顺序遍历数据</li>
+            <li><strong>循环交换</strong>：让最内层循环遍历连续的地址</li>
+            <li><strong>分块</strong>：处理大数组时，切分成 Cache 能容纳的小块</li>
+            <li><strong>合并访问</strong>：如果能一次读入多个字段，就合并数据结构而不是使用指针链</li>
+            <li><strong>避免 2 的幂的"陷阱"</strong>：数组大小避开 2 的幂，或使用 padding 来减少冲突</li>
+        </ol>
+
+        <p>这一章我们从 Cache 的硬件组织方式（S、E、B 三参数）出发，走过了从直接映射到全相联的三种设计，理解了"3C"（冷不命中、容量不命中、冲突不命中），最后通过矩阵乘法的实际案例掌握了编写 Cache 友好代码的核心技巧。下一章我们将进入一个全新的主题——链接。你写的每个 C 程序都需要经过链接这一步才能变成可执行文件，而链接中的许多陷阱，是很多资深程序员都栽过跟头的。</p>
+
+        <div class="footer-nav">
+            <a href="11.html">← 上一章</a>
+            <a href="index.html">📖 返回目录</a>
+            <a href="13.html">下一章 →</a>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

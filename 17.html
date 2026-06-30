@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>第17章 虚拟内存——地址翻译 — 深入理解计算机系统（CSAPP）</title>
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div class="double-border">
+<div class="container">
+    <div class="sidebar">
+        <h3>💻 课程目录</h3>
+        <ul class="chapter-list">
+            <li><a href="01.html">第1章 计算机系统漫游</a></li>
+            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
+            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
+            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
+            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
+            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
+            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
+            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
+            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
+            <li><a href="10.html">第10章 优化程序性能</a></li>
+            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
+            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
+            <li><a href="13.html">第13章 链接——静态链接</a></li>
+            <li><a href="14.html">第14章 链接——动态链接</a></li>
+            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
+            <li><a href="16.html">第16章 异常控制流——信号</a></li>
+            <li><a href="17.html" class="active">第17章 虚拟内存——地址翻译</a></li>
+            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
+            <li><a href="19.html">第19章 系统级I/O</a></li>
+            <li><a href="20.html">第20章 网络编程——基础</a></li>
+            <li><a href="21.html">第21章 网络编程——进阶</a></li>
+            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
+            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
+            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
+            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
+            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
+            <li><a href="27.html">第27章 现代系统新趋势</a></li>
+            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h2>第十七章：虚拟内存——地址翻译</h2>
+
+        <p>你有没有想过这样一个问题：你电脑只有 16GB 物理内存，但你可以同时打开一个 20GB 的游戏、一个 4GB 的 IDE、外加十多个浏览器标签页——每个标签页还在不断开着新页面。这些程序占用的"虚拟空间"加起来远超物理内存，为什么系统还能正常运转？答案是<strong>虚拟内存</strong>（Virtual Memory）。</p>
+
+        <p>虚拟内存是计算机系统中最伟大的抽象之一。它不仅让物理内存看起来比实际大得多，还为每个进程提供了独立的地址空间，让进程之间互相隔离。理解虚拟内存的地址翻译机制，是理解系统性能和安全性的关键。本章我们从动机说起，再深入到页表、TLB 和缺页处理的细节。</p>
+
+        <h3>17.1 虚拟寻址的动机</h3>
+
+        <p>在没有虚拟内存的时代（或者在没有 MMU 的嵌入式系统上），程序直接访问物理地址。这种方式的问题显而易见——多个程序同时运行时，它们必须事先协商好内存分区，否则互相覆盖。虚拟寻址引入了一个间接层：CPU 发出的地址是虚拟地址，由内存管理单元（MMU）翻译成物理地址。</p>
+
+        <table>
+            <tr>
+                <th>特性</th>
+                <th>物理寻址</th>
+                <th>虚拟寻址</th>
+            </tr>
+            <tr>
+                <td>地址空间</td>
+                <td>共享，所有程序看到同一个物理地址</td>
+                <td>隔离，每个进程有独立的虚拟地址空间</td>
+            </tr>
+            <tr>
+                <td>内存保护</td>
+                <td>无硬件保护，程序可以读写任意内存</td>
+                <td>页级权限位（读/写/执行），访问违规触发段错误</td>
+            </tr>
+            <tr>
+                <td>链接与加载</td>
+                <td>需要预先指定加载地址，位置相关</td>
+                <td>每个进程看到同样的布局（0x400000 开始），位置无关</td>
+            </tr>
+            <tr>
+                <td>内存超分配</td>
+                <td>总使用不能超过物理内存</td>
+                <td>进程可以分配比物理内存更大的空间（利用磁盘交换）</td>
+            </tr>
+            <tr>
+                <td>共享内存</td>
+                <td>困难，需要程序协调</td>
+                <td>不同进程的虚拟页映射到同一个物理页（如共享库）</td>
+            </tr>
+        </table>
+
+        <p>换句话说，虚拟内存带来了四个核心好处：<strong>隔离</strong>（进程不会互相影响）、<strong>简化链接和加载</strong>（所有进程看到相同的地址布局）、<strong>共享</strong>（通过映射同一物理页实现）和<strong>交换</strong>（程序可以超出物理内存限制）。</p>
+
+        <div class="tip">
+            <p><strong>想一想</strong>：为什么 C 语言的 NULL 指针解引用一定会崩溃？因为操作系统把虚拟地址 0 所在的页面标记为"未映射"——任何对该页的访问都会触发段错误。这是虚拟内存保护机制的体现。</p>
+        </div>
+
+        <h3>17.2 页表与多级页表</h3>
+
+        <p>虚拟地址到物理地址的翻译是通过<strong>页表</strong>（Page Table）完成的。页表是一个存储在物理内存中的数组，每个<strong>页表项（PTE）</strong>包含物理页号和一些标志位：</p>
+
+        <ul>
+            <li><strong>有效位（valid bit）</strong>：该虚拟页是否已映射到物理页</li>
+            <li><strong>权限位（read/write/execute）</strong>：该页的访问权限</li>
+            <li><strong>物理页号（Physical Page Number, PPN）</strong>：物理内存的页码</li>
+            <li><strong>其他标志</strong>：dirty bit（是否被写）、accessed bit（是否被访问）等</li>
+        </ul>
+
+        <p>最简单的情况是<strong>单级页表</strong>——每个虚拟页对应一个 PTE。在 64 位系统上，以 4KB 页大小计算，虚拟地址空间有 2^48 / 2^12 = 2^36 个页，每个 PTE 8 字节，单级页表需要 512GB——比整台服务器的内存还大，显然不现实。</p>
+
+        <p>这就是<strong>多级页表</strong>存在的理由。x86-64 使用四级页表，虚拟地址被分为以下部分：</p>
+
+        <pre><code>一个 48 位的虚拟地址在 x86-64 上被拆解为：
+
+63          48 47      39 38      30 29      21 20      12 11        0
++------------+----------+----------+----------+----------+-----------+
+|  符号扩展   |  PML4   |  PDPT    |   PD     |    PT    | 页内偏移  |
+|  (16 bits) | (9 bits) | (9 bits) | (9 bits) | (9 bits) | (12 bits) |
++------------+----------+----------+----------+----------+-----------+
+
+翻译过程（四级页表遍历）：
+1. CR3 寄存器 → PML4 页表基地址
+2. PML4[索引]   → PDPT 页表基地址
+3. PDPT[索引]   → PD 页表基地址
+4. PD[索引]     → PT 页表基地址
+5. PT[索引]     → 物理页号 (PPN)
+6. PPN + 偏移量 → 最终物理地址</code></pre>
+
+        <p>每个 9-bit 索引范围为 0-511，即每级页表有 512 个条目。关键的节省在于：如果某个 PML4 条目是"无效"的，那么它后面的整个子树都不需要分配。对于一个典型进程，大部分虚拟地址空间是未使用的，多级页表只在需要时分配中间节点——这使得页表占用的物理内存量从数百 GB 降到了数 MB。</p>
+
+        <div class="highlight">
+            <p><strong>核心要点</strong>：多级页表本质上是用"时间换空间"——每次地址翻译需要 4-5 次内存访问（每级查一次）。没有 TLB 的话，一次内存访问要慢 4-5 倍。这就是为什么 TLB 如此关键。</p>
+        </div>
+
+        <h3>17.3 TLB——翻译后备缓冲器</h3>
+
+        <p>TLB（Translation Lookaside Buffer）是 MMU 内部的一个小型硬件缓存，缓存了最近使用过的虚拟地址到物理地址的翻译结果。它的目标是让地址翻译的额外开销降到几乎为零。</p>
+
+        <p>每次 CPU 发出一个虚拟地址时，MMU 的流程大致是：</p>
+        <ol>
+            <li>检查 TLB——如果命中（TLB hit），直接得到物理地址，无需查页表。</li>
+            <li>TLB 未命中（TLB miss）——MMU 发起硬件页表遍历（hardware page table walk），从内存中读取 PTE，更新 TLB，再重试。</li>
+        </ol>
+
+        <p>现代 CPU 的 TLB 大约有 64-256 个条目，分为指令 TLB（iTLB）和数据 TLB（dTLB），通常还有 L2 TLB（更大的二级 TLB，约 512-2048 个条目）。TLB 覆盖率取决于<strong>工作集大小</strong>和<strong>页大小</strong>。</p>
+
+        <p><strong>TLB 刷新</strong>是上下文切换时不得不做的脏活——因为不同进程的虚拟地址到物理地址的映射不同，切换进程时必须使旧进程的 TLB 条目失效。在多核系统上，这需要通过处理器间中断（IPI）触发"TLB shootdown"——所有核心都收到中断，刷新自己的 TLB。频繁的上下文切换会带来大量的 TLB 刷新开销，这也是为什么线程（共享地址空间）比进程（独立地址空间）的切换成本低很多。</p>
+
+        <div class="highlight">
+            <p><strong>大页（Huge Pages）减少 TLB 压力</strong>：如果默认页大小是 4KB，一个 TLB 有 64 个条目，最多覆盖 256KB 的地址范围——这对于动辄几百 MB 的数据集来说杯水车薪。但 x86-64 支持 2MB 和 1GB 的大页。使用 2MB 大页时，同样 64 个 TLB 条目可以覆盖 128MB。对于数据库、大数据处理这类内存密集型应用，启用透明大页（Transparent Huge Pages, THP）或显式使用大页，可以显著降低 TLB miss 率，提升性能 10-30%。</p>
+        </div>
+
+        <h3>17.4 缺页故障与Demand Paging</h3>
+
+        <p>当程序访问一个 PTE 中有效位为 0 的虚拟页时，MMU 无法完成翻译——它触发一个<strong>缺页故障</strong>（page fault），将控制权交给内核的缺页处理函数。</p>
+
+        <p>缺页处理流程：</p>
+        <ol>
+            <li>CPU 触发缺页异常，保存触发地址（在 <code>%cr2</code> 寄存器中）</li>
+            <li>内核检查虚拟地址是否合法：如果是非法地址 → 发送 SIGSEGV</li>
+            <li>如果地址合法但页面不在内存中（被换出到磁盘了）：</li>
+            <li>内核找到一个空闲的物理页框（如果不够，先换出另一个页面）</li>
+            <li>从磁盘（swap 分区或文件）读入数据到该物理页</li>
+            <li>更新 PTE，设置有效位</li>
+            <li>返回用户态，重新执行触发缺页的那条指令——这次 TLB 命中</li>
+        </ol>
+
+        <p>这种方式称为<strong>Demand Paging</strong>（请求分页）——内核只在程序真正访问某页时才加载它，而不是在启动时把所有代码和数据都加载进内存。这意味着程序启动更快，物理内存的利用率也更高。</p>
+
+        <p>用 <code>perf</code> 工具跟踪缺页次数：</p>
+
+        <pre><code>$ # 跟踪程序的缺页次数
+$ perf stat -e page-faults,minor-faults,major-faults ./my_program
+
+   Performance counter stats for './my_program':
+            1,234      page-faults
+            1,200      minor-faults   # 缺页但页在内存中（如共享库懒加载）
+               34      major-faults   # 需要从磁盘读页
+
+$ # 也看缺页的代码位置
+$ perf record -e page-faults ./my_program
+$ perf report</code></pre>
+
+        <p>缺页分两种：<strong>minor fault</strong>（页面已存在，只是还没关联到当前进程的页表——典型情况是共享库的懒加载）和 <strong>major fault</strong>（页面确实在磁盘上，需要 I/O 读取）。major fault 是性能杀手——一次磁盘 I/O 是几毫秒，如果程序频繁触发 major fault，性能会急剧下降。这正是 <code>mmap</code> 惰性分配的底层机制。</p>
+
+        <div class="warning">
+            <p><strong>踩坑故事</strong>：我曾接手一个数据分析程序，处理 10GB 数据集需要 6 小时。直觉是算法问题，但 <code>perf stat</code> 显示 major fault 高达 200 万次。原因很简单：程序用 <code>mmap</code> 映射了整个数据集，然后 <code>memset</code> 预分配——但实际上，第一次写入会按 4KB 粒度触发缺页，200 万次 major fault 就是不断从磁盘按页读入数据。加上 <code>madvise(MADV_SEQUENTIAL)</code> 并增大 readahead 窗口后，时间降到了 40 分钟。理解缺页行为，就能读懂为什么你的程序会"卡"。</p>
+        </div>
+
+        <p>虚拟内存的地址翻译是计算机系统中最精妙的机制之一。它在硬件和软件的配合下，为每个进程提供了独立、安全、高效的内存抽象。下一章我们将深入学习虚拟内存的另一半——<strong>内存分配</strong>，看看当程序调用 <code>malloc</code> 时，内核是如何分配物理内存的。</p>
+
+        <div class="footer-nav">
+            <a href="16.html">← 上一章</a>
+            <a href="index.html">📖 返回目录</a>
+            <a href="18.html">下一章 →</a>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

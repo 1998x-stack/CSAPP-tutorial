@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>第15章 异常控制流——异常与进程 — 深入理解计算机系统（CSAPP）</title>
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div class="double-border">
+<div class="container">
+    <div class="sidebar">
+        <h3>💻 课程目录</h3>
+        <ul class="chapter-list">
+            <li><a href="01.html">第1章 计算机系统漫游</a></li>
+            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
+            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
+            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
+            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
+            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
+            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
+            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
+            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
+            <li><a href="10.html">第10章 优化程序性能</a></li>
+            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
+            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
+            <li><a href="13.html">第13章 链接——静态链接</a></li>
+            <li><a href="14.html">第14章 链接——动态链接</a></li>
+            <li><a href="15.html" class="active">第15章 异常控制流——异常与进程</a></li>
+            <li><a href="16.html">第16章 异常控制流——信号</a></li>
+            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
+            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
+            <li><a href="19.html">第19章 系统级I/O</a></li>
+            <li><a href="20.html">第20章 网络编程——基础</a></li>
+            <li><a href="21.html">第21章 网络编程——进阶</a></li>
+            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
+            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
+            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
+            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
+            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
+            <li><a href="27.html">第27章 现代系统新趋势</a></li>
+            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h2>第十五章：异常控制流——异常与进程</h2>
+
+        <p>设想一个场景：你在终端前台跑着一个编译任务，突然发现忘了在另一个窗口打开编辑器。你按下 <code>Ctrl+Z</code> 把编译进程挂起，敲 <code>bg</code> 让它到后台继续跑，再执行 <code>vim</code> 开始写代码。在这看似流畅的多任务操作背后，操作系统在一秒内可能进行了成千上万次上下文切换、处理了无数次硬件中断和系统调用——这些机制共同构成了所谓的"异常控制流"（Exceptional Control Flow, ECF）。</p>
+
+        <p>前几章我们讨论的，本质上是程序在"正常"路径下的执行——指令一条接一条顺序执行。但现实世界远没有这么规整：用户按下了键盘、磁盘数据准备好了、你写的代码除零了、或者<code>malloc</code>返回了NULL——这些"异常"的事件迫使控制流发生突变。理解这些突变，是理解操作系统内核的起点。本章我们先从最底层的异常分类讲起，再深入到进程的创建和管理。</p>
+
+        <h3>15.1 异常的分类</h3>
+
+        <p>"异常"这个词在计算机系统里有非常精确的定义：它是控制流的一种突变，由处理器内部或外部的事件触发，交由操作系统内核处理。异常分为四类，理解它们的区别至关重要：</p>
+
+        <table>
+            <tr>
+                <th>类别</th>
+                <th>触发方式</th>
+                <th>返回行为</th>
+                <th>典型示例</th>
+            </tr>
+            <tr>
+                <td><strong>中断（Interrupt）</strong></td>
+                <td>异步，外部I/O设备信号（键盘、磁盘、网卡）</td>
+                <td>返回到下一条指令</td>
+                <td>磁盘DMA完成、时钟中断、按键按下</td>
+            </tr>
+            <tr>
+                <td><strong>陷阱（Trap）</strong></td>
+                <td>同步，程序员主动触发（<code>syscall</code>/<code>int</code>指令）</td>
+                <td>返回到下一条指令</td>
+                <td>系统调用（<code>read</code>/<code>write</code>/<code>fork</code>）</td>
+            </tr>
+            <tr>
+                <td><strong>故障（Fault）</strong></td>
+                <td>同步，可恢复的错误</td>
+                <td>返回到当前指令<strong>重新执行</strong></td>
+                <td>缺页故障、除零错误、段错误</td>
+            </tr>
+            <tr>
+                <td><strong>终止（Abort）</strong></td>
+                <td>同步，不可恢复的硬件错误</td>
+                <td>不返回，程序直接被杀死</td>
+                <td>DRAM校验错误、总线错误、断言失败</td>
+            </tr>
+        </table>
+
+        <p><strong>中断</strong>是唯一一类"异步"的异常——它和你正在执行的程序毫无关系，网卡说"我收到包了"，CPU 就得停下来看看。这也是为什么我们常说"中断处理程序要尽可能短"——它们在打断正常的工作流。</p>
+
+        <p><strong>陷阱</strong>是程序主动请缨："内核同志，请你帮我做件事。"这就是系统调用的本质。你写 <code>printf</code> 时，C库最终会执行一个 <code>syscall</code> 指令，陷入内核，让操作系统帮你往终端写字符串。</p>
+
+        <p><strong>故障</strong>是最有意思的一类——它是"可恢复"的错误。最经典的例子是缺页故障（page fault）：程序访问了一个未加载到物理内存的虚拟页面，CPU触发缺页故障，内核从磁盘把页面加载进来，然后CPU重新执行那条触发故障的指令。这一次，内存有了，访问成功。整个过程对应用程序完全透明。</p>
+
+        <p><strong>终止</strong>是最后的手段——硬件发生了不可恢复的错误，内核别无选择，只能杀死当前进程。</p>
+
+        <div class="warning">
+            <p><strong>真实踩坑故事</strong>：有一回我写了个网络服务，跑了一周后客户端突然全部连不上。排查半天，发现是一个中断处理函数里调用了 <code>printk</code>（内核态的打印函数），而 <code>printk</code> 内部拿了一个锁。中断上下文里拿锁导致和进程上下文形成死锁——系统假死了。教训：中断处理函数只能做最轻量的事情，绝不能拿锁、不能睡眠。</p>
+        </div>
+
+        <h3>15.2 Linux系统调用机制</h3>
+
+        <p>在 x86-64 Linux 上，系统调用通过 <code>syscall</code> 指令实现。用户态程序把系统调用号放进 <code>%rax</code>，参数依次放进 <code>%rdi</code>、<code>%rsi</code>、<code>%rdx</code>、<code>%r10</code>、<code>%r8</code>、<code>%r9</code>，然后执行 <code>syscall</code>。</p>
+
+        <pre><code>; 直接调用 write(1, msg, len) 的内联汇编示例
+; 系统调用号：write = 1, 第一个参数 fd = 1 (stdout)
+mov $1, %rax       ; 系统调用号
+mov $1, %rdi       ; fd = 1 (stdout)
+lea msg(%rip), %rsi ; 缓冲区地址
+mov $13, %rdx      ; 字符串长度
+syscall            ; 陷入内核
+
+; 系统调用返回后，%rax 存放返回值
+; 如果是负数，表示出错（-errno）
+
+msg: .ascii "Hello, World!"</code></pre>
+
+        <p>常见系统调用号（x86-64）：</p>
+        <ul>
+            <li><code>read</code> = 0，从文件描述符读数据</li>
+            <li><code>write</code> = 1，向文件描述符写数据</li>
+            <li><code>open</code> = 2，打开文件</li>
+            <li><code>fork</code> = 57，创建子进程</li>
+            <li><code>execve</code> = 59，加载新程序</li>
+        </ul>
+
+        <p>为什么我们不直接在代码里写 <code>syscall</code>？因为 C 标准库（glibc）已经封装好了——<code>write()</code> 函数的内部就是执行了这段逻辑。但理解底层的调用机制，能帮你解释为什么系统调用比普通函数调用慢得多（上下文切换 + 权限检查 + 内核态执行），这也是为什么高性能程序会尽量减少系统调用次数。</p>
+
+        <div class="highlight">
+            <p><strong>要点</strong>：系统调用是用户态进入内核态的唯一合法入口。每次系统调用都有固定的开销（几百纳秒到几微秒），批量操作（如 <code>readv</code>/<code>writev</code>、<code>sendmmsg</code>）可以摊薄这个成本。这也是为什么像 Redis、Nginx 这类高性能服务大量使用 epoll 这类批量事件接口。</p>
+        </div>
+
+        <h3>15.3 进程的创建——fork()</h3>
+
+        <p>从这一节开始，我们进入进程的世界。<code>fork()</code> 是 Unix 系统中最独特的一个系统调用——它<strong>调用一次，返回两次</strong>。</p>
+
+        <pre><code>#include &lt;stdio.h&gt;
+#include &lt;unistd.h&gt;
+
+int main() {
+    pid_t pid = fork();
+
+    if (pid == 0) {
+        printf("我是子进程，我的 PID = %d\n", getpid());
+    } else if (pid > 0) {
+        printf("我是父进程，子进程的 PID = %d\n", pid);
+    } else {
+        perror("fork 失败");
+    }
+    return 0;
+}</code></pre>
+
+        <p>执行这段代码，输出类似：</p>
+        <pre><code>我是父进程，子进程的 PID = 12345
+我是子进程，我的 PID = 12345</code></pre>
+
+        <p>父进程收到的返回值是子进程的 PID，子进程收到的返回值是 0——这是区分父子进程的唯一方式。两个进程从 <code>fork()</code> 返回的那一刻开始，各自独立执行。</p>
+
+        <p>但 fork 真正的精妙之处在于<strong>写时复制（Copy-on-Write, COW）</strong>：</p>
+
+        <p>刚 fork 完时，子进程并不真的复制父进程的整个地址空间。相反，父子进程<strong>共享</strong>所有的物理页面，但页表项被标记为"只读"。当其中一方尝试写入时，CPU 触发一个缺页故障，内核此时才复制这个页面，给写的那一方一个独立的副本。这种"懒惰"的设计意味着：如果子进程 fork 后立即 <code>execve</code>（绝大部分情况如此），父进程的页面连一次复制都不会发生，极大地提高了性能。</p>
+
+        <div class="tip">
+            <p><strong>小知识</strong>：这也是为什么有些人会说"fork 是廉价的"。在 COW 之前的老 Unix 系统上，fork 确实是昂贵的——它要完整复制父进程的整个地址空间。COW 把 fork 的代价从 O(进程大小) 降到了 O(页表大小)。在 Linux 上，fork 一个 2GB 的进程，如果没有后续写入，几乎是瞬时的。</p>
+        </div>
+
+        <h3>15.4 execve与孤儿僵尸进程</h3>
+
+        <p>fork 创建了一个新的进程控制块，但子进程仍然在运行父进程的代码。如果我们想运行一个完全不同的程序，就需要 <code>execve</code>：</p>
+
+        <pre><code>#include &lt;unistd.h&gt;
+
+int main() {
+    pid_t pid = fork();
+    if (pid == 0) {
+        // 子进程：加载 /bin/ls，替换当前地址空间
+        char *argv[] = {"ls", "-l", NULL};
+        char *envp[] = {NULL};
+        execve("/bin/ls", argv, envp);
+        // 如果 execve 返回，说明出错了
+        perror("execve failed");
+        return 1;
+    }
+    // 父进程等待子进程结束
+    wait(NULL);
+    return 0;
+}</code></pre>
+
+        <p><code>execve</code> 做的事情很"暴力"：它完全清空当前进程的地址空间（包括堆、栈、数据段、代码段），从磁盘加载新程序的 ELF 文件，重新初始化地址空间，然后跳转到新程序的入口。唯一保持不变的是 PID 和打开的文件描述符（除非设置了 <code>FD_CLOEXEC</code>）。这就是"加载并执行"的本质。</p>
+
+        <p>两个与进程生命周期相关的"非正常状态"需要特别注意：</p>
+
+        <p><strong>孤儿进程（Orphan Process）</strong>：父进程先于子进程结束时，子进程成为孤儿进程。init 进程（PID = 1）会收养所有孤儿进程，负责在它们退出时回收资源。这其实是内核的一种兜底设计——确保系统中不会有"无人认领"的子进程。</p>
+
+        <p><strong>僵尸进程（Zombie Process）</strong>：子进程已经退出，但它占用的进程描述符（task_struct）还在内核中。为什么不让它彻底消失？因为父进程可能需要通过 <code>waitpid()</code> 查询子进程的退出状态（exit code、资源用量等）。只有父进程调用了 <code>waitpid()</code> 之后，子进程的 task_struct 才会被彻底释放。</p>
+
+        <p>如果父进程从来不调用 <code>waitpid()</code> 呢？子进程就永远停留在僵尸状态——在 <code>ps</code> 输出里标记为 <code><defunct></code>。</p>
+
+        <div class="warning">
+            <p><strong>⚠️ 僵尸进程的危害</strong>：我维护过一个后台任务调度系统，跑了几个月后运维报告说 <code>ps</code> 输出了几千行 <code><defunct></code> 进程。原因是调度器的父进程创建了大量子进程来执行任务，但忘了调用 <code>waitpid()</code>。僵尸进程虽然不占内存（除了 tiny 的 task_struct），但它占用了 PID 号——Linux 默认的 PID 最大值是 32768，一旦耗尽，系统就无法创建新进程了。最后只能重启服务来清理。教训：创建子进程的代码一定搭配 <code>waitpid()</code> 或者注册 <code>SIGCHLD</code> 信号处理函数。</p>
+        </div>
+
+        <p>异常控制流是理解操作系统如何"管理"程序的起点。从异常到系统调用，从 fork 到 execve，这些机制构成了操作系统控制权的传递链条。下一章我们将继续深入 ECF 的另一个核心话题——<strong>信号</strong>，它允许内核和进程之间进行异步通信，是我们在用户态处理"事件"的主要手段。</p>
+
+        <div class="footer-nav">
+            <a href="14.html">← 上一章</a>
+            <a href="index.html">📖 返回目录</a>
+            <a href="16.html">下一章 →</a>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

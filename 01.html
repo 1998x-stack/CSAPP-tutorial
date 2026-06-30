@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>第1章 计算机系统漫游 — 深入理解计算机系统（CSAPP）</title>
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div class="double-border">
+<div class="container">
+    <div class="sidebar">
+        <h3>💻 课程目录</h3>
+        <ul class="chapter-list">
+            <li><a href="01.html" class="active">第1章 计算机系统漫游</a></li>
+            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
+            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
+            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
+            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
+            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
+            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
+            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
+            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
+            <li><a href="10.html">第10章 优化程序性能</a></li>
+            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
+            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
+            <li><a href="13.html">第13章 链接——静态链接</a></li>
+            <li><a href="14.html">第14章 链接——动态链接</a></li>
+            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
+            <li><a href="16.html">第16章 异常控制流——信号</a></li>
+            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
+            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
+            <li><a href="19.html">第19章 系统级I/O</a></li>
+            <li><a href="20.html">第20章 网络编程——基础</a></li>
+            <li><a href="21.html">第21章 网络编程——进阶</a></li>
+            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
+            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
+            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
+            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
+            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
+            <li><a href="27.html">第27章 现代系统新趋势</a></li>
+            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h2>第一章：计算机系统漫游</h2>
+
+        <p>大家好，我是你们的讲师。在开始这门课程之前，我想先问大家一个问题：你写过无数遍的 <code>hello.c</code>，从按下保存键到在终端里看到 "Hello, World" 输出，这短短的几秒钟里，计算机内部到底发生了哪些事情？</p>
+
+        <p>可能有人会说："不就是编译器把源代码翻译成机器码，然后 CPU 执行吗？" 说得没错，但这里的每一层——编译器的前端后端、操作系统的进程管理、存储器的层次调度、链接器的符号解析——任何一个环节出问题，你的程序就会崩溃，而且崩溃得莫名其妙。我在一线写代码的头几年，遇到过太多这样的"灵异事件"：同样的代码换个编译器版本就挂、内存里的数据莫名其妙被改掉、多线程下程序时好时坏……其实这些都不是"灵异事件"，而是我们没能真正<strong>理解计算机系统</strong>。</p>
+
+        <p>计算机系统就像一座冰山。大多数工程师只看到水面之上的部分——编程语言、框架、API。但这门课，<strong>深入理解计算机系统</strong>（CSAPP: Computer Systems: A Programmer's Perspective），要带你潜入水下，看看那些决定程序性能、正确性和安全性的底层机制。学完这门课，你再写代码时，脑子里会有 CPU 流水线在跑、Cache 在缓存、页表在翻译——你写的每一行代码，都能映射到硬件的实际行为上。</p>
+
+        <p>好，咱们开始第一章的漫游之旅。</p>
+
+        <h3>1.1 从hello.c到可执行文件</h3>
+
+        <p>假设我们有这样一个最简单的 C 程序：</p>
+
+        <pre><code>#include &lt;stdio.h&gt;
+
+int main()
+{
+    printf("Hello, World!\n");
+    return 0;
+}</code></pre>
+
+        <p>在 Linux 系统上，用 GCC 将其转化为可执行文件只需要一条命令：</p>
+
+        <pre><code>$ gcc -o hello hello.c</code></pre>
+
+        <p>但这背后，编译器替你执行了四个阶段的工作。让我带你逐个步骤拆解。</p>
+
+        <p><strong>第一阶段：预处理（Preprocessing）—— hello.c → hello.i</strong></p>
+        <p>预处理器根据 <code>#</code> 开头的指令处理源代码。<code>#include &lt;stdio.h&gt;</code> 会被替换为标准库头文件的全部内容——你可以想象，仅仅这行代码就会插入几百行声明。此外，宏定义被展开，条件编译被处理。你可以用 <code>gcc -E hello.c -o hello.i</code> 来单独查看预处理后的结果。</p>
+
+        <p><strong>第二阶段：编译（Compilation）—— hello.i → hello.s</strong></p>
+        <p>编译器将预处理后的文本翻译成<strong>汇编语言</strong>。这是整个流程中最复杂的阶段：词法分析、语法分析、语义分析、中间代码生成、优化、最终生成汇编代码。编译器的优化能力直接决定了你程序的性能——一个开了 <code>-O3</code> 的 GCC 和没开优化的，跑出来的可能是完全不同的代码。执行 <code>gcc -S hello.i -o hello.s</code> 可以查看生成的汇编文件。</p>
+
+        <p><strong>第三阶段：汇编（Assembly）—— hello.s → hello.o</strong></p>
+        <p>汇编器将汇编代码翻译成<strong>机器指令</strong>，生成<strong>可重定位目标文件</strong>（relocatable object file）。这个文件已经是二进制格式了，包含机器码、数据段和符号表，但还不能直接运行——<code>printf</code> 的实现在哪里还不知道呢。</p>
+
+        <p><strong>第四阶段：链接（Linking）—— hello.o → hello</strong></p>
+        <p>链接器将 <code>hello.o</code> 和 <code>printf</code> 所在的标准库目标文件合并，把符号引用解析为符号定义，最终生成一个<strong>可执行目标文件</strong>。执行 <code>gcc -v hello.c -o hello</code> 可以看到 GCC 背后调用了 <code>collect2</code>（一个链接器的包装）等组件的工作细节。</p>
+
+        <div class="highlight">
+            <p><strong>核心洞察</strong>：从 <code>.c</code> 到可执行文件，经历了四次翻译变换。每一层都在做同一件事——把高层的抽象表达，逐步降级为低层的具体实现。这个"层层抽象"的思想，贯穿了整个计算机系统的设计。</p>
+        </div>
+
+        <div class="tip">
+            <p><strong>小技巧</strong>：想要看到 GCC 每一步干了什么？试试 <code>gcc -v --save-temps hello.c</code>。它会保留所有中间文件（<code>.i</code>、<code>.s</code>、<code>.o</code>），还告诉你每一步调用的是什么程序。这对于理解编译流程非常有帮助。</p>
+        </div>
+
+        <h3>1.2 系统的硬件组成</h3>
+
+        <p>当你在终端运行 <code>./hello</code> 并按下回车时，操作系统的加载器（loader）会将可执行文件从磁盘复制到内存中，然后跳转到 <code>main</code> 函数的入口。在这个过程中，计算机的四大核心硬件组件全部参与其中：</p>
+
+        <ul>
+            <li><strong>中央处理器（CPU）</strong>：从内存中取出指令并执行。CPU 内部有<strong>程序计数器（PC）</strong>指向当前指令地址、<strong>寄存器文件（Register File）</strong>存储少量临时数据、<strong>算术逻辑单元（ALU）</strong>执行运算。现代 CPU 每秒可以执行数十亿条指令。</li>
+            <li><strong>主存（Main Memory）</strong>：通常是 DRAM（动态随机存取存储器），存放程序和数据。CPU 和主存之间通过总线通信。</li>
+            <li><strong>总线（Bus）</strong>：CPU、内存、I/O 设备之间传输数据的通道。通常包含地址总线、数据总线和控制总线。</li>
+            <li><strong>I/O 设备</strong>：键盘、鼠标、显示器、磁盘等。程序的输入输出最终都需要通过 I/O 设备完成。</li>
+        </ul>
+
+        <p>这里最关键的认知是：<strong>不同存储层次的速度差异</strong>比大多数程序员想象的要大得多。看下面的对比：</p>
+
+        <table>
+            <tr>
+                <th>存储技术</th>
+                <th>访问时间</th>
+                <th>典型容量</th>
+                <th>成本/GB（约）</th>
+            </tr>
+            <tr>
+                <td>SRAM（CPU 缓存）</td>
+                <td>~1 ns（0.5-2 ns）</td>
+                <td>数 MB</td>
+                <td>$500-1000</td>
+            </tr>
+            <tr>
+                <td>DRAM（主存）</td>
+                <td>~10-100 ns</td>
+                <td>8-64 GB</td>
+                <td>$10-20</td>
+            </tr>
+            <tr>
+                <td>SSD（固态硬盘）</td>
+                <td>~10-100 μs</td>
+                <td>256 GB-4 TB</td>
+                <td>$0.10-0.30</td>
+            </tr>
+            <tr>
+                <td>HDD（机械硬盘）</td>
+                <td>~5-10 ms</td>
+                <td>1-20 TB</td>
+                <td>$0.02-0.05</td>
+            </tr>
+        </table>
+
+        <p>这些数字单独看可能不太直观。让我用一个<strong>时间缩放</strong>的例子来帮你建立感觉：</p>
+
+        <p>假设 CPU 执行一条指令需要 <strong>1 秒</strong>：</p>
+        <ul>
+            <li>从 SRAM（L1 Cache）中读数据——大约 <strong>1-2 秒</strong>，相当于喝口水</li>
+            <li>从 DRAM（主存）中读数据——大约 <strong>10-100 秒</strong>，相当于去楼下买杯咖啡</li>
+            <li>从 SSD 中读数据——大约 <strong>10-100 小时</strong>，相当于一个长周末</li>
+            <li>从 HDD 中读数据——大约 <strong>10 天</strong>，相当于一个假期</li>
+        </ul>
+
+        <p>看到了吗？一条 CPU 指令的时间和一次磁盘访问之间差了 <strong>7 个数量级</strong>！这就是为什么设计良好的程序会把热点数据尽量放在缓存和内存中，减少磁盘访问。这也是为什么 <strong>Cache 命中率</strong>会成为系统性能的核心瓶颈。</p>
+
+        <div class="warning">
+            <p><strong>真实踩坑故事</strong>：我曾经接手过一个后端服务，处理一批数据要 40 分钟。代码逻辑看起来没太大问题，但用 <code>perf</code> 一分析，发现 95% 的时间浪费在一个 for 循环内部——每次迭代都从数据库（其实就在本地 HDD 上）查询一个小配置。加上一个简单的缓存层后，40 分钟缩短到了 2 分钟。这就是不理解存储层次差异的代价。你以为你在做计算，实际上你在等磁盘转。</p>
+        </div>
+
+        <h3>1.3 操作系统的层叠抽象</h3>
+
+        <p>你可能会想："如果磁盘这么慢，那我写程序时为什么感觉不到？" 答案在于操作系统提供的<strong>抽象</strong>。操作系统是硬件和应用之间的中间层，它把各种复杂硬件封装成简洁的抽象接口。理解这三个核心抽象，你就掌握了操作系统的半边天。</p>
+
+        <table>
+            <tr>
+                <th>抽象</th>
+                <th>抽象了什么</th>
+                <th>提供给谁</th>
+                <th>核心目的</th>
+            </tr>
+            <tr>
+                <td><strong>进程（Process）</strong></td>
+                <td>CPU、内存、I/O 的独占使用权</td>
+                <td>应用程序</td>
+                <td>让每个程序感觉自己在独占整台机器</td>
+            </tr>
+            <tr>
+                <td><strong>虚拟内存（Virtual Memory）</strong></td>
+                <td>物理内存和磁盘 I/O</td>
+                <td>进程</td>
+                <td>提供连续、私有的地址空间，隔离进程</td>
+            </tr>
+            <tr>
+                <td><strong>文件（File）</strong></td>
+                <td>所有 I/O 设备</td>
+                <td>进程</td>
+                <td>统一接口读写磁盘、终端、网络等</td>
+            </tr>
+        </table>
+
+        <p><strong>进程</strong>是操作系统最重要的抽象之一。当你同时开着浏览器、IDE 和终端时，操作系统通过<strong>上下文切换（context switch）</strong>来让这些进程分享 CPU。它把 CPU 的执行时间分成时间片，快速轮转——每次切换时保存当前进程的状态（寄存器、PC、内存映射等），恢复下一个进程的状态。因为切换速度极快（毫秒级），你感觉它们在"同时运行"。然而，进程的创建和切换是有代价的——每次上下文切换都要耗费几十到几百微秒。如果你的服务器上进程数量过多，大量时间会花在切换上而不是真正的计算上。</p>
+
+        <p><strong>虚拟内存</strong>是进程抽象的自然延伸。每个进程看到的是一个从 0 到某个最大地址的连续地址空间（例如 64 位系统上的 2^48），但实际上物理内存可能只有 8 GB。操作系统和 MMU（内存管理单元）共同维护一个<strong>页表（page table）</strong>，将虚拟地址翻译成物理地址。一个进程访问了不属于自己的页？操作系统会立即抛出一个<strong>段错误（segmentation fault）</strong>——这就是 C/C++ 程序中最常见的崩溃原因。</p>
+
+        <p><strong>文件</strong>是 I/O 的统一抽象。在 Unix/Linux 的世界里，"一切皆文件"——你可以用 <code>read()</code>/<code>write()</code> 这套接口操作磁盘文件、管道、终端甚至网络套接字。这种统一性大大简化了编程模型，也是 Unix 设计哲学的核心之一。</p>
+
+        <div class="highlight">
+            <p><strong>核心要点</strong>：操作系统的三层抽象（进程、虚拟内存、文件）是所有应用程序的基础。无论你写的是 Web 服务器还是嵌入式固件，最终都跑在这三层抽象之上。不理解它们，你就无法理解程序为什么会崩溃、为什么会慢、为什么会不安全。</p>
+        </div>
+
+        <h3>1.4 Amdahl定律与系统性能思维</h3>
+
+        <p>做了这么多铺垫，终于要聊到一个所有系统工程师都必须掌握的核心定律——<strong>Amdahl定律</strong>（阿姆达尔定律）。这个定律回答了计算机系统中最关键的一个问题：<strong>当我优化了系统的某个部分，整体性能能提升多少？</strong></p>
+
+        <p>公式很简单：</p>
+
+        <pre><code>S = 1 / ((1 - α) + α / k)</code></pre>
+
+        <p>其中：</p>
+        <ul>
+            <li><strong>S</strong> 是整体加速比</li>
+            <li><strong>α</strong> 是被优化部分占总执行时间的比例</li>
+            <li><strong>k</strong> 是该部分的加速倍数</li>
+        </ul>
+
+        <p>我们来算一个具体例子。假设你的程序中有 60% 的代码可以并行化，你在一个 10 核的 CPU 上运行，那么：</p>
+
+        <pre><code>S = 1 / ((1 - 0.6) + 0.6 / 10)
+  = 1 / (0.4 + 0.06)
+  = 1 / 0.46
+  ≈ 2.17</code></pre>
+
+        <p>花了 10 倍的硬件资源，整体只快了 2.17 倍？这听起来有点令人失望，但这就是 Amdahl 定律告诉我们的硬道理：<strong>程序的性能受限于它不可并行化的那部分</strong>。</p>
+
+        <p>更极端一点——如果 60% 的代码可以用无限多个核来加速呢？极限加速比是 1 / 0.4 = 2.5。也就是说，不管投多少硬件资源，这 40% 的串行部分永远是天花板。</p>
+
+        <div class="highlight">
+            <p><strong>Amdahl定律的核心教训</strong>：不值得为某个部分做大幅优化，除非它占据了系统的主要时间。这个道理说起来简单，但在实际工作中太容易被忽视了。我见过太多工程师花几周去优化一个只占 1% 执行时间的函数——优化的成果斐然，把那个函数加速了 100 倍，可惜整体性能只提升了不到 1%。而旁边那个占了 40% 执行时间的大函数，没人去动。</p>
+        </div>
+
+        <p>正确的性能优化思路应该是：</p>
+        <ol>
+            <li><strong>先测量，再优化</strong>——使用 profiler（如 gprof、perf、Valgrind）找出真正的热点</li>
+            <li><strong>关注大头</strong>——优先优化占总时间比例最大的部分</li>
+            <li><strong>关注系统瓶颈</strong>——有时瓶颈不在 CPU，而在内存带宽、磁盘 I/O 或网络延迟</li>
+        </ol>
+
+        <div class="warning">
+            <p><strong>⚠️ 性能优化误区</strong>：Amdahl定律还有另一个不容易注意到的推论——如果你优化了一个原本只占很小比例的部分，即使加速效果惊人，整体收益也微乎其微。我曾经看到一位工程师花了整整一周，用 SIMD 指令重写了一个字符串哈希函数，将其加速了 8 倍。但 profiler 数据显示，这个函数在整个服务中仅占 0.5% 的 CPU 时间。最终的加速效果：从 100 秒降到 99.6 秒。用户根本感觉不到变化。一周的投入换来了 0.4% 的提升——这不是技术问题，是思维问题。</p>
+        </div>
+
+        <h3>1.5 全书的学习路线图</h3>
+
+        <p>到这里，我们已经完成了对计算机系统的一次"直升机巡游"。你看到了从源代码到可执行文件的翻译流程、硬件组件的速度鸿沟、操作系统的三层抽象，以及 Amdahl 定律这个性能思维的基石。</p>
+
+        <p>接下来的 27 章，将分为六个部分，带你从直升机降到地面，一步步深入系统的每一个层次：</p>
+
+        <table>
+            <tr>
+                <th>部分</th>
+                <th>章节</th>
+                <th>核心内容</th>
+                <th>对应经典 Lab</th>
+            </tr>
+            <tr>
+                <td><strong>Part 1</strong></td>
+                <td>第 1-3 章</td>
+                <td>计算机系统漫游、整数与浮点数的表示和处理</td>
+                <td>Data Lab</td>
+            </tr>
+            <tr>
+                <td><strong>Part 2</strong></td>
+                <td>第 4-7 章</td>
+                <td>程序的机器级表示：基础指令、控制流、过程调用、数据与进阶</td>
+                <td>Bomb Lab + Attack Lab</td>
+            </tr>
+            <tr>
+                <td><strong>Part 3</strong></td>
+                <td>第 8-9 章</td>
+                <td>处理器体系结构：ISA 设计与流水线实现</td>
+                <td>Architecture Lab (Y86-64)</td>
+            </tr>
+            <tr>
+                <td><strong>Part 4</strong></td>
+                <td>第 10-14 章</td>
+                <td>性能优化、存储器层次结构（Cache）、链接（静态+动态）</td>
+                <td>Cache Lab + Shell Lab</td>
+            </tr>
+            <tr>
+                <td><strong>Part 5</strong></td>
+                <td>第 15-21 章</td>
+                <td>异常控制流、虚拟内存、系统级 I/O、网络编程</td>
+                <td>Malloc Lab + Proxy Lab</td>
+            </tr>
+            <tr>
+                <td><strong>Part 6</strong></td>
+                <td>第 22-28 章</td>
+                <td>并发编程、经典 Lab 实战合集、现代系统新趋势、综合实战项目</td>
+                <td>综合项目：手写高性能 Web 服务器</td>
+            </tr>
+        </table>
+
+        <p>每一章都配有真实的代码示例和实验。如果你能坚持完成所有章节和配套的 Lab，那我敢打包票——你写代码的方式会发生质的改变。你会发现：</p>
+        <ul>
+            <li>写多线程程序时自然想到 Cache 伪共享的问题</li>
+            <li>遇到内存错误时能迅速定位是堆溢出还是栈溢出</li>
+            <li>做性能优化时先去跑 profiler 而不是凭感觉</li>
+            <li>阅读汇编代码不再害怕，甚至能从中读出编译器做了什么优化</li>
+        </ul>
+
+        <p>这些能力，不是靠背 API 和记框架能获得的。它们来自对<strong>计算机系统底层运作机制</strong>的深刻理解。</p>
+
+        <p>下一章，我们将深入计算机系统最底层的基础——信息是如何在计算机中表示的。从整数到浮点数，这些看似简单的概念背后，隐藏着许多让程序员踩坑的细节。</p>
+
+        <div class="footer-nav">
+            <a href="javascript:void(0)">← 上一章</a>
+            <a href="index.html">📖 返回目录</a>
+            <a href="02.html">下一章 →</a>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

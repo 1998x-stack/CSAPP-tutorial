@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>第19章 系统级I/O — 深入理解计算机系统（CSAPP）</title>
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div class="double-border">
+<div class="container">
+    <div class="sidebar">
+        <h3>💻 课程目录</h3>
+        <ul class="chapter-list">
+            <li><a href="01.html">第1章 计算机系统漫游</a></li>
+            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
+            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
+            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
+            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
+            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
+            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
+            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
+            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
+            <li><a href="10.html">第10章 优化程序性能</a></li>
+            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
+            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
+            <li><a href="13.html">第13章 链接——静态链接</a></li>
+            <li><a href="14.html">第14章 链接——动态链接</a></li>
+            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
+            <li><a href="16.html">第16章 异常控制流——信号</a></li>
+            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
+            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
+            <li><a href="19.html" class="active">第19章 系统级I/O</a></li>
+            <li><a href="20.html">第20章 网络编程——基础</a></li>
+            <li><a href="21.html">第21章 网络编程——进阶</a></li>
+            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
+            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
+            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
+            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
+            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
+            <li><a href="27.html">第27章 现代系统新趋势</a></li>
+            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h2>第十九章：系统级I/O</h2>
+
+        <p>在之前的章节中，我们深入讨论了虚拟内存——操作系统给每个进程描绘了一幅"独占整台机器"的美好画卷。但进程终究不能活在自己的世界里，它要和外界交互：从磁盘读文件、往终端写日志、通过网络收发数据。所有这些交互，都离不开一个最基本的系统机制——<strong>输入/输出（I/O）</strong>。</p>
+
+        <p>你可能会说："I/O 有什么好学的？不就是 <code>printf</code>、<code>scanf</code>、<code>fread</code>、<code>fwrite</code> 吗？" 你用的这些确实是 C 标准库的 I/O 函数，但它们只是上层封装。我见过太多因为不懂底层系统级 I/O 而掉进坑里的案例：一个 <code>read()</code> 调用只读了部分数据就返回了，程序直接崩溃；混合使用 <code>printf</code> 和 <code>write</code> 导致输出顺序错乱——而这些问题的根源，都在于不理解 Unix 系统级 I/O 到底怎么工作的。这一章，我们就来把 I/O 这层窗户纸捅破。</p>
+
+        <h3>19.1 Unix I/O 模型：一切皆文件</h3>
+
+        <p>Unix 的设计哲学里有一句经典名言——<strong>"Everything is a file"</strong>（一切皆文件）。对 Unix 来说，打开一个磁盘文件、向终端写入数据、从网络套接字读取数据，甚至获取系统信息（如 <code>/proc</code> 下的内容），都统一抽象为"文件"这个概念。所有 I/O 操作都通过同一个接口完成：<code>open()</code> → <code>read()</code>/<code>write()</code> → <code>close()</code>。</p>
+
+        <p>每个进程在被创建时，操作系统会为其维护一个<strong>文件描述符表</strong>（file descriptor table）。文件描述符（fd）本质上是这张表的一个<strong>整数索引</strong>。当你打开一个文件时，系统在表中新增一项，返回最小的可用整数作为 fd；当你关闭文件时，对应表项被释放。</p>
+
+        <p>每个 Unix 进程在启动时，默认打开三个标准的文件描述符：</p>
+
+        <table>
+            <tr>
+                <th>文件描述符</th>
+                <th>名称</th>
+                <th>默认绑定</th>
+                <th>C 标准流</th>
+            </tr>
+            <tr>
+                <td><code>0</code></td>
+                <td>stdin（标准输入）</td>
+                <td>键盘</td>
+                <td><code>stdin</code></td>
+            </tr>
+            <tr>
+                <td><code>1</code></td>
+                <td>stdout（标准输出）</td>
+                <td>终端显示</td>
+                <td><code>stdout</code></td>
+            </tr>
+            <tr>
+                <td><code>2</code></td>
+                <td>stderr（标准错误）</td>
+                <td>终端显示</td>
+                <td><code>stderr</code></td>
+            </tr>
+        </table>
+
+        <p>这三个描述符默认都指向终端设备。但通过<strong>重定向</strong>，可以把它们指向任何文件——这正是 Shell 中 <code>ls > out.txt</code>、<code>./a.out 2>&1</code> 等操作的底层实现原理。</p>
+
+        <p>文件描述符背后有两层重要的状态。第一层是<strong>文件描述符表</strong>（per-process），每个表项指向一个<strong>打开文件表项</strong>（系统级）。打开文件表项记录了关键的<strong>当前文件位置</strong>（current file position），即下一次读写操作从文件的哪个字节开始。这个位置会随着 <code>read()</code>/<code>write()</code> 自动推进。了解这个机制，你就能理解为什么多个进程同时写入同一个文件时会出现相互覆盖的问题——它们共享同一个文件位置吗？不，每个进程有自己的 fd 表，但如果两个进程通过 <code>fork()</code> 继承同一个 fd，那么它们<strong>共享</strong>同一个打开文件表项，包括同一个文件位置。这既是强大的 IPC 机制，也是潜在的 bug 源头。</p>
+
+        <h3>19.2 open/read/write/close 系统调用</h3>
+
+        <p>让我们看看这几个最核心的系统调用。它们的声明在 <code>&lt;fcntl.h&gt;</code>、<code>&lt;unistd.h&gt;</code> 中：</p>
+
+        <pre><code>#include &lt;fcntl.h&gt;
+#include &lt;unistd.h&gt;
+
+// 打开文件：返回文件描述符，失败返回 -1
+int open(const char *path, int flags, mode_t mode);
+
+// 标志位（定义在 &lt;fcntl.h&gt;）:
+// O_RDONLY  — 只读打开
+// O_WRONLY  — 只写打开
+// O_RDWR    — 读写打开
+// O_CREAT   — 文件不存在则创建
+// O_TRUNC   — 若文件已存在，截断为 0 长度
+// O_APPEND  — 每次写入前将文件位置定位到末尾
+
+// 读：尝试读取 count 字节到 buf，返回实际读到的字节数
+ssize_t read(int fd, void *buf, size_t count);
+
+// 写：从 buf 写入 count 字节到 fd，返回实际写入的字节数
+ssize_t write(int fd, const void *buf, size_t count);
+
+// 关闭文件描述符
+int close(int fd);</code></pre>
+
+        <p><code>read()</code> 的返回值需要特别注意：返回值等于 0 表示读到 <strong>EOF</strong>（文件结束）；返回值等于 -1 表示出错（需要检查 <code>errno</code>）；返回正数则表示实际读取的字节数。你可能会问："我要求读 4096 字节，它就一定返回 4096 吗？"<strong>不一定</strong>。这就是所谓的 <strong>short count</strong>（短计数）问题。</p>
+
+        <p>什么时候会出现 short count？以下几种情况：</p>
+        <ul>
+            <li>读取普通文件时遇到文件末尾（还剩 100 字节，但你要求读 4096）</li>
+            <li>从终端（stdin）读取时，通常一次只返回一行</li>
+            <li>从网络套接字读取时，网络缓冲区的数据可能小于请求量</li>
+            <li>被信号中断时，读完的部分已经返回</li>
+        </ul>
+
+        <p>下面是一个直接用 Unix I/O 实现的文件拷贝程序。看似简单，实际上正确性需要考虑 short count 问题：</p>
+
+        <pre><code>#include &lt;unistd.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;stdlib.h&gt;
+
+int main(int argc, char *argv[])
+{
+    int fd_src = open(argv[1], O_RDONLY);
+    int fd_dst = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    char buf[4096];
+    ssize_t n;
+
+    while ((n = read(fd_src, buf, sizeof(buf))) > 0) {
+        char *p = buf;
+        ssize_t remaining = n;
+        while (remaining > 0) {
+            ssize_t written = write(fd_dst, p, remaining);
+            if (written < 0) exit(1);
+            remaining -= written;
+            p += written;
+        }
+    }
+
+    close(fd_src);
+    close(fd_dst);
+    return 0;
+}</code></pre>
+
+        <p>注意内层的 while 循环——即使 <code>read()</code> 返回了 n 字节，<code>write()</code> 也可能只写入了部分数据。这个"循环直到写完"的模式，是可靠 I/O 编程的基础。</p>
+
+        <div class="highlight">
+            <p><strong>核心洞察</strong>：<code>read()</code> 和 <code>write()</code> 的 short count 不是 bug，是特性。它们给了内核灵活性——当数据还没准备好时，可以先返回已有的部分，而不必让进程无限等待。你的代码必须有能力处理 short count。</p>
+        </div>
+
+        <h3>19.3 I/O 重定向的原理</h3>
+
+        <p>Shell 中的重定向操作看起来像魔法一样：<code>ls > out.txt</code> 可以把原本输出到终端的内容写入文件。这个魔法的本质是什么？答案就是 <code>dup2</code> 系统调用。</p>
+
+        <pre><code>#include &lt;unistd.h&gt;
+
+// 将 oldfd 复制到 newfd（如果 newfd 已打开，先关闭它）
+int dup2(int oldfd, int newfd);</code></pre>
+
+        <p><code>dup2</code> 做的事情是：关闭 <code>newfd</code> 当前指向的文件描述符表项，然后让 <code>newfd</code> 指向 <code>oldfd</code> 所指向的同一个打开文件表项。从此以后，对 <code>newfd</code> 的读写操作，实际上操作的是 <code>oldfd</code> 的那个文件。</p>
+
+        <p>要实现 <code>ls > out.txt</code>，Shell 的流程大致是这样的：</p>
+
+        <pre><code>// 伪代码：Shell 如何实现 "ls > out.txt"
+pid_t pid = fork();
+
+if (pid == 0) {
+    // 子进程：重定向 stdout 并执行 ls
+    int fd = open("out.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    dup2(fd, STDOUT_FILENO);   // 关闭 stdout(1)，让它指向 out.txt
+    close(fd);                 // 原始的 fd 不再需要
+    execlp("ls", "ls", NULL);  // ls 的输出会写入 out.txt
+}
+
+wait(NULL);  // 父进程等待子进程结束</code></pre>
+
+        <p>同理，<code>ls 2>&1</code> 的原理就是 <code>dup2(1, 2)</code>——让 stderr 指向 stdout 所指向的终端。管道 <code>|</code> 也是类似的思路，只不过中间多了一个由 <code>pipe()</code> 创建的内核缓冲区。</p>
+
+        <div class="tip">
+            <p><strong>小技巧</strong>：想要在代码里实现"把日志同时写入文件和控制台"？试试 <code>fork()</code> 一个子进程，父进程保持正常输出，子进程通过 <code>dup2</code> 将 stdout 重定向到日志文件。这是很多守护进程的实现思路。</p>
+        </div>
+
+        <h3>19.4 标准 I/O 库的缓冲机制</h3>
+
+        <p>你可能已经注意到，前面我们用 <code>read()</code>/<code>write()</code> 直接操作文件描述符，而日常编程中更常用的是 <code>fread()</code>/<code>fwrite()</code>/<code>printf()</code>/<code>fgets()</code> 这些 C 标准库函数。这两套 API 之间是什么关系？</p>
+
+        <p>简单来说，<strong>标准 I/O 库（stdio）是在系统级 I/O 上封装了一层用户态的缓冲区</strong>。系统调用 <code>read()</code>/<code>write()</code> 每次都要陷入内核——上下文切换的开销是很大的（大约几百纳秒到几微秒）。如果每次 printf 输出一个字符都要做一次系统调用，效率会极其低下。stdio 的做法是：先把数据写入用户空间的缓冲区，等缓冲区满了（或者遇到换行符，或者程序主动 <code>fflush</code>）才真正调用 <code>write()</code>。</p>
+
+        <p>stdio 支持三种缓冲策略：</p>
+
+        <table>
+            <tr>
+                <th>缓冲类型</th>
+                <th>适用场景</th>
+                <th>行为</th>
+                <th>默认缓冲区大小</th>
+            </tr>
+            <tr>
+                <td><strong>全缓冲</strong>（_IOFBF）</td>
+                <td>普通磁盘文件</td>
+                <td>缓冲区填满后才写入内核</td>
+                <td>4096 或 8192 字节</td>
+            </tr>
+            <tr>
+                <td><strong>行缓冲</strong>（_IOLBF）</td>
+                <td>终端（stdin/stdout）</td>
+                <td>遇到换行符或缓冲区满时写入</td>
+                <td>通常与全缓冲相同</td>
+            </tr>
+            <tr>
+                <td><strong>无缓冲</strong>（_IONBF）</td>
+                <td>stderr</td>
+                <td>每次写入立即输出</td>
+                <td>无缓冲区</td>
+            </tr>
+        </table>
+
+        <p>可以用 <code>setvbuf</code> 来修改缓冲策略：</p>
+
+        <pre><code>#include &lt;stdio.h&gt;
+
+int setvbuf(FILE *stream, char *buf, int mode, size_t size);
+// mode: _IOFBF (全缓冲) / _IOLBF (行缓冲) / _IONBF (无缓冲)</code></pre>
+
+        <p>这里有一个极易踩坑的地方——<strong>混合使用 stdio 和 Unix I/O</strong>。</p>
+
+        <div class="warning">
+            <p><strong>真实踩坑故事</strong>：曾经有一个线上服务，在排查问题时打印了很多 <code>printf</code> 调试日志，同时偶尔调用 <code>write(STDOUT_FILENO, ...)</code> 输出一些二进制数据到同一个终端。结果诡异的事情发生了：<code>printf</code> 输出的日志和 <code>write</code> 输出的二进制数据顺序错乱了——按理说先 <code>printf</code> 后 <code>write</code>，输出却先看到 <code>write</code> 的内容。原因就是 <code>printf</code> 用的是 stdio 的行缓冲（还没遇到换行符，数据在用户缓冲区里躺着），而 <code>write</code> 直接绕过缓冲区进了内核，所以后调用的反而先输出了。解决方法是：在 <code>write</code> 调用前加一句 <code>fflush(stdout)</code>，强制清空 stdio 缓冲区。</p>
+        </div>
+
+        <p>这个教训告诉我们：<strong>永远不要在同一个文件描述符上混合使用 stdio 和 Unix I/O，除非你非常清楚缓冲机制并做好 fflush</strong>。</p>
+
+        <h3>19.5 RIO（鲁棒 I/O）包设计</h3>
+
+        <p>从上面的讨论我们看到，可靠地处理 short count 需要对 <code>read()</code>/<code>write()</code> 进行封装。CSAPP 教材中提供了一个非常实用的工具包——<strong>RIO（Robust I/O）包</strong>。RIO 的核心思想就是一个"循环"：不管系统调用返回了多少字节，循环调用直到读够/写够为止。</p>
+
+        <p>RIO 提供两类函数：</p>
+        <ul>
+            <li><strong>无缓冲版本</strong>：<code>rio_readn()</code> 和 <code>rio_writen()</code>，直接处理 short count</li>
+            <li><strong>带缓冲版本</strong>：<code>rio_readlineb()</code> 和 <code>rio_readnb()</code>，在内置缓冲区中读取，避免每个字节都做系统调用</li>
+        </ul>
+
+        <pre><code>// RIO 无缓冲版本：保证读/写 n 字节
+ssize_t rio_readn(int fd, void *usrbuf, size_t n) {
+    size_t nleft = n;
+    ssize_t nread;
+    char *bufp = (char *)usrbuf;
+
+    while (nleft > 0) {
+        if ((nread = read(fd, bufp, nleft)) < 0) {
+            if (errno == EINTR)  // 被信号中断，重新读
+                nread = 0;
+            else
+                return -1;       // 真正的错误
+        } else if (nread == 0) {
+            break;               // EOF
+        }
+        nleft -= nread;
+        bufp += nread;
+    }
+    return n - nleft;            // 返回实际读到的字节数
+}
+
+// RIO 带缓冲版本：内部维护一个 buffer
+// rio_readlineb 从缓冲区中逐字节扫描，直到遇到换行符
+// 这样避免了每个字符都调用 read() 的巨大开销</code></pre>
+
+        <p>注意代码中的 <code>EINTR</code> 检查。系统调用被信号中断时，它返回 -1 并设置 <code>errno = EINTR</code>。对于慢速设备（如终端、网络套接字），这种情况经常发生。如果我们的代码不处理 <code>EINTR</code>，就会误判为 I/O 错误。</p>
+
+        <div class="highlight">
+            <p><strong>真实踩坑故事</strong>：一位同事在开发一个高并发的代理服务器时，使用 <code>read()</code> 从网络套接字读取 HTTP 请求。在低流量压力测试下一切正常，但在生产环境收到大量请求时，<code>read()</code> 经常返回 1024 字节而不是他预期的 4096 字节。他的代码是做了一次 <code>read(fd, buf, 4096)</code>，然后假设数据已经全部到位，直接开始解析。结果是——请求被截断了，解析失败，服务返回 400 错误。这个 bug 花费了整整一个下午才排查出来。解决方案就是用 RIO 风格的循环读取。</p>
+        </div>
+
+        <p>这个 bug 的根本原因是什么呢？网络数据是分片到达的。TCP 是流式协议，没有"消息边界"的概念。你调一次 <code>read()</code> 最多只能读到现在内核缓冲区里已有的数据——如果只到了 1024 字节，你就只能读到 1024 字节。这不是错误，这是 TCP 的正常行为。你必须反复调用 <code>read()</code> 直到拿到完整的消息。</p>
+
+        <p>讲到这里，我们已经把 Unix I/O 的核心机制学完了。从文件描述符到系统调用，从重定向到缓冲机制，再到鲁棒的 RIO 封装——这些都是系统编程的"基本功"。下一章，我们将把这些知识应用到<strong>网络编程</strong>中。你会发现，网络 I/O 本质上就是文件 I/O 的一种特例——毕竟，"一切皆文件"。</p>
+
+        <div class="footer-nav">
+            <a href="18.html">← 上一章</a>
+            <a href="index.html">📖 返回目录</a>
+            <a href="20.html">下一章 →</a>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

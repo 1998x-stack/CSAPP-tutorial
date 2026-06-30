@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>第18章 虚拟内存——内存分配 — 深入理解计算机系统（CSAPP）</title>
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div class="double-border">
+<div class="container">
+    <div class="sidebar">
+        <h3>💻 课程目录</h3>
+        <ul class="chapter-list">
+            <li><a href="01.html">第1章 计算机系统漫游</a></li>
+            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
+            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
+            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
+            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
+            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
+            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
+            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
+            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
+            <li><a href="10.html">第10章 优化程序性能</a></li>
+            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
+            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
+            <li><a href="13.html">第13章 链接——静态链接</a></li>
+            <li><a href="14.html">第14章 链接——动态链接</a></li>
+            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
+            <li><a href="16.html">第16章 异常控制流——信号</a></li>
+            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
+            <li><a href="18.html" class="active">第18章 虚拟内存——内存分配</a></li>
+            <li><a href="19.html">第19章 系统级I/O</a></li>
+            <li><a href="20.html">第20章 网络编程——基础</a></li>
+            <li><a href="21.html">第21章 网络编程——进阶</a></li>
+            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
+            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
+            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
+            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
+            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
+            <li><a href="27.html">第27章 现代系统新趋势</a></li>
+            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h2>第十八章：虚拟内存——内存分配</h2>
+
+        <p>上一章我们讨论了虚拟地址如何翻译成物理地址。你在写 C/C++ 的时候，可能无数次地调用过 <code>malloc</code> 和 <code>free</code>，但有没有想过：当你调用 <code>malloc(1024)</code> 时，内核到底做了什么？它是怎么在茫茫多的虚拟地址空间中"找到"一块 1024 字节的连续区域的？多次 malloc/free 之后，内存为什么会"碎片化"？</p>
+
+        <p>本章我们回答这些问题。先从内核态的内存映射接口 <code>mmap</code> 讲起，再深入到用户态分配器（如 glibc 的 malloc）的设计策略，最后看看垃圾收集是怎么一回事。理解这些，你就能写出更"内存友好"的程序。</p>
+
+        <h3>18.1 mmap与munmap</h3>
+
+        <p><code>mmap</code> 是 Linux 内核提供给用户态的最底层内存映射接口。它可以在进程的虚拟地址空间中创建新的映射区域：</p>
+
+        <pre><code>#include &lt;sys/mman.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;stdio.h&gt;
+
+int main() {
+    // 匿名映射：分配 4MB 虚拟内存
+    size_t len = 4 * 1024 * 1024;  // 4MB
+    void *addr = mmap(NULL, len,
+                      PROT_READ | PROT_WRITE,      // 可读写
+                      MAP_PRIVATE | MAP_ANONYMOUS, // 私有匿名映射
+                      -1, 0);                      // 无文件关联
+
+    if (addr == MAP_FAILED) {
+        perror("mmap failed");
+        return 1;
+    }
+    printf("mmap 分配在: %p\n", addr);
+
+    // 此时只是分配了虚拟地址——物理页面还没来
+    // 直到实际写入时才触发缺页，分配物理页
+
+    // 释放映射
+    munmap(addr, len);
+    return 0;
+}</code></pre>
+
+        <div class="tip">
+            <p><strong>mmap 的两种模式</strong>：<code>mmap</code> 有两种主要用法。文件映射将文件内容映射到进程的虚拟地址空间，修改内存就能直接修改文件（写回时机取决于 <code>MS_SYNC</code>/<code>MS_ASYNC</code>）。匿名映射（<code>MAP_ANONYMOUS</code>）只分配内存，不与任何文件关联——<code>malloc</code> 分配大块内存时，底层使用的就是匿名映射。</p>
+        </div>
+
+        <p>这里有一个重要的性能洞察：<code>mmap</code> 是<strong>惰性分配</strong>的。调用 <code>mmap</code> 只是修改了进程的页表结构（建立了虚拟地址到"未分配"的映射），并没有真正分配物理页面。物理页面要到第一次访问（读或写）时，通过缺页机制才真正分配。这也是为什么 <code>mmap</code> 分配 1GB 内存几乎是瞬时的——只有真正用到的部分才占物理内存。</p>
+
+        <p>相比而言，<code>sbrk()</code>（传统的堆扩展接口）已经逐渐被淘汰——它只能线性扩展堆，不如 <code>mmap</code> 灵活。现代 glibc 的 malloc 实现中，大于 128KB 的分配直接走 <code>mmap</code>，小于 128KB 的从堆（arena）中分配。</p>
+
+        <h3>18.2 显式分配器的设计</h3>
+
+        <p>用户态的堆内存管理由<strong>显式分配器</strong>负责——最著名的就是 C 标准库的 <code>malloc</code> 和 <code>free</code>。分配器维护一个"空闲块"的数据结构，在 malloc 时找到足够大的块分割出去，在 free 时把块放回去。</p>
+
+        <p>三种主要的空闲块组织策略：</p>
+
+        <table>
+            <tr>
+                <th>策略</th>
+                <th>结构</th>
+                <th>优势</th>
+                <th>劣势</th>
+            </tr>
+            <tr>
+                <td><strong>隐式空闲链表</strong></td>
+                <td>块头部含大小信息，遍历整个堆查找空闲块</td>
+                <td>实现简单，易于验证正确性</td>
+                <td>分配时遍历所有块（包括已分配的），开销线性</td>
+            </tr>
+            <tr>
+                <td><strong>显式空闲链表</strong></td>
+                <td>只将空闲块用链表/双向链表链接起来</td>
+                <td>分配时只遍历空闲块，比隐式快</td>
+                <td>空闲块需额外空间存储指针</td>
+            </tr>
+            <tr>
+                <td><strong>分离空闲链表</strong></td>
+                <td>按块大小分多个链表（如 16B、32B、64B...）</td>
+                <td>分配时直接找对应大小，近似 O(1)</td>
+                <td>实现最复杂，需平衡链表数量与碎片</td>
+            </tr>
+        </table>
+
+        <p>每种策略还需要决定<strong>放置策略</strong>——从空闲链表中选哪个块：</p>
+        <ul>
+            <li><strong>First Fit</strong>：选第一个足够大的块。简单但容易在堆前部产生小碎片。</li>
+            <li><strong>Best Fit</strong>：遍历所有空闲块，选刚好够用且最小的。碎片少但慢。</li>
+            <li><strong>Next Fit</strong>：从上一次分配的位置继续找。比 First Fit 更均匀地使用堆。</li>
+        </ul>
+
+        <p>边界标记（boundary tag）是另一个重要的设计模式——每个块的头部和尾部都存储块大小和分配状态。这使得释放一个块时能快速检查前后邻居是否也是空闲的，便于合并。</p>
+
+        <div class="highlight">
+            <p><strong>CSAPP 经典 Lab</strong>：讲解分配器策略不是为了让你重新实现 malloc——但 CSAPP 的 Malloc Lab 确实要求你在一个框架内实现自己的分配器。这个 Lab 是所有 CSAPP Lab 中最有含金量的之一，完成它，你会对内存管理有脱胎换骨的理解。</p>
+        </div>
+
+        <h3>18.3 碎片问题</h3>
+
+        <p>为什么 malloc 越多、free 越乱，新 malloc 就越容易失败——即使"总空闲空间"足够大？这就是碎片问题。</p>
+
+        <p><strong>内部碎片</strong>：分配器给了一个块比你要求的更大。比如你要 30 字节，分配器给你一个 48 字节的块——多出来的 18 字节就是内部碎片。内部碎片来源于：对齐要求（通常 8 或 16 字节对齐）、元数据开销（每个块的头部字节）、分配器的最小块大小。</p>
+
+        <p><strong>外部碎片</strong>：堆上有足够的总空闲内存，但没有一个连续的空闲块能满足请求。比如堆上有 1000 字节空闲，但拆成了 10 个 100 字节的小块夹在已分配块之间——此时 <code>malloc(200)</code> 就会失败。</p>
+
+        <p>对抗外部碎片的主要武器是<strong>合并（coalescing）</strong>：</p>
+        <ul>
+            <li><strong>立即合并</strong>：每次 free 时立即检查前后邻居，如果空闲就合并成大块。实现简单，但如果程序反复分配和释放同一大小的块，会导致频繁的分割和合并。</li>
+            <li><strong>延迟合并</strong>：先不合并，等分配失败时再扫描并合并所有空闲块。效率更高，但实现复杂。</li>
+        </ul>
+
+        <div class="warning">
+            <p><strong>踩坑故事</strong>：有一个 C++ 网络服务跑了大约 3 天就莫名其妙地 <code>bad_alloc</code> 崩溃。检查发现程序仍然有数百 MB 的空闲堆空间——但都被外部碎片困住了。原因是一个模块频繁分配和释放 17 字节的小对象，而分配器的最小块是 32 字节。这些 32 字节块交替分配和释放，形成了大量"已分配 + 空闲 + 已分配 + 空闲"的交替模式，导致任何超过 32 字节的分配都会失败。最后的修复是把那个 17 字节的结构体对齐填充到 32 字节——听起来浪费，但实际消除了碎片模式。</p>
+        </div>
+
+        <h3>18.4 垃圾收集简介</h3>
+
+        <p>手动管理内存（malloc/free）容易出错——忘记 free 导致内存泄漏，重复 free 导致 double free。垃圾收集（Garbage Collection, GC）自动回收不再使用的内存。最常见的两种算法：</p>
+
+        <p><strong>Mark-Sweep（标记-清除）</strong>：从一组"根"（root set：全局变量、寄存器、栈帧中的指针）出发，遍历所有可达的对象并做标记。然后扫描整个堆，把未被标记的块归还给自由链表。这是<strong>追踪式</strong>收集的代表。</p>
+
+        <p><strong>引用计数</strong>：每个对象维护一个计数器，记录有多少引用指向它。引用增加时计数加 1，减少时减 1。计数归零时立即回收。优点是实时性好，缺点是无法处理循环引用（A 引用 B，B 引用 A，但两者都已不可达）。</p>
+
+        <p>Boehm GC 是一个著名的 C/C++ 保守式垃圾收集器——它不需要你修改代码，替换掉 <code>malloc</code>/<code>free</code> 就可以使用。之所以叫"保守式"，是因为 C 没有类型安全的内存模型，GC 无法准确区分"整数恰好等于一个地址"和"真正的指针"，所以它<strong>保守</strong>地假设任何看起来像地址的值都是指针。</p>
+
+        <div class="tip">
+            <p><strong>现实世界的分配器</strong>：今天你在生产环境中大概率不会遇到自己实现的 malloc，而是以下三个中的一种：<strong>ptmalloc2</strong>（glibc 默认，通用性好但在多线程下性能一般）、<strong>tcmalloc</strong>（Google 出品，每个线程有自己的缓存，减少锁竞争）、<strong>jemalloc</strong>（FreeBSD/Apple/meta 使用，通过 per-thread arena 达到极好的多核扩展性）。Redis 替换为 jemalloc 后，碎片率从 30% 降到了 5%，分配性能也大幅提升。理解分配器的工作方式，能帮你在碰到内存性能问题时，做出正确的选型决策。</p>
+        </div>
+
+        <p>至此，我们完成了虚拟内存的两大部分——地址翻译和内存分配。虚拟内存是系统中最强大的抽象之一，提供了隔离、保护、共享和超分配等核心能力，是现代计算机系统的基础。从下一章开始，我们将把这些知识整合起来，进入<strong>系统级 I/O</strong> 的世界，看看读写操作是如何在内核和硬件之间协同完成的。</p>
+
+        <div class="footer-nav">
+            <a href="17.html">← 上一章</a>
+            <a href="index.html">📖 返回目录</a>
+            <a href="19.html">下一章 →</a>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>第25章 经典Lab实战(II)——Cache/Shell/Malloc — 深入理解计算机系统（CSAPP）</title>
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div class="double-border">
+<div class="container">
+    <div class="sidebar">
+        <h3>💻 课程目录</h3>
+        <ul class="chapter-list">
+            <li><a href="01.html">第1章 计算机系统漫游</a></li>
+            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
+            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
+            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
+            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
+            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
+            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
+            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
+            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
+            <li><a href="10.html">第10章 优化程序性能</a></li>
+            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
+            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
+            <li><a href="13.html">第13章 链接——静态链接</a></li>
+            <li><a href="14.html">第14章 链接——动态链接</a></li>
+            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
+            <li><a href="16.html">第16章 异常控制流——信号</a></li>
+            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
+            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
+            <li><a href="19.html">第19章 系统级I/O</a></li>
+            <li><a href="20.html">第20章 网络编程——基础</a></li>
+            <li><a href="21.html">第21章 网络编程——进阶</a></li>
+            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
+            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
+            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
+            <li><a href="25.html" class="active">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
+            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
+            <li><a href="27.html">第27章 现代系统新趋势</a></li>
+            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h2>第二十五章：经典Lab实战(II)——Cache/Shell/Malloc</h2>
+
+        <p>如果说前三个 Lab 是让你"看懂"计算机系统，那 Cache、Shell、Malloc 这三个 Lab 就是让你"构建"计算机系统。你要亲手写一个缓存模拟器、实现一个 Unix Shell 的核心功能、以及设计一个动态内存分配器——每一个都是真实系统组件的缩影。当你完成这三个 Lab 时，你写的代码已经触及了计算机系统的三个核心模块：存储层次、进程管理、内存管理。</p>
+
+        <p>这其中的每个 Lab 都有实际的工程难度。不少同学在 Cache Lab 的 Part B 卡了一周，在 Shell Lab 被信号竞态折磨得怀疑人生，在 Malloc Lab 为了提升 1% 的利用率而反复调整策略——但正是这种"折磨"让你从"会用"进阶到"会设计"。</p>
+
+        <h3>25.1 Cache Lab——手写缓存模拟器</h3>
+
+        <p>Cache Lab 分为两个部分。Part A 要求你实现一个缓存模拟器，能模拟组相联缓存的行为——给定一个内存访问轨迹文件，输出总的 hits、misses 和 evictions 次数。Part B 则要求你通过分块（blocking）技术优化矩阵转置，最小化 cache miss。</p>
+
+        <p><strong>Part A: 模拟器核心逻辑</strong></p>
+
+        <pre><code>// 简化的缓存模拟器核心（C 语言）
+#define MAX_LINES 64
+
+typedef struct {
+    int valid;          // 有效位
+    int tag;            // 标记位
+    int lru_counter;    // 用于 LRU 替换
+} cache_line_t;
+
+typedef struct {
+    cache_line_t *lines;
+    int E;              // 每组行数（associativity）
+} cache_set_t;
+
+cache_set_t *cache;
+int hits = 0, misses = 0, evictions = 0;
+int lru_clock = 0;
+
+void access_cache(unsigned long address) {
+    // 从地址中提取 set index 和 tag
+    int set_idx = (address >> b) & ((1 << s) - 1);
+    unsigned long tag = address >> (b + s);
+
+    cache_set_t *set = &amp;cache[set_idx];
+    int empty = -1, lru_idx = 0;
+
+    for (int i = 0; i < set->E; i++) {
+        if (set->lines[i].valid &amp;&amp; set->lines[i].tag == tag) {
+            hits++;  // Cache hit: 找到匹配的行
+            set->lines[i].lru_counter = ++lru_clock;
+            return;
+        }
+        if (!set->lines[i].valid) empty = i;
+        if (set->lines[i].lru_counter < set->lines[lru_idx].lru_counter)
+            lru_idx = i;  // 追踪最久未使用的行
+    }
+
+    misses++;  // Cache miss: 需要加载行
+    int victim = (empty != -1) ? empty : (evictions++, lru_idx);
+    set->lines[victim].valid = 1;
+    set->lines[victim].tag = tag;
+    set->lines[victim].lru_counter = ++lru_clock;
+}</code></pre>
+
+        <p><strong>Part B: 矩阵转置优化</strong></p>
+
+        <p>矩阵转置的朴素实现中，内层循环按列访问源矩阵、按行写入目标矩阵——访问模式与缓存布局不匹配，导致大量 conflict miss。解决思路是<strong>分块（blocking/tiling）</strong>：把矩阵分成小块，使每块能完全装入缓存，块内局部性最大化。</p>
+
+        <ul>
+            <li><strong>32×32</strong>：用 8×8 分块，每块 64 个 int（256 字节），正好能装入 32 字节/行 × 8 行的缓存中。miss 率从 ~50% 降到 ~5%。</li>
+            <li><strong>64×64</strong>：更棘手，因为 64×64 矩阵的同一列元素会映射到同一缓存组。需要用 4×4 分块 + 对角线重排（diagonal copying）的技巧来压住 miss。</li>
+            <li><strong>61×67</strong>：非 2 的幂的矩阵，conflict miss 的规律更难预测。需要尝试不同分块大小（16×16、8×8、4×4），用自动测试脚本寻找最优解。</li>
+        </ul>
+
+        <div class="highlight">
+            <p><strong>分块的核心洞察</strong>：Cache Lab 教会你最重要的一个道理——<strong>算法的计算复杂度一样，不代表性能一样</strong>。两个时间复杂度同为 O(n²) 的转置实现，因为缓存访问模式不同，实际运行时间可能相差 5-10 倍。这就是为什么当你的程序性能瓶颈在内存而非 CPU 时，优化算法步骤数量不如优化数据访问模式有效。</p>
+        </div>
+
+        <h3>25.2 Shell Lab——实现 Unix Shell</h3>
+
+        <p>Shell Lab 要求你实现 <code>tsh</code>（Tiny Shell），一个支持作业控制的简易 Unix Shell。你需要处理以下核心机制：</p>
+
+        <ul>
+            <li><strong>内置命令</strong>：<code>quit</code>（退出 shell）、<code>jobs</code>（列出所有作业）、<code>bg &lt;job&gt;</code>（后台继续运行）、<code>fg &lt;job&gt;</code>（前台继续运行）。</li>
+            <li><strong>前台/后台作业管理</strong>：用 <code>&amp;</code> 后缀启动后台作业，否则为前台作业。前台作业独占终端，后台作业在后台执行。维护一个作业列表（job list），记录每个作业的 PID、JID、状态。</li>
+            <li><strong>SIGCHLD 信号收割</strong>：子进程终止时向父进程发送 SIGCHLD。父进程的信号处理程序调用 <code>waitpid</code> 回收子进程，并更新作业状态。</li>
+            <li><strong>信号阻塞防止竞态</strong>：在 <code>fork</code> 之后、将子进程加入 job list 之前，必须阻塞 SIGCHLD，否则子进程可能在父进程添加作业前就终止并被回收，导致作业被添加到列表两次或出现 dangling 条目。</li>
+        </ul>
+
+        <table>
+            <tr>
+                <th>信号</th>
+                <th>默认行为</th>
+                <th>在 Shell Lab 中的处理</th>
+            </tr>
+            <tr>
+                <td><strong>SIGCHLD</strong></td>
+                <td>忽略</td>
+                <td>调用 <code>waitpid(-1, &amp;status, WNOHANG)</code> 循环收割已终止的子进程，更新作业状态</td>
+            </tr>
+            <tr>
+                <td><strong>SIGINT</strong>（Ctrl+C）</td>
+                <td>终止前台进程</td>
+                <td>将 SIGINT 转发到前台作业的进程组</td>
+            </tr>
+            <tr>
+                <td><strong>SIGTSTP</strong>（Ctrl+Z）</td>
+                <td>挂起前台进程</td>
+                <td>将 SIGTSTP 转发到前台作业的进程组，标记为 Stopped</td>
+            </tr>
+        </table>
+
+        <div class="tip">
+            <p><strong>fork+exec+signal 的竞态陷阱</strong>：Shell Lab 最常见的 BUG 是信号竞态——你在 <code>fork()</code> 后、<code>addjob()</code> 前收到了子进程的 SIGCHLD。解决方法是：在 fork 之前用 <code>sigprocmask(SIG_BLOCK, &amp;mask, NULL)</code> 阻塞 SIGCHLD，把 addjob 做完之后再用 <code>sigprocmask(SIG_UNBLOCK, &amp;mask, NULL)</code> 解除。这期间累积的 SIGCHLD 会在解除后统一递送。这是 Unix 信号编程的经典模式——<strong>先屏蔽信号、做关键操作、再解除屏蔽</strong>。</p>
+        </div>
+
+        <h3>25.3 Malloc Lab——动态内存分配器</h3>
+
+        <p>Malloc Lab 让你实现自己的 <code>malloc</code>、<code>free</code> 和 <code>realloc</code>。你面对一个内存堆区域（通过 <code>mem_sbrk</code> 扩展），需要设计数据结构来管理空闲块和已分配块，目标是最大化"吞吐量 × 内存利用率"这个综合评分。</p>
+
+        <p>以下是几种常见的设计方案，性能和复杂度逐步递增：</p>
+
+        <ul>
+            <li><strong>隐式空闲链表（Implicit Free List）</strong>——最简单的方案。每个块有头部和脚部（boundary tag），存储块大小和分配位。遍历链表查找空闲块（first-fit / next-fit / best-fit）。释放时检查相邻块是否空闲，合并。优点是实现简单，缺点是分配时间与空闲块数量成 O(n) 关系。</li>
+            <li><strong>显式空闲链表（Explicit Free List）</strong>——在空闲块中嵌入前驱和后继指针（利用空闲块的数据区，反正它没被使用），形成一个空闲块的双向链表。分配时只需遍历空闲链表，速度更快。通常配合 LIFO（后进先出）策略：新释放的块插到链表头部，分配时也从头部开始 first-fit。</li>
+            <li><strong>分离适配（Segregated Fit）</strong>——维护多个大小类别的空闲链表（如 16 字节、32 字节、64 字节……4096 字节、更大）。分配时直接查对应大小类的链表。这是 glibc ptmalloc2 的核心策略，时间复杂度近乎 O(1)。评分最高的方案通常采用这种设计。</li>
+        </ul>
+
+        <pre><code>// 隐式空闲链表的边界标记（边界标记法）
+// 每个块的头尾各有一个 size|alloc 标记，方便合并
+
+typedef struct {
+    int header;                // [31:3] 块大小 | [0:1] 分配位
+    /* 数据区从这里开始 */
+} block_t;
+
+#define GET_SIZE(p)   (*(int *)(p) &amp; ~7)
+#define GET_ALLOC(p)  (*(int *)(p) &amp; 1)
+#define HDRP(bp)      ((char *)(bp) - 4)       // 头部地址
+#define FTRP(bp)      ((char *)(bp) + GET_SIZE(HDRP(bp)) - 8)  // 脚部地址
+#define NEXT_BLKP(bp) ((char *)(bp) + GET_SIZE((char *)(bp) - 4))
+
+void *malloc(size_t size) {
+    // first-fit: 遍历堆，找第一个足够大的空闲块
+    // 如果找到：分割（块太大则分裂成两个），标记已分配
+    // 如果没找到：调用 mem_sbrk 扩展堆
+}
+
+void free(void *bp) {
+    // 标记为空闲
+    // 检查相邻块，立即合并（immediate coalescing）
+}</code></pre>
+
+        <div class="highlight">
+            <p><strong>真实世界的影响</strong>：Malloc Lab 不是纸上谈兵。Linux 上默认的 glibc <strong>ptmalloc2</strong>（基于 Doug Lea 的 dlmalloc）和 Facebook 开源的 <strong>jemalloc</strong>（基于 FreeBSD 的 allocator，现用于 Rust、Redis、MariaDB）之间的性能差距可能在特定负载下达到 2-10 倍。jemalloc 的核心优化包括：每个线程一个本地缓存（避免锁竞争）、arena 分区（减少内存碎片）、以及更精细的 size class 划分。理解 Malloc Lab 的原理后，你就能明白为什么 Redis 切换到 jemalloc 后内存碎片率从 15% 降到了 3%。如果你对内存分配器有深入兴趣，还可以研究 Google 的 <strong>TCMalloc</strong>（Thread-Caching Malloc），它在多线程场景下有更极致的性能。</p>
+        </div>
+
+        <p>我们已经走过了 CSAPP 七个经典 Lab 中的六个，还剩下最后一个——Proxy Lab。下一章我们将学习如何实现一个并发 HTTP 代理服务器，把网络编程、并发控制、系统 I/O 的知识熔于一炉。这是对你这 25 章以来所有知识的终极考验，也是最接近真实生产环境的一次演练。</p>
+
+        <div class="footer-nav">
+            <a href="24.html">← 上一章</a>
+            <a href="index.html">📖 返回目录</a>
+            <a href="26.html">下一章 →</a>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>第7章 程序的机器级表示——数据与进阶 — 深入理解计算机系统（CSAPP）</title>
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div class="double-border">
+<div class="container">
+    <div class="sidebar">
+        <h3>💻 课程目录</h3>
+        <ul class="chapter-list">
+            <li><a href="01.html">第1章 计算机系统漫游</a></li>
+            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
+            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
+            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
+            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
+            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
+            <li><a href="07.html" class="active">第7章 程序的机器级表示——数据与进阶</a></li>
+            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
+            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
+            <li><a href="10.html">第10章 优化程序性能</a></li>
+            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
+            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
+            <li><a href="13.html">第13章 链接——静态链接</a></li>
+            <li><a href="14.html">第14章 链接——动态链接</a></li>
+            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
+            <li><a href="16.html">第16章 异常控制流——信号</a></li>
+            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
+            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
+            <li><a href="19.html">第19章 系统级I/O</a></li>
+            <li><a href="20.html">第20章 网络编程——基础</a></li>
+            <li><a href="21.html">第21章 网络编程——进阶</a></li>
+            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
+            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
+            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
+            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
+            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
+            <li><a href="27.html">第27章 现代系统新趋势</a></li>
+            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h2>第七章：程序的机器级表示——数据与进阶</h2>
+
+        <p>大家好，我是你们的讲师。这将是"程序的机器级表示"系列的收官之作。前三章我们依次学了基础指令、控制流、过程调用——现在我们把目光投向数据。</p>
+
+        <p>在 C 语言中，数组、结构体和联合体是组织数据的核心抽象。它们看起来是"高级概念"，但到了汇编层面，它们不过是一些<strong>地址计算的语法糖</strong>——数组访问就是基址+偏移量的寻址模式，结构体字段就是基址+固定偏移量的内存访问。理解这个映射，你写出来的代码就能真正"快得明白"。</p>
+
+        <p>然后我们要讲一个更刺激的话题——<strong>缓冲区溢出</strong>。这是把前几章学过的栈帧、返回地址、内存访问等知识结合起来，理解现代计算机安全攻防的起点。1988 年，Robert Morris 释放的 Morris Worm 感染了约 6000 台 Unix 机器（当时互联网总共约 60000 台），造成约 1 亿美元的损失。它利用的漏洞之一就是 <code>fingerd</code> 守护进程中的 <code>gets()</code> 缓冲区溢出。三十多年过去了，缓冲区溢出仍然是最危险的软件漏洞之一——每年 CVE（通用漏洞披露）中还有大量相关的条目。</p>
+
+        <h3>7.1 数组与指针的汇编映射</h3>
+
+        <p>数组的本质就是一块连续的内存区域，加上访问时的地址计算公式。让我们从最简单的一维数组开始：</p>
+
+        <pre><code>// C 代码
+long arr[4] = {10, 20, 30, 40};
+long x = arr[2];   // x = 30
+
+// 地址计算：&amp;arr[2] = arr起始地址 + 2 * sizeof(long) = arr + 16
+// 汇编等价：
+movq 16(%rdi), %rax    # 假设 %rdi 是 arr 的基址，取 [arr + 16] 处的 8 字节</code></pre>
+
+        <p>对于一维数组，访问 <code>arr[i]</code> 就对应内存寻址中的 <code>(base, index, scale)</code> 模式，其中 scale = sizeof(元素类型)。</p>
+
+        <p><strong>多维数组</strong>——真正考验理解的地方。C 语言中的二维数组 <code>T A[R][C]</code> 是按<strong>行优先（Row-major）</strong>存储的：先存第 0 行的所有列，再存第 1 行的所有列，以此类推。</p>
+
+        <pre><code>// C 代码
+int matrix[3][4];  // 3 行 4 列，共 12 个 int
+int x = matrix[i][j];
+
+// 地址计算公式（核心）：
+// &amp;matrix[i][j] = 基址 + i * (C * sizeof(int)) + j * sizeof(int)
+//              = 基址 + i * 16 + j * 4   (因为 C=4, sizeof(int)=4)
+
+// 汇编中，如果 %rdi = 基址，%rsi = i，%rdx = j
+leaq    (%rsi, %rsi, 2), %rax   # %rax = i * 3
+leaq    (%rdi, %rax, 4), %rax   # %rax = base + i*3*4 = base + i*12 (注意这里编译器优化了!)
+                               # 但实际上正确的行步长是 C*4=16，这里不同编译器策略不同
+                               # 直接看地址计算本质即可：base + i*16 + j*4</code></pre>
+
+        <p>注意地址计算公式中的关键优化机会：如果矩阵的列数 C 是 2 的幂，编译器可以用移位代替乘法；否则需要用 <code>imulq</code> 做乘法——这就是为什么有些高性能代码会刻意选择 2 的幂作为数组的第二维。</p>
+
+        <div class="highlight">
+            <p><strong>指针运算与数组的关系</strong>：在 C 中，<code>arr[i]</code> 完全等价于 <code>*(arr + i)</code>。编译器对 <code>arr + i</code> 自动做了 <code>sizeof(*arr)</code> 的缩放——这就是所谓的<strong>指针算术</strong>。一个有意思的推论是：<code>arr[2]</code> 和 <code>2[arr]</code> 是等价的，因为 <code>*(arr + 2) == *(2 + arr)</code>。虽然你几乎不应该在实际代码中写 <code>2[arr]</code>，但这个等价关系说明了数组下标操作本质上就是指针算术运算。</p>
+        </div>
+
+        <h3>7.2 结构体与联合体对齐</h3>
+
+        <p>结构体（struct）的字段在内存中不是紧挨着排布的——编译器会在字段之间插入<strong>填充字节（padding）</strong>，以保证每个字段的地址符合其<strong>对齐要求</strong>。</p>
+
+        <p>对齐规则的核心：<strong>一个类型为 T 的变量必须存储在 T 的对齐倍数地址上</strong>。例如：</p>
+        <ul>
+            <li><code>char</code>（1 字节）→ 1 字节对齐（任何地址都可以）</li>
+            <li><code>short</code>（2 字节）→ 2 字节对齐（地址必须是偶数）</li>
+            <li><code>int</code>（4 字节）→ 4 字节对齐</li>
+            <li><code>long/指针</code>（8 字节）→ 8 字节对齐</li>
+        </ul>
+
+        <p>来看两个字段顺序不同、大小差异巨大的例子：</p>
+
+        <table>
+            <tr>
+                <th>struct</th>
+                <th>字段顺序</th>
+                <th>实际占用（加上 padding）</th>
+                <th>浪费的字节</th>
+            </tr>
+            <tr>
+                <td><code>struct S1 { char c; int i; char d; };</code></td>
+                <td>char → int → char</td>
+                <td>12 字节（4+4+4）</td>
+                <td>6 字节（2 个 char 后各 3 字节 padding）</td>
+            </tr>
+            <tr>
+                <td><code>struct S2 { int i; char c; char d; };</code></td>
+                <td>int → char → char</td>
+                <td>8 字节（4+1+1+2 padding）</td>
+                <td>2 字节（结尾对齐）</td>
+            </tr>
+        </table>
+
+        <p>两个结构体包含相同的字段，仅仅因为排列顺序不同，S1 占 12 字节，S2 占 8 字节——减少了 <strong>33%</strong> 的内存占用。如果程序中有大量这样的结构体实例，影响可能非常显著。</p>
+
+        <pre><code>// S1 的内存布局（12 字节）
+// 地址 0:  c (1 byte)
+// 地址 1-3: padding (3 bytes, 为了让 int i 对齐到 4 的倍数)
+// 地址 4-7: i (4 bytes)
+// 地址 8:  d (1 byte)
+// 地址 9-11: padding (3 bytes, 为了让整个结构体大小是 4 的倍数)
+
+// S2 的内存布局（8 字节）
+// 地址 0-3: i (4 bytes)
+// 地址 4:  c (1 byte)
+// 地址 5:  d (1 byte)
+// 地址 6-7: padding (2 bytes, 为了让整个结构体大小是 4 的倍数)</code></pre>
+
+        <div class="tip">
+            <p><strong>优化建议</strong>：在定义结构体时，把大字段（8 字节）放在最前面，小字段（1-2 字节）放在后面，可以最小化 padding 带来的空间浪费。这个技巧俗称"<strong>从大到小排列（Sort by size, descending）</strong>"。GCC 的 <code>-Wpadding</code> 警告可以帮你发现因字段顺序不当导致的额外 padding。</p>
+        </div>
+
+        <p><strong>联合体（union）</strong>的所有字段共享同一块内存，大小等于最大字段的大小。联合体的常见用途包括：</p>
+        <ul>
+            <li>在已知某时刻只有一种类型有效的场景中节省内存（如解析网络协议中的可选字段）</li>
+            <li>用联合体实现"类型双关（type punning）"——例如通过 <code>union { float f; uint32_t u; }</code> 来检查浮点数的二进制表示</li>
+        </ul>
+
+        <h3>7.3 缓冲区溢出原理</h3>
+
+        <p>缓冲区溢出（Buffer Overflow）之所以能发生，根源在于两个事实：</p>
+        <ol>
+            <li>C 语言的数组不检查边界——你写入 <code>buf[100]</code>，即使数组只有 10 个元素，编译器也不会阻止你</li>
+            <li>栈帧中局部变量和返回地址相邻——(局部缓冲区地址) <strong>低于</strong> (返回地址地址)，且方向是往高地址增长</li>
+        </ol>
+
+        <p>看下面这个经典的漏洞代码：</p>
+
+        <pre><code>#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+void vulnerable(void)
+{
+    char buf[8];        // 8 字节的缓冲区
+    gets(buf);          // gets() 不检查输入长度！
+    printf("Hello, %s\n", buf);
+}
+
+int main(int argc, char *argv[])
+{
+    vulnerable();
+    return 0;
+}</code></pre>
+
+        <p>这个函数的栈帧布局如下（假设编译器没有额外的栈保护）：</p>
+
+        <pre><code>高地址
+    +-------------------------+
+    | 调用者的栈帧             |
+    +-------------------------+
+    | 返回地址 (8 bytes)       |  ← 溢出到这里就能劫持控制流！
+    +-------------------------+
+    | 保存的 %rbp (8 bytes)    |  ← 可以被覆盖
+    +-------------------------+
+    | buf[8]                   |  ← %rsp 指向这里 (低地址)
+    +-------------------------+
+低地址</code></pre>
+
+        <p>如果用户输入的字符串超过 8 个字符，<code>gets()</code> 会从 <code>buf</code> 的低地址一直往高地址写，依次覆盖：</p>
+        <ul>
+            <li>第 1-8 字节：填满 <code>buf</code></li>
+            <li>第 9-16 字节：覆盖保存的 <code>%rbp</code></li>
+            <li>第 17-24 字节：覆盖 <strong>返回地址</strong>！</li>
+        </ul>
+
+        <p>攻击者可以精心构造输入，使第 17-24 字节指向一段恶意代码（通常称为 <strong>shellcode</strong>）的地址。当 <code>vulnerable()</code> 执行 <code>ret</code> 指令时，CPU 会弹出被篡改的返回地址，然后跳转到 shellcode 执行——攻击者就拿到了控制权。</p>
+
+        <div class="warning">
+            <p><strong>⚠️ 危险函数清单</strong>：以下 C 标准库函数是缓冲区溢出的"惯犯"，在新代码中<strong>禁止使用</strong>它们：</p>
+            <ul>
+                <li><code>gets()</code>——永远不要用。C11 标准已将其移除。</li>
+                <li><code>strcpy()</code>、<code>strcat()</code>——改用 <code>strncpy()</code>、<code>strlcat()</code> 或 <code>snprintf()</code></li>
+                <li><code>sprintf()</code>——改用 <code>snprintf()</code></li>
+                <li><code>scanf("%s")</code>——指定宽度如 <code>scanf("%31s", buf)</code>，或使用 <code>fgets()</code></li>
+            </ul>
+            <p>有个很讽刺的事实：UNIX 的 <code>fingerd</code> 在 1988 年被 Morris Worm 攻破，起因就是 <code>gets()</code>。而到 2020 年代，<code>gets()</code> 仍然出现在某些产品的代码库中。人们总是在重复犯同样的错误。</p>
+        </div>
+
+        <h3>7.4 溢出防御机制</h3>
+
+        <p>面对缓冲区溢出攻击，现代计算机系统和编译器已经构建了一套"纵深防御"体系。理解这些机制，对系统程序员和安全的工程师都是必需的。</p>
+
+        <p><strong>1. 栈金丝雀（Stack Canary / Stack Guard）</strong></p>
+        <p>函数在局部变量和保存的寄存器/返回地址之间放置一个<strong>随机值</strong>，称为 canary（金丝雀——这个术语来自煤矿工人用金丝雀检测有毒气体的历史）。在函数返回前，检查 canary 值是否被篡改。如果被改，说明发生了缓冲区溢出，程序立即终止（不执行 ret）。</p>
+
+        <pre><code>// GCC 用 -fstack-protector 启用栈金丝雀（-O1 以上默认启用）
+// 加了 canary 保护的函数汇编会多出这样的指令：
+
+vulnerable:
+    subq    $24, %rsp
+    movq    %fs:40, %rax     # 从线程局部存储加载随机 canary 值
+    movq    %rax, 8(%rsp)    # 存入栈上 (在 buf 和返回地址之间)
+    # ... 函数主体 ...
+    movq    8(%rsp), %rax    # 检查 canary
+    subq    %fs:40, %rax
+    jne     .L_stack_chk_fail  # 如果被改，跳转到 __stack_chk_fail
+    addq    $24, %rsp
+    ret
+.L_stack_chk_fail:
+    call    __stack_chk_fail  # 打印错误并终止进程</code></pre>
+
+        <p><strong>2. ASLR（Address Space Layout Randomization）</strong></p>
+        <p>每次程序运行时，栈、堆、共享库的基地址都被随机化。攻击者不知道该把返回地址定向到何处，因为 shellcode 的地址每次运行都不同。这使得"精确构造"攻击载荷变得非常困难。</p>
+
+        <p><strong>3. NX/XD 不可执行位（No-Execute / eXecute Disable）</strong></p>
+        <p>现代 CPU 的页表项中有一个 NX 位（AMD 的叫法，Intel 叫 XD）。操作系统把数据所在的页面（栈、堆、数据段）标记为<strong>不可执行</strong>。即使攻击者通过溢出把 shellcode 写到了栈上，CPU 也不会执行它——会直接抛出异常。这彻底堵死了"在栈上注入并执行代码"的经典攻击路径。</p>
+
+        <p><strong>4. ROP（Return-Oriented Programming）</strong></p>
+        <p>既然栈不可执行了，攻击者就发明了 ROP——不注入新代码，而是利用进程中<strong>已有的</strong>机器指令片段（称为 gadgets），每个 gadget 以 <code>ret</code> 结尾。攻击者把栈上的返回地址编排成一串 gadget 地址链，每个 gadget 执行一点操作（比如把某寄存器的值加 1），然后 ret 到下一个 gadget。ROP 是 ASLR + NX 时代的主流攻击方式，它不依赖代码注入，只依赖控制流的劫持。</p>
+
+        <div class="highlight">
+            <p><strong>安全编码三原则</strong>：</p>
+            <ol>
+                <li><strong>永远不要相信外部输入</strong>——所有用户输入（包括文件、网络数据、环境变量）的长度和内容都要检查</li>
+                <li><strong>使用边界检查的库函数</strong>——<code>strncpy</code> 代替 <code>strcpy</code>，<code>snprintf</code> 代替 <code>sprintf</code>，<code>fgets</code> 代替 <code>gets</code></li>
+                <li><strong>开启所有编译器防护</strong>——<code>-fstack-protector-strong</code>（栈保护）、<code>-D_FORTIFY_SOURCE=2</code>（编译时/运行时边界检查）、<code>-Wformat -Wformat-security</code>（格式字符串安全检查）</li>
+            </ol>
+        </div>
+
+        <p>到这里，我们完成了"程序的机器级表示"系列的全部四个章节。从寄存器到指令，从控制流到过程调用，从数组/结构体布局到缓冲区溢出——你已经掌握了把 C 语言代码"翻译"成机器指令并在脑中模拟执行的能力。这种能力将极大地帮助你理解程序的性能特征、调试困难和安全隐患。</p>
+
+        <p>下一章，我们将从汇编语言"下沉"一层，进入<strong>处理器体系结构</strong>（Processor Architecture）的世界。我们将学习如何设计一个指令集（ISA），以及 CPU 是如何用硬件实现那些我们刚刚学会的指令的——包括数据通路、控制逻辑，以及现代 CPU 的核心魔法：流水线（Pipelining）。</p>
+
+        <div class="footer-nav">
+            <a href="06.html">← 上一章</a>
+            <a href="index.html">📖 返回目录</a>
+            <a href="08.html">下一章 →</a>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

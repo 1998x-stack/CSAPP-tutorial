@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>第3章 信息的表示与处理——浮点数 — 深入理解计算机系统（CSAPP）</title>
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div class="double-border">
+<div class="container">
+    <div class="sidebar">
+        <h3>💻 课程目录</h3>
+        <ul class="chapter-list">
+            <li><a href="01.html">第1章 计算机系统漫游</a></li>
+            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
+            <li><a href="03.html" class="active">第3章 信息的表示与处理——浮点数</a></li>
+            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
+            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
+            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
+            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
+            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
+            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
+            <li><a href="10.html">第10章 优化程序性能</a></li>
+            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
+            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
+            <li><a href="13.html">第13章 链接——静态链接</a></li>
+            <li><a href="14.html">第14章 链接——动态链接</a></li>
+            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
+            <li><a href="16.html">第16章 异常控制流——信号</a></li>
+            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
+            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
+            <li><a href="19.html">第19章 系统级I/O</a></li>
+            <li><a href="20.html">第20章 网络编程——基础</a></li>
+            <li><a href="21.html">第21章 网络编程——进阶</a></li>
+            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
+            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
+            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
+            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
+            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
+            <li><a href="27.html">第27章 现代系统新趋势</a></li>
+            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h2>第三章：信息的表示与处理——浮点数</h2>
+
+        <p>大家好，我是你们的讲师。在上一章我们学习了整数的表示，有符号/无符号之间的转换陷阱，以及整数溢出的严重后果。但说实话，整数再反直觉，至少它和数学上的整数还"差不多"。浮点数才是真正的"异次元生物"。</p>
+
+        <p>让我讲一个真实的故事。1991 年海湾战争期间，美国爱国者导弹防御系统在沙特阿拉伯的达兰基地未能拦截一枚伊拉克的 Scud 导弹。导弹击中了兵营，造成 28 名美国士兵死亡。调查发现，爱国者系统的雷达跟踪软件中存在一个<strong>浮点精度问题</strong>：系统用 24 位定点数表示时间（以 0.1 秒为单位的计数器），乘以 1/10 得到实际秒数。但 1/10 在二进制中是一个无限循环小数，无法精确表示。系统每运行一小时，误差就积累约 0.343 秒。爱国者系统连续运行了 100 多个小时后，累计误差达到 0.34 秒——对于以高速飞行的 Scud 导弹，0.34 秒的误差足以让拦截系统失去目标。</p>
+
+        <p>这个故事告诉我们两件事：第一，用浮点数表示连续量（时间、距离、金额）<strong>必然存在精度误差</strong>；第二，误差是会积累的，在长时间运行的系统里，微小的误差可能酿成灾难。</p>
+
+        <p>本章我们就来深入理解浮点数的二进制表示——IEEE 754 标准。</p>
+
+        <h3>3.1 IEEE 754 浮点格式详解</h3>
+
+        <p>IEEE 754 是当今几乎所有 CPU 都采用的浮点数标准。它定义了三种核心组件：<strong>符号位（S）</strong>、<strong>阶码（Exponent）</strong>和<strong>尾数（Mantissa / Significand）</strong>。一个浮点数 V 的通用公式是：</p>
+
+        <pre><code>V = (-1)^S × M × 2^E</code></pre>
+
+        <p>其中 S 是符号位（0 正 1 负），M 是尾数（二进制小数），E 是阶码（整数，经过移码调整）。</p>
+
+        <p>单精度（float，32 位）和双精度（double，64 位）的字段分布如下：</p>
+
+        <table>
+            <tr>
+                <th>精度类型</th>
+                <th>总位数</th>
+                <th>符号位 S</th>
+                <th>阶码 E（含偏置）</th>
+                <th>尾数 M</th>
+                <th>偏置值（Bias）</th>
+                <th>大致范围</th>
+            </tr>
+            <tr>
+                <td>float (单精度)</td>
+                <td>32</td>
+                <td>1 bit (bit 31)</td>
+                <td>8 bits (bit 30-23)</td>
+                <td>23 bits (bit 22-0)</td>
+                <td>127</td>
+                <td>±1.2×10^-38 ~ ±3.4×10^38</td>
+            </tr>
+            <tr>
+                <td>double (双精度)</td>
+                <td>64</td>
+                <td>1 bit (bit 63)</td>
+                <td>11 bits (bit 62-52)</td>
+                <td>52 bits (bit 51-0)</td>
+                <td>1023</td>
+                <td>±2.2×10^-308 ~ ±1.8×10^308</td>
+            </tr>
+        </table>
+
+        <p>注意尾数位数的微妙之处：float 明明有 23 位尾数，但实际精度大约是 24 位有效二进制位——为什么？这就要谈到规格化与非规格化的区别了。</p>
+
+        <h3>3.2 规格化、非规格化与特殊值</h3>
+
+        <p>IEEE 754 根据阶码 E 的值把所有浮点数分为三类：<strong>规格化（Normalized）</strong>、<strong>非规格化（Denormalized / Subnormal）</strong>和<strong>特殊值（Special）</strong>。</p>
+
+        <p><strong>规格化值（阶码不全 0 也不全 1）：</strong></p>
+        <p>这是最常用的情形。阶码被解释为有符号整数，但经过<strong>偏置（Bias）</strong>处理：真实阶码 E = 存储的阶码值 - Bias。对于 float，Bias=127，所以存储的阶码值为 1~254 时，真实 E = -126~127。尾数 M 有一个<strong>隐含的 1</strong>——尾数字段存储的是小数部分（fraction），实际尾数 = 1 + fraction。这就是为什么 23 位尾数能提供约 24 位的精度。</p>
+
+        <p><strong>非规格化值（阶码全 0）：</strong></p>
+        <p>阶码全 0 时，真实 E = 1 - Bias（而不是 0 - Bias），且隐含的 1 变成了隐含的 0。即实际尾数 = 0 + fraction。非规格数的用途是表示<strong>非常接近 0 的数</strong>，在 0 附近提供"逐渐下溢"的特性，而不是从最小规格数直接跳转到 0——这避免了两个问题：一是"突然下溢"造成的精度断层，二是提供了有符号的 +0 和 -0。</p>
+
+        <p><strong>特殊值（阶码全 1）：</strong></p>
+        <ul>
+            <li>如果尾数全 0：表示 <strong>无穷大</strong>（Infinity），分 +∞ 和 -∞。比如 <code>1.0 / 0.0 = +inf</code>。</li>
+            <li>如果尾数非 0：表示 <strong>NaN</strong>（Not a Number）。比如 <code>sqrt(-1.0) = NaN</code>。</li>
+        </ul>
+
+        <div class="highlight">
+            <p><strong>一个可视化例子</strong>：以 8 位浮点格式（1 位符号 + 4 位阶码 + 3 位尾数）为例，从 0 到正无穷的值分布可以直观看到——靠近 0 的区域有更多的可表示数值（非规格化的贡献），越往大数值走，间隔越稀疏。这种"不均匀分布"是浮点数最反直觉的特性。金融系统中用整数（单位：分）而非浮点数来存储金额，正是因为这个原因。</p>
+        </div>
+
+        <h3>3.3 浮点舍入策略</h3>
+
+        <p>因为浮点数只能表示一部分实数，当一个实数落在两个可表示浮点数的正中间时，就需要<strong>舍入</strong>。IEEE 754 定义了 4 种舍入模式：</p>
+
+        <table>
+            <tr>
+                <th>模式</th>
+                <th>行为</th>
+                <th>举例（最近的两个可表示值为 1.0 和 1.1，实际值为 1.05）</th>
+            </tr>
+            <tr>
+                <td>向偶数舍入（Round to Nearest, Ties to Even）</td>
+                <td>舍入到最近的值；恰好在正中间时，取偶数位</td>
+                <td>1.05 → 1.0（0 是偶数）</td>
+            </tr>
+            <tr>
+                <td>向零舍入（Round toward Zero）</td>
+                <td>直接截断小数部分</td>
+                <td>1.05 → 1.0；-1.05 → -1.0</td>
+            </tr>
+            <tr>
+                <td>向下舍入（Round Down, Floor）</td>
+                <td>向负无穷方向取整</td>
+                <td>1.05 → 1.0；-1.05 → -2.0</td>
+            </tr>
+            <tr>
+                <td>向上舍入（Round Up, Ceiling）</td>
+                <td>向正无穷方向取整</td>
+                <td>1.05 → 2.0；-1.05 → -1.0</td>
+            </tr>
+        </table>
+
+        <p><strong>向偶数舍入</strong>是默认模式，也是大多数情况下使用的模式。它的设计原理和"银行家舍入（Banker's Rounding）"一样——避免单纯的四舍五入带来的统计偏差。在四舍五入中，0.5 总是向上舍入，大量交易后会产生向正方向的系统性偏移。而向偶数舍入在正中间时"五五开"，长期统计下来偏差更小。</p>
+
+        <div class="tip">
+            <p><strong>实践经验</strong>：在数据库和财务计算中，如果你需要可控的舍入行为，务必显式指定舍入模式，不要依赖语言默认行为。例如，SQL 的 <code>ROUND()</code> 函数和 C 语言的 <code>rint()</code> 家族函数都提供了选择不同舍入模式的能力。</p>
+        </div>
+
+        <h3>3.4 为什么 0.1 + 0.2 ≠ 0.3</h3>
+
+        <p>这是计算机科学中最著名的"令人困惑的等式"。在任何主流编程语言中运行 <code>0.1 + 0.2 == 0.3</code>，结果都是 <code>false</code>。让我们看看为什么。</p>
+
+        <p>根本原因很简单：<strong>二进制无法精确表示某些十进制小数</strong>。</p>
+
+        <p>就像十进制无法精确表示 1/3 = 0.33333... 一样，二进制也无法精确表示 1/10 和 1/5。在二进制中：</p>
+
+        <pre><code>0.1（十进制）= 1/10 = 0.00011001100110011...（二进制，无限循环！）
+0.2（十进制）= 1/5  = 0.00110011001100110...（二进制，无限循环！）</code></pre>
+
+        <p>计算机用有限的 23 位（float）或 52 位（double）尾数截断这个无限循环小数，于是产生了一个微小的截断误差。两个带有截断误差的值相加，误差叠加，最终与 "0.3" 的近似值不相等。</p>
+
+        <p>我们来用 C 语言验证：</p>
+
+        <pre><code>#include &lt;stdio.h&gt;
+
+int main()
+{
+    float a = 0.1;
+    float b = 0.2;
+    float c = a + b;
+
+    printf("0.1 + 0.2 = %.15f\n", c);
+    printf("0.3       = %.15f\n", 0.3);
+    printf("Equal? %d\n", c == 0.3);
+
+    // 用 double 也一样
+    double d = 0.1 + 0.2;
+    printf("\ndouble: 0.1 + 0.2 = %.17f\n", d);
+    printf("double: 0.3       = %.17f\n", 0.3);
+    printf("Equal? %d\n", d == 0.3);
+
+    return 0;
+}</code></pre>
+
+        <p>输出：</p>
+
+        <pre><code>0.1 + 0.2 = 0.300000011920929
+0.3       = 0.300000000000000
+Equal? 0
+
+double: 0.1 + 0.2 = 0.30000000000000004
+double: 0.3       = 0.30000000000000000
+Equal? 0</code></pre>
+
+        <p>float 版本的误差大约在 1.19e-7 量级（相对误差约 4e-7），double 版本的误差大约在 5.55e-17 量级。double 的误差小得多，但依然不为 0。</p>
+
+        <div class="tip">
+            <p><strong>正确比较浮点数的方法</strong>：永远不要直接用 <code>==</code> 比较浮点数。而是检查两个数的差是否在某个可接受的 <strong>epsilon</strong> 范围内：</p>
+            <pre><code>#include &lt;math.h&gt;
+
+int approx_equal(double a, double b, double eps)
+{
+    return fabs(a - b) &lt; eps;
+}
+
+// 使用示例：
+double eps = 1e-9;  // 根据应用场景调整
+if (approx_equal(0.1 + 0.2, 0.3, eps))
+    printf("可以认为是相等的\n");</code></pre>
+            <p>注意：epsilon 不能选得太小（可能永远返回 false），也不能选得太大（误判错误值）。对于大多数科学计算，<code>1e-9</code> 或相对 epsilon 是合理的选择。</p>
+        </div>
+
+        <div class="warning">
+            <p><strong>⚠️ 不要用浮点数存储货币！</strong></p>
+            <p>对于金融和会计软件，浮点数的精度误差是不可接受的。想象一下，一个银行系统每天处理百万笔交易，每笔因浮点舍入损失 1 分钱——一年就是几十万。正确的做法是：</p>
+            <ul>
+                <li>用整数存储"分"或者"厘"（如用 <code>long long</code> 存储金额的最小单位）</li>
+                <li>或者使用十进制浮点库（如 IEEE 754-2008 的 decimal64/decimal128, Python 的 <code>decimal.Decimal</code>）</li>
+                <li>数据库中使用 <code>DECIMAL</code> 类型而非 <code>FLOAT/DOUBLE</code></li>
+            </ul>
+        </div>
+
+        <p>这一章的篇幅比整数那章短一些，但浮点数带来的"坑"数量绝对不少。理解 IEEE 754 的标准机制——规格化、非规格化的划分、舍入策略、有限精度的根本原因——能帮助你在遇到浮点数相关 bug 时快速定位根因，而不是对着 <code>0.30000000000000004</code> 发呆。</p>
+
+        <p>下一章，我们将告别"数据表示"的世界，正式进入"程序是如何被机器执行"的领域。我们将打开汇编语言的大门，看看 C 语言的 <code>int a = b + c</code> 在 x86-64 处理器上到底对应着什么指令。</p>
+
+        <div class="footer-nav">
+            <a href="02.html">← 上一章</a>
+            <a href="index.html">📖 返回目录</a>
+            <a href="04.html">下一章 →</a>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

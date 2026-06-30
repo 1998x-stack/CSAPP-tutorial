@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>第2章 信息的表示与处理——整数 — 深入理解计算机系统（CSAPP）</title>
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div class="double-border">
+<div class="container">
+    <div class="sidebar">
+        <h3>💻 课程目录</h3>
+        <ul class="chapter-list">
+            <li><a href="01.html">第1章 计算机系统漫游</a></li>
+            <li><a href="02.html" class="active">第2章 信息的表示与处理——整数</a></li>
+            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
+            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
+            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
+            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
+            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
+            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
+            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
+            <li><a href="10.html">第10章 优化程序性能</a></li>
+            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
+            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
+            <li><a href="13.html">第13章 链接——静态链接</a></li>
+            <li><a href="14.html">第14章 链接——动态链接</a></li>
+            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
+            <li><a href="16.html">第16章 异常控制流——信号</a></li>
+            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
+            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
+            <li><a href="19.html">第19章 系统级I/O</a></li>
+            <li><a href="20.html">第20章 网络编程——基础</a></li>
+            <li><a href="21.html">第21章 网络编程——进阶</a></li>
+            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
+            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
+            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
+            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
+            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
+            <li><a href="27.html">第27章 现代系统新趋势</a></li>
+            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h2>第二章：信息的表示与处理——整数</h2>
+
+        <p>大家好，我是你们的讲师。在进入本章之前，我想先问你一个问题：假设你在 C 语言里写了一句 <code>int x = 0x12345678;</code>，然后你把 <code>x</code> 的低地址字节取出来——你猜它等于多少？</p>
+
+        <p>你可能觉得这个问题太简单。但事实是，你的 CPU 架构决定了答案：在 x86 机器上低地址字节是 <code>0x78</code>，在 ARM 大端模式下却是 <code>0x12</code>。同一条语句，同一段数据，不同的 CPU 看到的是完全不同的字节排列。这就是整数表示的第一个"坑"——<strong>字节序</strong>。</p>
+
+        <p>比起字节序更隐蔽的是补码的数学性质、无符号数与有符号数比较时的隐式转换、以及溢出可能造成的灾难性后果。1996 年，欧洲航天局的 Ariane 5 火箭在发射 40 秒后爆炸，直接损失 3.7 亿美元——根因就是一个 64 位浮点数到 16 位整数的溢出转换。虽然那是浮点数，但类似的整数溢出安全隐患至今仍潜伏在无数生产代码中。2014 年 OpenSSL 心脏滴血漏洞，其根因本质上也是一个整数溢出问题。</p>
+
+        <p>理解整数的表示，不是一个学术练习题——它是写出安全、正确、可移植代码的前提。</p>
+
+        <h3>2.1 大端序与小端序</h3>
+
+        <p><strong>字节序</strong>（Endianness）这个词来自乔纳森·斯威夫特的小说《格列佛游记》。小说中，小人国里有两派政治势力争执不休——一派认为吃鸡蛋应该从大的一端（Big-Endian）敲开，另一派认为应该从小的一端（Little-Endian）敲开。计算机界的"大小端"之争，和小说里一样有趣且持久。</p>
+
+        <p>大端序（Big-Endian）把数据的最高有效字节存放在最低地址，小端序（Little-Endian）把最低有效字节存放在最低地址。看一个例子，假设我们在内存地址 <code>0x100</code> 处存放一个 4 字节的整数 <code>0x12345678</code>：</p>
+
+        <table>
+            <tr>
+                <th>内存地址</th>
+                <th>0x100</th>
+                <th>0x101</th>
+                <th>0x102</th>
+                <th>0x103</th>
+            </tr>
+            <tr>
+                <td><strong>大端序（Big-Endian）</strong></td>
+                <td><code>0x12</code></td>
+                <td><code>0x34</code></td>
+                <td><code>0x56</code></td>
+                <td><code>0x78</code></td>
+            </tr>
+            <tr>
+                <td><strong>小端序（Little-Endian）</strong></td>
+                <td><code>0x78</code></td>
+                <td><code>0x56</code></td>
+                <td><code>0x34</code></td>
+                <td><code>0x12</code></td>
+            </tr>
+        </table>
+
+        <p>大端序很符合人的直觉——你从左往右读过去，就是数字本身的样子。小端序则反着来，但对 CPU 而言，小端序在做加法时效率更高，因为加法从低位开始，CPU 可以直接从低地址读起，无需额外的字节偏移计算。</p>
+
+        <p>怎么检测当前机器的字节序？一段简单的 C 代码就够了：</p>
+
+        <pre><code>#include &lt;stdio.h&gt;
+
+int main()
+{
+    int x = 0x12345678;
+    unsigned char *p = (unsigned char *)&amp;x;
+
+    for (int i = 0; i &lt; sizeof(x); i++)
+        printf("byte[%d] = 0x%02x\n", i, p[i]);
+
+    if (p[0] == 0x78)
+        printf("Little-Endian\n");
+    else if (p[0] == 0x12)
+        printf("Big-Endian\n");
+    return 0;
+}</code></pre>
+
+        <p>在 x86-64 的 Linux 上运行，输出是：</p>
+
+        <pre><code>byte[0] = 0x78
+byte[1] = 0x56
+byte[2] = 0x34
+byte[3] = 0x12
+Little-Endian</code></pre>
+
+        <p>这里有个关键操作——我们用 <code>unsigned char *</code> 指针来重新解释 <code>int</code> 对象的内存。这是一个在 C 语言中完全合法的技巧（char 类型被语言标准特例允许访问任何对象的内存表示），它能让我们以字节为单位看到数据的底层布局。</p>
+
+        <div class="tip">
+            <p><strong>实用建议</strong>：在网络传输中，为保证不同架构的机器能正确解析数据，<strong>网络字节序</strong>被定义为大端序。这就是为什么你总能看到 <code>htons()</code>、<code>htonl()</code> 这类函数——它们把本机字节序的整数转换为网络字节序（大端）。如果你的 x86 机器不调用这些函数就直接发送多字节整数，接收方如果是大端机器就会解析出反过来的数值。</p>
+        </div>
+
+        <h3>2.2 补码编码的数学本质</h3>
+
+        <p>大多数人知道负数在计算机中以补码（Two's Complement）表示，但很少有人认真思考过补码的数学含义。补码的核心思想可以用一个简单的公式表达。</p>
+
+        <p>对于一个 w 位的二进制数，如果把它解释为有符号整数：</p>
+
+        <pre><code>B2T(x) = -x_{w-1} * 2^{w-1} + Σ (x_i * 2^i)   (i = 0 到 w-2)</code></pre>
+
+        <p>其中 B2T 表示 Binary to Two's Complement。最高位（符号位）的权重是负的，其余位的权重都是正的。这意味着：</p>
+
+        <ul>
+            <li>当最高位是 0（即正数区域）时，补码和普通二进制一样</li>
+            <li>当最高位是 1 时，数值等于 <code>-2^{w-1}</code> 加上剩余位的正数部分</li>
+        </ul>
+
+        <p>举个例子，对于 4 位补码 <code>1101</code>：</p>
+        <pre><code>B2T(1101) = -1*2^3 + 1*2^2 + 0*2^1 + 1*2^0
+          = -8 + 4 + 0 + 1
+          = -3</code></pre>
+
+        <p>这就解释了补码的一个核心性质——<strong>不对称性</strong>。以 8 位整数为例：</p>
+
+        <table>
+            <tr>
+                <th>类型</th>
+                <th>最小值</th>
+                <th>最大值</th>
+                </tr>
+            <tr>
+                <td>char (有符号)</td>
+                <td>-128</td>
+                <td>127</td>
+            </tr>
+            <tr>
+                <td>unsigned char</td>
+                <td>0</td>
+                <td>255</td>
+            </tr>
+            <tr>
+                <td>int (有符号)</td>
+                <td>-2,147,483,648</td>
+                <td>2,147,483,647</td>
+            </tr>
+            <tr>
+                <td>unsigned int</td>
+                <td>0</td>
+                <td>4,294,967,295</td>
+            </tr>
+        </table>
+
+        <div class="warning">
+            <p><strong>⚠️ 绝对不要对 INT_MIN 调用 abs()！</strong></p>
+            <p><code>abs(INT_MIN)</code> 在 C 标准中是 <strong>未定义行为</strong>（undefined behavior）。INT_MIN = -2147483648，而 INT_MAX = 2147483647，补码的不对称性导致 -INT_MIN 根本不能在 32 位有符号整数范围内表示出来。abs() 函数内部试图求反，结果会产生溢出，进而导致不可预期的结果——常见情况下返回的还是 INT_MIN，即 <code>abs(INT_MIN) == INT_MIN</code>。这是一个真实的源头 bug。</p>
+        </div>
+
+        <p>补码的另一个漂亮性质是：<strong>加法和减法不必区分有符号还是无符号</strong>。同样的二进制位，同样的加法器电路，无论你把它们解释为有符号还是无符号，加法操作在二进制层面一模一样。这个性质是 IEEE 标准刻意设计的，目的就是让 CPU 省掉一套额外的 UAL 电路。</p>
+
+        <h3>2.3 无符号数与有符号数的转换</h3>
+
+        <p>C 语言中，无符号数和有符号数之间的隐式转换可能是最常见、也最隐蔽的 bug 来源之一。它的规则可以总结为一句话：<strong>当表达式中同时出现 signed 和 unsigned 时，signed 会被隐式提升为 unsigned</strong>。</p>
+
+        <p>来看一个经典陷阱：</p>
+
+        <pre><code>#include &lt;stdio.h&gt;
+
+int main()
+{
+    int a = -1;
+    unsigned int b = 0;
+
+    if (a &lt; b)
+        printf("a &lt; b (有符号比较)\n");
+    else
+        printf("a &gt; b (无符号比较！)\n");
+
+    return 0;
+}</code></pre>
+
+        <p>这段代码会输出什么？直觉告诉我们 <code>-1 &lt; 0</code> 成立，但实际输出是：</p>
+
+        <pre><code>a &gt; b (无符号比较！)</code></pre>
+
+        <p>原因在于：C 语言规定当有符号 <code>int</code> 和无符号 <code>unsigned int</code> 出现在同一个表达式中比较时，有符号 <code>int</code> 被<strong>隐式转换</strong>为无符号 <code>unsigned int</code>。<code>-1</code> 的二进制表示是全 1，被解释为无符号数就成了 <code>0xFFFFFFFF</code>，也就是 <code>4294967295</code>——当然大于 0。</p>
+
+        <p>让我们用一个更实际的例子来说明这个问题有多危险：</p>
+
+        <pre><code>int sum_elements(int arr[], unsigned int count)
+{
+    int sum = 0;
+    for (int i = 0; i &lt; count - 1; i++)  // 危险！
+        sum += arr[i];
+    return sum;
+}</code></pre>
+
+        <p>如果 <code>count = 0</code>，那么 <code>count - 1</code> 就不是 -1，而是 <code>UINT_MAX = 4294967295</code>！循环会越界访问整个内存，直接导致段错误。正确的写法应该把 <code>count</code> 声明为 <code>int</code>，或者在调用前检查。</p>
+
+        <div class="highlight">
+            <p><strong>关键原则</strong>：在 C/C++ 中，尽量<strong>不要混用 signed 和 unsigned</strong>。如果不得不混用，务必让编译器开启 <code>-Wsign-compare</code> 警告（GCC/clang 默认已启用），并且把这类警告当作错误处理。GCC 的 <code>-Werror=sign-compare</code> 可以帮你强制消除这类隐患。</p>
+        </div>
+
+        <h3>2.4 整数溢出与安全编码</h3>
+
+        <p>整数溢出的本质很简单：一个固定位数的整数，能表示的范围是有限的。当运算结果超出这个范围时，就会发生溢出——高位被丢弃，结果回绕（wrap around）。但在安全领域，整数溢出从来都不是小事。</p>
+
+        <p><strong>最常见的溢出场景：</strong></p>
+        <ul>
+            <li><strong>无符号加法回绕</strong>：<code>UINT_MAX + 1 = 0</code></li>
+            <li><strong>有符号加法溢出</strong>：<code>INT_MAX + 1 = INT_MIN</code>（未定义行为！）</li>
+            <li><strong>乘法溢出</strong>：假设分配 <code>n * sizeof(T)</code> 字节内存，如果 <code>n</code> 太大导致乘法溢出，实际分配的内存远小于预期</li>
+        </ul>
+
+        <p>怎么安全地检测加法溢出？以下是一个 C 语言的实现：</p>
+
+        <pre><code>#include &lt;limits.h&gt;
+
+/* 安全加法：检测有符号加法是否溢出 */
+int safe_add(int a, int b, int *result)
+{
+    if (a &gt; 0 &amp;&amp; b &gt; INT_MAX - a) return -1;  // 正溢出
+    if (a &lt; 0 &amp;&amp; b &lt; INT_MIN - a) return -1;  // 负溢出
+    *result = a + b;
+    return 0;
+}</code></pre>
+
+        <p>在安全编码中，<strong>分配大小检查</strong>是整数溢出的高发区。看一个经典的错误模式：</p>
+
+        <pre><code>/* 错误版本：乘法可能溢出 */
+void *xmalloc_bad(size_t n)
+{
+    return malloc(n * sizeof(int));  // if n is too large, overflow!
+}
+
+/* 正确版本：先检查再分配 */
+void *xmalloc_good(size_t n)
+{
+    if (n &gt; SIZE_MAX / sizeof(int))  // 防止乘法溢出
+        return NULL;
+    return malloc(n * sizeof(int));
+}</code></pre>
+
+        <div class="warning">
+            <p><strong>真实案例：OpenSSL 心脏滴血漏洞（Heartbleed, CVE-2014-0160）</strong></p>
+            <p>2014 年震惊全球的 Heartbleed 漏洞，本质上就是一个整数溢出问题。OpenSSL 的 TLS 心跳（Heartbeat）扩展中，客户端发送一个心跳请求，包含一段数据及其长度。服务器端在处理时，没有验证声明的长度与实际数据长度是否一致。攻击者可以声明长度为 65535 字节，但实际只发送几个字节——服务器端直接使用这个长度调用 <code>memcpy()</code>，把堆内存中超过请求内容的部分也发送回去，其中可能包含其他用户的私钥、密码等敏感信息。补丁方案只增加了一行检查：<code>if (payload_length &gt; actual_length) return error;</code>。</p>
+        </div>
+
+        <div class="highlight">
+            <p><strong>现代安全编码实践</strong>：</p>
+            <ul>
+                <li>C 语言中优先使用 <code>size_t</code>（无符号类型），避免有符号/无符号混用</li>
+                <li>GCC/Clang 的 <code>-ftrapv</code> 选项可以在有符号溢出时产生运行时 trap（但性能有损耗）</li>
+                <li>现代编译器提供内置溢出检测函数：<code>__builtin_add_overflow()</code>、<code>__builtin_mul_overflow()</code> 等</li>
+                <li>在 C++20 中，推荐使用 <code>std::add_sat</code>/<code>std::clamp</code> 等安全算术操作</li>
+            </ul>
+        </div>
+
+        <p>到这里，我们已经深入理解了整数在计算机中的表示机制——从字节序到补码数学，从隐式转换陷阱到溢出检测。这些知识不只是考试用的理论，它们是写出可靠系统软件的基本功。我在工作中见到过太多因为忽略这些细节而导致的线上事故——很多 bug 的根源，说穿了就是一个符号用错了、一个类型转换没想到、一个溢出没检查。</p>
+
+        <p>下一章我们将继续讨论信息的表示，但对象换成另一个更"反直觉"的家伙——<strong>浮点数</strong>。为什么 <code>0.1 + 0.2</code> 不等于 <code>0.3</code>？为什么金融系统宁可自己实现十进制运算也不用 float？这些问题背后是 IEEE 754 浮点格式的设计取舍。让我们带着这些疑问进入下一章。</p>
+
+        <div class="footer-nav">
+            <a href="01.html">← 上一章</a>
+            <a href="index.html">📖 返回目录</a>
+            <a href="03.html">下一章 →</a>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

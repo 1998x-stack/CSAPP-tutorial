@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>第11章 存储器层次结构——技术 — 深入理解计算机系统（CSAPP）</title>
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div class="double-border">
+<div class="container">
+    <div class="sidebar">
+        <h3>💻 课程目录</h3>
+        <ul class="chapter-list">
+            <li><a href="01.html">第1章 计算机系统漫游</a></li>
+            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
+            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
+            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
+            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
+            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
+            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
+            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
+            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
+            <li><a href="10.html">第10章 优化程序性能</a></li>
+            <li><a href="11.html" class="active">第11章 存储器层次结构——技术</a></li>
+            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
+            <li><a href="13.html">第13章 链接——静态链接</a></li>
+            <li><a href="14.html">第14章 链接——动态链接</a></li>
+            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
+            <li><a href="16.html">第16章 异常控制流——信号</a></li>
+            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
+            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
+            <li><a href="19.html">第19章 系统级I/O</a></li>
+            <li><a href="20.html">第20章 网络编程——基础</a></li>
+            <li><a href="21.html">第21章 网络编程——进阶</a></li>
+            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
+            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
+            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
+            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
+            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
+            <li><a href="27.html">第27章 现代系统新趋势</a></li>
+            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h2>第十一章：存储器层次结构——技术</h2>
+
+        <p>上一章结束时我提到，程序慢很多时候不是因为 CPU 不够快，而是数据没在正确的地方。这是一个看似简单但极其深刻的观察。让我们用数据说话：一条 L1 Cache 命中的加载指令大约需要 1ns，而一次 DRAM 主存访问需要约 100ns，一次 SSD 随机访问需要约 10,000ns（10μs）。这之间的差距是 3 到 4 个数量级。</p>
+
+        <p>如果你的程序频繁访问的数据恰好不在 Cache 中而在主存里，CPU 就得停下来干等——这就是所谓的"内存壁（Memory Wall）"。现代 CPU 的时钟频率已经很难大幅提升了，于是处理器设计者把更多晶体管投入到 Cache 和预取机制中，试图掩盖这个差距。但作为程序员，如果你不理解存储技术的本质差异，就无法写出能高效利用这些机制的程序。</p>
+
+        <p>这一章我们从最底层的存储技术开始，逐步构建起对整个"存储山"（Memory Mountain）的认知。先打好技术基础，下一章我们再深入 Cache 的设计与优化。</p>
+
+        <h3>11.1 存储技术全景</h3>
+
+        <p>计算机系统中使用的存储技术多种多样，从快到慢、从贵到便宜、从大到小，构成了一个层次分明的体系：</p>
+
+        <table>
+            <tr>
+                <th>技术</th>
+                <th>典型容量</th>
+                <th>访问时间</th>
+                <th>成本/GB（约）</th>
+                <th>特点</th>
+            </tr>
+            <tr>
+                <td>SRAM（CPU 缓存）</td>
+                <td>32 KB - 32 MB</td>
+                <td>0.5 - 2 ns</td>
+                <td>$500 - $1000</td>
+                <td>6 个晶体管/bit，速度极快，集成度低</td>
+            </tr>
+            <tr>
+                <td>DRAM（主存）</td>
+                <td>8 - 256 GB</td>
+                <td>50 - 100 ns</td>
+                <td>$10 - $30</td>
+                <td>1 个电容 + 1 个晶体管/bit，需刷新</td>
+            </tr>
+            <tr>
+                <td>NAND Flash（SSD）</td>
+                <td>128 GB - 8 TB</td>
+                <td>10 - 100 μs</td>
+                <td>$0.10 - $0.30</td>
+                <td>非易失，擦写次数有限（MLC ~ 3000 次）</td>
+            </tr>
+            <tr>
+                <td>磁盘（HDD）</td>
+                <td>500 GB - 20 TB</td>
+                <td>3 - 10 ms</td>
+                <td>$0.02 - $0.05</td>
+                <td>机械结构，随机访问极慢，容量成本最低</td>
+            </tr>
+        </table>
+
+        <p>SRAM（静态随机存取存储器）和 DRAM（动态随机存取存储器）的区别在于：SRAM 用 6 个晶体管构成一个触发器来存储 1 比特，不需要刷新，速度极快；DRAM 用一个晶体管加一个电容来存储 1 比特，电容会漏电，需要定期刷新（每 64ms 刷新一次），速度较慢。DRAM 的密度是 SRAM 的 4-6 倍，所以主存用 DRAM 而不是 SRAM——否则你的 16GB 内存条要花掉上万美元。</p>
+
+        <p>磁盘（HDD）是通过磁头在旋转的盘片上读写数据的机械装置。它的致命弱点是随机访问——磁头需要物理移动到正确的磁道（寻道时间 ~5ms），然后等待盘片旋转到正确的扇区（旋转延迟 ~3ms）。这就是为什么 HDD 的随机 IOPS（每秒 I/O 操作数）只有 100-200，而 SSD 可以达到数万到数十万。</p>
+
+        <div class="tip">
+            <p><strong>存储层次的核心思想</strong>：上层存储更快但更贵（容量小），下层存储更慢但更便宜（容量大）。通过把最常用的数据放在上层，不常用的放在下层，系统可以在"接近快的速度"和"接近便宜的容量"之间取得平衡。这种"用空间换时间"的思想贯穿了整个计算机系统设计。</p>
+        </div>
+
+        <h3>11.2 时间局部性与空间局部性</h3>
+
+        <p>存储层次之所以有效，不是靠硬件魔法，而是靠程序的<strong>局部性（Locality）</strong>。局部性有两种：</p>
+        <ul>
+            <li><strong>时间局部性（Temporal Locality）</strong>：如果一个内存位置被访问了，它很可能在不久的将来被再次访问。例如循环中的循环变量。</li>
+            <li><strong>空间局部性（Spatial Locality）</strong>：如果一个内存位置被访问了，它附近的地址很可能也被访问。例如数组的顺序遍历。</li>
+        </ul>
+
+        <p>来看两个对比鲜明的代码片段：</p>
+
+        <pre><code>#define N 10000
+int a[N][N];
+
+// 好的局部性——按行访问（空间局部性好）
+int sum_row_major() {
+    int sum = 0;
+    for (int i = 0; i &lt; N; i++)
+        for (int j = 0; j &lt; N; j++)
+            sum += a[i][j];  // 按内存布局顺序访问
+    return sum;
+}
+
+// 差的局部性——按列访问（空间局部性差）
+int sum_col_major() {
+    int sum = 0;
+    for (int j = 0; j &lt; N; j++)
+        for (int i = 0; i &lt; N; i++)
+            sum += a[i][j];  // 跨行跳着访问！
+    return sum;
+}</code></pre>
+
+        <p>C 语言的二维数组在内存中是<strong>行优先（Row-major）</strong>存储的——a[0][0], a[0][1], a[0][2], ... , a[1][0], a[1][1], ...。行优先访问触发了空间局部性（连续的地址被顺序访问），Cache 一次加载一个 Cache 行（64 字节），连续访问能充分利用每一行。列优先访问则每次跳到不同的行——a[i][j] 和 a[i+1][j] 之间相隔 N×4 字节（如果 N=10000 就是 40KB），Cache 根本帮不上忙，每次都要去主存加载。</p>
+
+        <p>实际测试中，在 N=10000 时，行优先版本可能比列优先版本快 10-20 倍。同样的计算量，只是访问顺序不同，性能差距如此之大——这就是局部性的力量。</p>
+
+        <div class="highlight">
+            <p><strong>局部性思维</strong>：编写高性能代码的关键之一就是培养"局部性直觉"。每次你写一个多重循环，都应该问自己：内层循环是在连续访问内存吗？如果是嵌套循环访问多维数组，最内层循环应该遍历哪个维度？这个意识一旦建立，你写出的代码自然而然就是 Cache 友好的。</p>
+        </div>
+
+        <h3>11.3 存储山实验</h3>
+
+        <p>CSAPP 中有一个经典的实验叫做<strong>Memory Mountain（存储山）</strong>，它通过测量不同工作集大小和不同步长下的读吞吐量，直观地展示了存储层次的影响。</p>
+
+        <p>实验参数：</p>
+        <ul>
+            <li><strong>工作集大小（Working set size）</strong>：程序正在活跃使用的数据总量（从 1KB 到 8MB）</li>
+            <li><strong>步长（Stride）</strong>：每次访问跳过的字节数（从 1 到缓存大小）</li>
+        </ul>
+
+        <p>测量结果形成一个三维的"山"形曲面——这就是"Memory Mountain"名字的来源。山的"顶峰"（吞吐量最高）出现在工作集小、步长小的区域——数据全部在 L1 Cache 中。随着工作集增大，数据溢出到 L2、L3、主存，吞吐量逐级下降，形成"山脊"——每个平台对应一个存储层次。</p>
+
+        <p>山的不同"山坡"告诉你的信息：</p>
+        <ul>
+            <li><strong>陡峭的下降</strong>：工作集超过 L1 Cache 大小 → 数据溢出到 L2（速度下降 2-3 倍）</li>
+            <li><strong>继续下降</strong>：超过 L2 → L3（再慢 2-3 倍）</li>
+            <li><strong>急剧坠落</strong>：超过最后一级 Cache → 主存（慢 5-10 倍）</li>
+            <li><strong>步长增大</strong>：同样工作集下，大步长访问（跳过 Cache 行中的数据）会降低吞吐量</li>
+        </ul>
+
+        <p>你自己也可以做这个实验。CSAPP 官网上有 Memory Mountain 的代码（<code>mountain.c</code>），在你的机器上编译运行，看看你的"山"长什么样。每个型号的 CPU 都有独特的地形。</p>
+
+        <h3>11.4 SSD 的内部原理</h3>
+
+        <p>SSD（固态硬盘）的普及是过去十年存储界的最大变革。虽然 SSD 在存储层次中位于"慢速设备"层，但它的速度已经远超 HDD。但 SSD 内部的工作原理远比 HDD 复杂，而且有一些必须知道的陷阱。</p>
+
+        <p>SSD 的核心是 NAND Flash 芯片。一个 NAND Flash 芯片由块（Block）组成，每个块包含若干页（Page）。关键限制：</p>
+        <ul>
+            <li><strong>读取</strong>：以页为单位（通常 4-16 KB），速度较快（~10μs）</li>
+            <li><strong>写入</strong>：以页为单位，但只能写到"空"页（~100μs）</li>
+            <li><strong>擦除</strong>：以块为单位（通常几百 KB 到几 MB），很慢（~1ms），且每个块的擦除次数有限</li>
+        </ul>
+
+        <p>这就是 SSD 和 HDD 最大的不同——你不能覆盖写入一个已经写过的页，必须先擦除整个块！于是引入了<strong>Flash 转换层（FTL, Flash Translation Layer）</strong>，它负责：</p>
+        <ul>
+            <li><strong>逻辑到物理地址映射</strong>：操作系统看到的 LBA（逻辑块地址）和实际的 NAND 物理地址通过 FTL 映射表关联</li>
+            <li><strong>垃圾回收（Garbage Collection）</strong>：当块中的大部分页都变成"脏"页时，FTL 把有效页拷贝到另一个块，然后擦除原块</li>
+            <li><strong>损耗均衡（Wear Leveling）</strong>：FTL 把写入均匀分布到所有块上，延长 SSD 寿命</li>
+        </ul>
+
+        <p>这里有一个重要的性能概念——<strong>写放大（Write Amplification）</strong>：操作系统要写入 4KB 数据，但 FTL 可能需要搬移几百 KB 的有效页、擦除整个块。实际写入 NAND 的数据量 / 主机请求写入的数据量 = 写放大系数，通常在 2-5 倍之间。</p>
+
+        <div class="warning">
+            <p><strong>踩坑：SSD 写放大的真实代价</strong>：我之前维护过一个数据库系统，SSD 的寿命远低于预期。排查发现，数据库每 5 秒写一次日志文件（每次 4KB），但这 4KB 写导致了每 5 秒一个 1MB 块的垃圾回收——FTL 得搬移大量有效页。最终写放大系数达到了 50+。RocksDB 等 LSM-tree 存储引擎针对 SSD 做了专门的优化：顺序写入 + 分层合并，从源头减少随机写。这个教训是：当你在 SSD 上设计 I/O 密集型系统时，一定要考虑写放大的影响。批量写、追加写而不是原地更新，可以显著延长 SSD 寿命并提高写入性能。</p>
+        </div>
+
+        <p>还有一个实用的命令——<strong>TRIM</strong>。当你删除一个文件时，操作系统向 SSD 发送 TRIM 命令，通知 FTL："这些 LBA 上的数据不再有效"。如果没有 TRIM，FTL 不知道哪些页是"废弃"的，在垃圾回收时还得把这些无用的数据搬来搬去，浪费写入带宽。确保你的操作系统和文件系统支持 TRIM（Linux 上用 <code>fstrim</code> 命令手动触发，或通过 <code>mount -o discard</code> 自动发送）。</p>
+
+        <p>这一章我们覆盖了从 SRAM、DRAM 到 HDD、SSD 的完整存储技术谱系，理解了局部性如何让存储层次变得有效，看到了 Memory Mountain 实验的"山形"数据，也深入了解了 SSD 的 FTL、写放大和 TRIM 机制。这些技术背景知识，是我们下一章深入 Cache 设计和优化的重要基础。</p>
+
+        <div class="footer-nav">
+            <a href="10.html">← 上一章</a>
+            <a href="index.html">📖 返回目录</a>
+            <a href="12.html">下一章 →</a>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>第13章 链接——静态链接 — 深入理解计算机系统（CSAPP）</title>
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div class="double-border">
+<div class="container">
+    <div class="sidebar">
+        <h3>💻 课程目录</h3>
+        <ul class="chapter-list">
+            <li><a href="01.html">第1章 计算机系统漫游</a></li>
+            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
+            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
+            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
+            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
+            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
+            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
+            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
+            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
+            <li><a href="10.html">第10章 优化程序性能</a></li>
+            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
+            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
+            <li><a href="13.html" class="active">第13章 链接——静态链接</a></li>
+            <li><a href="14.html">第14章 链接——动态链接</a></li>
+            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
+            <li><a href="16.html">第16章 异常控制流——信号</a></li>
+            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
+            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
+            <li><a href="19.html">第19章 系统级I/O</a></li>
+            <li><a href="20.html">第20章 网络编程——基础</a></li>
+            <li><a href="21.html">第21章 网络编程——进阶</a></li>
+            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
+            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
+            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
+            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
+            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
+            <li><a href="27.html">第27章 现代系统新趋势</a></li>
+            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h2>第十三章：链接——静态链接</h2>
+
+        <p>在第一章的计算机系统漫游中，我提到过 C 程序变成可执行文件需要经过四个阶段：预处理、编译、汇编、链接。前三步我们已经在第 2 到第 7 章（信息的表示、机器级表示）中有了深入的理解。但链接——这个将多个目标文件"粘合"成最终可执行文件的步骤——往往被当作"黑盒子"对待。</p>
+
+        <p>实际上，链接过程中隐藏着大量容易踩坑的地方。你有没有遇到过这样的场景：明明在头文件里声明了一个全局变量，链接时报"undefined reference"；或者更诡异的——改了某个全局变量的值，结果程序莫名其妙崩溃了。这些问题很可能出在链接阶段。</p>
+
+        <p>这一章我们要打开链接器的"黑盒子"，深入理解 ELF 文件格式、符号解析和重定位的过程。这不仅是知识层面的"补课"，更是在实战中少踩坑的保障。</p>
+
+        <h3>13.1 ELF 可重定位目标文件</h3>
+
+        <p>ELF（Executable and Linkable Format）是 Linux 系统上目标文件和可执行文件的标准格式。它从 Solaris 系统引入，现在已经成为 Linux 世界的通用标准。</p>
+
+        <p>一个 ELF 可重定位目标文件（<code>.o</code> 文件）的结构如下：</p>
+
+        <table>
+            <tr>
+                <th>节（Section）</th>
+                <th>描述</th>
+                <th>常见内容</th>
+            </tr>
+            <tr>
+                <td><code>.text</code></td>
+                <td>已编译的机器代码</td>
+                <td>所有函数的指令</td>
+            </tr>
+            <tr>
+                <td><code>.rodata</code></td>
+                <td>只读数据</td>
+                <td>字符串常量、switch 跳转表</td>
+            </tr>
+            <tr>
+                <td><code>.data</code></td>
+                <td>已初始化的全局和静态变量</td>
+                <td>int global = 42;</td>
+            </tr>
+            <tr>
+                <td><code>.bss</code></td>
+                <td>未初始化或初始化为 0 的全局/静态变量</td>
+                <td>int global;（实际不占文件空间）</td>
+            </tr>
+            <tr>
+                <td><code>.symtab</code></td>
+                <td>符号表</td>
+                <td>函数名、全局变量名、地址</td>
+            </tr>
+            <tr>
+                <td><code>.rel.text</code></td>
+                <td>.text 节的重定位信息</td>
+                <td>哪些位置需要在链接时修改地址</td>
+            </tr>
+            <tr>
+                <td><code>.rel.data</code></td>
+                <td>.data 节的重定位信息</td>
+                <td>引用了外部符号的数据项</td>
+            </tr>
+            <tr>
+                <td><code>.debug</code></td>
+                <td>调试符号表（用 -g 编译时产生）</td>
+                <td>行号、局部变量信息</td>
+            </tr>
+            <tr>
+                <td><code>.line</code></td>
+                <td>源代码行号与机器码的映射</td>
+                <td>用于调试器</td>
+            </tr>
+            <tr>
+                <td><code>.strtab</code></td>
+                <td>字符串表</td>
+                <td>符号名、节名称</td>
+            </tr>
+        </table>
+
+        <p>一个重要的细节：<strong>.bss 节不占用磁盘空间</strong>。它只是一个"占位符"，在链接后或运行时被分配内存并初始化为 0。所以你在 C 文件中声明 <code>int big_array[1000000];</code>，<code>.o</code> 文件并不会因此变大 4MB——这些 0 只会在运行时分配。</p>
+
+        <div class="tip">
+            <p><strong>查看 ELF 文件</strong>：Linux 提供了 <code>readelf</code> 和 <code>objdump</code> 工具来检查 ELF 文件。用 <code>readelf -h a.o</code> 查看 ELF 头，<code>readelf -S a.o</code> 查看所有节。编译时加 <code>-g</code> 选项可以看到额外的 .debug 节。</p>
+        </div>
+
+        <h3>13.2 符号与符号表</h3>
+
+        <p>每个可重定位目标文件都有一张<strong>符号表（.symtab）</strong>，记录了文件中定义或引用的所有符号。符号分为三类：</p>
+        <ul>
+            <li><strong>全局符号（Global Symbols）</strong>：在当前文件中定义，可以被其他文件引用。例如非 static 的函数和全局变量。</li>
+            <li><strong>外部符号（External Symbols）</strong>：在当前文件中引用但定义在其他文件中的全局符号。链接器需要找到它们的定义。</li>
+            <li><strong>局部符号（Local Symbols）</strong>：用 static 定义的函数和变量，只在当前文件可见。注意，局部"自动变量"（函数内的局部变量）不在符号表中——它们在栈上管理，与链接无关。</li>
+        </ul>
+
+        <p>来看一个具体的 <code>readelf -s</code> 输出示例：</p>
+
+        <pre><code>$ readelf -s main.o
+
+Symbol table '.symtab' contains 14 entries:
+   Num:    Value  Size Type    Bind   Vis      Ndx Name
+     0:        0     0 NOTYPE  LOCAL  DEFAULT  UND
+     1:        0     0 FILE    LOCAL  DEFAULT  ABS main.c
+     2:        0     0 SECTION LOCAL  DEFAULT    1
+     3:        0     0 SECTION LOCAL  DEFAULT    3
+     4:        0     0 SECTION LOCAL  DEFAULT    4
+     5:        0     0 SECTION LOCAL  DEFAULT    5
+     6:        0     0 SECTION LOCAL  DEFAULT    7
+     7:        0     0 SECTION LOCAL  DEFAULT    8
+     8:        0     4 OBJECT  GLOBAL DEFAULT    3 global_var
+     9:        8     4 OBJECT  GLOBAL DEFAULT  COM global_weak
+    10:       16     4 OBJECT  GLOBAL DEFAULT    3 global_init
+    11:        0    36 FUNC    GLOBAL DEFAULT    1 main
+    12:        0     0 NOTYPE  GLOBAL DEFAULT  UND printf
+    13:        0     0 NOTYPE  GLOBAL DEFAULT  UND exit</code></pre>
+
+        <p>这个输出展示的符号表信息丰富：</p>
+        <ul>
+            <li><code>global_var</code>（在 .data 节，Ndx=3，已初始化）</li>
+            <li><code>global_weak</code>（在 COMMON，Ndx=COM，未初始化）</li>
+            <li><code>global_init</code>（在 .data 节，已初始化）</li>
+            <li><code>main</code>（函数，在 .text 节，Ndx=1）</li>
+            <li><code>printf</code> 和 <code>exit</code>（UND，表示未定义——需要链接器在其他目标文件中解析）</li>
+        </ul>
+
+        <p>注意 COMMON 和 .bss 的区别：COMMON 是未初始化的全局变量（弱符号），而 .bss 是初始化为 0 的全局和静态变量。这个区分在后面讨论强符号/弱符号时至关重要。</p>
+
+        <h3>13.3 静态库与 ar 工具</h3>
+
+        <p>你可能每天都用 <code>-lm</code>、<code>-lpthread</code> 这些选项链接标准库。这些库文件（<code>libc.a</code>、<code>libm.a</code> 等）本质上是多个 <code>.o</code> 文件打包在一起——用 <code>ar</code> 工具打包。</p>
+
+        <pre><code># 创建静态库
+$ gcc -c addvec.c multvec.c      # 编译成 .o
+$ ar rcs libvector.a addvec.o multvec.o  # 打包成静态库
+
+# 使用静态库
+$ gcc -c main.c
+$ gcc -o prog main.o -L. -lvector  # 链接静态库</code></pre>
+
+        <p>链接器处理静态库的原则是<strong>"按需提取"</strong>——只把 main.o 中引用了的目标模块（如 addvec.o）从库中提取出来链接，而不是把整个 libvector.a 都塞进可执行文件。</p>
+
+        <p>这就引出了一个非常重要的陷阱：<strong>库在命令行中的顺序</strong>。</p>
+
+        <div class="warning">
+            <p><strong>库顺序的致命陷阱</strong>：在链接命令中，静态库必须放在引用它的目标文件<strong>之后</strong>！为什么？因为链接器是从左到右扫描文件列表的。当它看到一个目标文件时，会把该文件引用的未解析符号记录在"待解析列表"中。当它看到一个库时，会检查库中的模块是否能解析当前列表中的符号——如果能，就提取该模块；如果不能，就跳过整个库。所以如果库出现在引用它的文件<strong>之前</strong>，链接器扫描到库时还不知道需要哪些符号——就跳过了！最终导致 undefined reference 错误。</p>
+
+            <pre><code># 错误！libfoo.a 在 main.o 前面，链接器会跳过 libfoo.a
+$ gcc -o prog -L. -lfoo main.o
+
+# 正确！main.o 在前，libfoo.a 在后
+$ gcc -o prog main.o -L. -lfoo
+
+# 如果有循环依赖，需要重复列出
+$ gcc -o prog main.o -lfoo -lbar -lfoo</code></pre>
+        </div>
+
+        <p>这个陷阱每年坑害无数程序员（包括我自己）。记住：<strong>目标文件 → 库1 → 库2</strong>，如果有相互依赖，重复列出必要的库。</p>
+
+        <h3>13.4 强符号与弱符号</h3>
+
+        <p>链接器在处理多重定义的符号时，会遵循一套"强/弱"规则：</p>
+        <ul>
+            <li><strong>强符号（Strong Symbol）</strong>：函数名、已初始化的全局变量</li>
+            <li><strong>弱符号（Weak Symbol）</strong>：未初始化的全局变量</li>
+        </ul>
+
+        <p>规则很简单：</p>
+        <ol>
+            <li><strong>不允许有多个强符号</strong>——链接器报"multiple definition"错误</li>
+            <li><strong>一个强符号 + 多个弱符号</strong>——强符号胜出</li>
+            <li><strong>多个弱符号</strong>——任选一个（通常是 COMMON 中最大的那个）</li>
+        </ol>
+
+        <p>规则 2 是嵌入式系统中最常见的 bug 来源。来看一个真实案例：</p>
+
+        <pre><code>/* file1.c */
+#include &lt;stdio.h&gt;
+int global = 100;  // 强符号
+
+void func() {
+    printf("global = %d\n", global);
+}
+
+/* file2.c */
+int global;  // 弱符号（未初始化）
+
+int main() {
+    func();
+    global = 42;
+    func();
+    return 0;
+}</code></pre>
+
+        <pre><code>$ gcc file1.c file2.c -o prog &amp;&amp; ./prog
+global = 100
+global = 42</code></pre>
+
+        <p>这个例子看起来工作正常。但如果弱符号在不同文件中被声明为<strong>不同类型</strong>呢？</p>
+
+        <pre><code>/* file1.c */
+double global = 3.14;  // 强符号，double 类型
+
+/* file2.c */
+int global;  // 弱符号，int 类型，链接器选择 double 版本
+
+int main() {
+    printf("global = %d\n", global);  // 未定义行为！
+    return 0;
+}</code></pre>
+
+        <p>这里编译器在 file2.c 中假设 <code>global</code> 是 int（4 字节），但链接后它实际上是 double（8 字节）——类型信息在链接阶段丢失了。程序打印出的 "global" 值完全就是 garbage，而且可能会破坏相邻的内存！</p>
+
+        <div class="highlight">
+            <p><strong>强符号规则的实际教训</strong>：这个 bug 的可怕之处在于——链接器不会给出任何警告！它"静默"地用强符号覆盖了弱符号。你的程序可能正常跑很久，直到某个看似无关的修改导致弱符号的定义变成了不同的强符号，然后程序崩溃得一塌糊涂。最佳实践是：<strong>尽量避免使用全局变量</strong>。如果必须用，用 static 限定可见范围，或者显式初始化为 0。对于大型项目，可以考虑使用 <code>-fno-common</code> 编译选项来把所有的弱符号都视为强符号——这样链接器会在多重定义时报错，而不是静默覆盖。</p>
+        </div>
+
+        <p>这一章我们详细解析了 ELF 可重定位目标文件的内部结构，学会了用 <code>readelf</code> 查看符号表，理解了静态库链接时按需提取的原则以及库顺序的重要性，最后揭开了强符号/弱符号这个静默 bug 的根源。下一章，我们将讨论静态链接的"进阶版"——动态链接，看看共享库是如何在运行时被加载和解析的。</p>
+
+        <div class="footer-nav">
+            <a href="12.html">← 上一章</a>
+            <a href="index.html">📖 返回目录</a>
+            <a href="14.html">下一章 →</a>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

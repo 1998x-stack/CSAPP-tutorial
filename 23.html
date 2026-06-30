@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>第23章 并发编程——高阶模式 — 深入理解计算机系统（CSAPP）</title>
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div class="double-border">
+<div class="container">
+    <div class="sidebar">
+        <h3>💻 课程目录</h3>
+        <ul class="chapter-list">
+            <li><a href="01.html">第1章 计算机系统漫游</a></li>
+            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
+            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
+            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
+            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
+            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
+            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
+            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
+            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
+            <li><a href="10.html">第10章 优化程序性能</a></li>
+            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
+            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
+            <li><a href="13.html">第13章 链接——静态链接</a></li>
+            <li><a href="14.html">第14章 链接——动态链接</a></li>
+            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
+            <li><a href="16.html">第16章 异常控制流——信号</a></li>
+            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
+            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
+            <li><a href="19.html">第19章 系统级I/O</a></li>
+            <li><a href="20.html">第20章 网络编程——基础</a></li>
+            <li><a href="21.html">第21章 网络编程——进阶</a></li>
+            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
+            <li><a href="23.html" class="active">第23章 并发编程——高阶模式</a></li>
+            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
+            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
+            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
+            <li><a href="27.html">第27章 现代系统新趋势</a></li>
+            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h2>第二十三章：并发编程——高阶模式</h2>
+
+        <p>上一章我们掌握了 Pthread 的基本功：怎么创建线程、怎么用 mutex 保护共享数据、怎么用条件变量做同步。这些就像是给你一把枪和几发子弹，能打中靶子，但真要上战场还远远不够。现实世界中的并发系统远比"几个线程抢一把锁"复杂——同一个数据可能有大量读者、少量写者；线程的创建和销毁需要几十微秒的开销，高频场景下根本承受不住；锁用不好就会死锁，死锁一发生整个服务就卡死了。</p>
+
+        <p>这一章我们来讨论这些"上了战场才遇到的问题"：读写锁怎么让读者并行、线程池如何复用线程减少开销、死锁怎么从设计层面避免，以及当并发 BUG 真的出现了，有哪些军火库里的工具能帮你定位。</p>
+
+        <h3>23.1 读写锁——读者共享，写者独占</h3>
+
+        <p>假如你有一个配置缓存，99% 的操作是读配置，只有 1% 是修改配置。用最基本的 mutex 保护当然可以——但它过于保守了：读操作之间本来不会互相干扰，mutex 却强制它们串行化。这就好比图书馆里明明有 100 个座位，管理员说"一次只准一个人进去读书"。</p>
+
+        <p>Pthread 提供了 <strong>读写锁（readers-writer lock）</strong> 来解决这个问题：<code>pthread_rwlock_t</code>。它的规则很简单——<strong>多个读者可以同时持有读锁，但写者必须独占写锁</strong>。也就是说：有写者在写时，任何人都不准读；没有写者时，所有读者可以同时读。</p>
+
+        <pre><code>#include &lt;pthread.h&gt;
+
+pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
+
+// 读线程
+void *reader(void *arg) {
+    pthread_rwlock_rdlock(&amp;rwlock);
+    // 读取共享数据（多个读者可以同时进入这里）
+    pthread_rwlock_unlock(&amp;rwlock);
+    return NULL;
+}
+
+// 写线程
+void *writer(void *arg) {
+    pthread_rwlock_wrlock(&amp;rwlock);
+    // 修改共享数据（独占，读者和其他写者都在等待）
+    pthread_rwlock_unlock(&amp;rwlock);
+    return NULL;
+}</code></pre>
+
+        <p>下面这个对比表格清楚地展示了 mutex 和 rwlock 在读多写少场景下的差异：</p>
+
+        <table>
+            <tr>
+                <th>特性</th>
+                <th>pthread_mutex_t</th>
+                <th>pthread_rwlock_t</th>
+            </tr>
+            <tr>
+                <td>并发读</td>
+                <td>不支持，读操作之间也串行</td>
+                <td>支持，所有读者可同时进入</td>
+            </tr>
+            <tr>
+                <td>写者等待</td>
+                <td>所有等待者（读/写）公平竞争</td>
+                <td>写者等所有当前读者释放</td>
+            </tr>
+            <tr>
+                <td>读多写少场景</td>
+                <td>性能较差，锁竞争高</td>
+                <td>性能极好，读者几乎不竞争</td>
+            </tr>
+            <tr>
+                <td>开销</td>
+                <td>轻量，~25 ns/次</td>
+                <td>稍重，~40 ns/次</td>
+            </tr>
+            <tr>
+                <td>适用场景</td>
+                <td>读写比例接近，或临界区极小</td>
+                <td>读 >> 写（如配置缓存、路由表）</td>
+            </tr>
+        </table>
+
+        <div class="warning">
+            <p><strong>读写锁的饥饿问题</strong>：如果读者源源不断地进来，写者可能永远拿不到写锁——这叫"写者饥饿"。Linux 的 <code>pthread_rwlock</code> 默认偏向读者，在高并发下写者可能长时间得不到调度。解决办法之一是使用<strong>写者优先</strong>的变种（如 <code>pthread_rwlockattr_setkind_np</code> 设为 <code>PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP</code>），或是干脆用 RCU（Read-Copy-Update，Linux 内核的独门绝技）来彻底消灭读写锁的竞争。</p>
+        </div>
+
+        <h3>23.2 线程池——让线程"活"起来</h3>
+
+        <p>在高并发服务中，每个任务都创建一个新线程是灾难性的——创建线程需要调用 <code>clone()</code> 系统调用、分配栈空间、注册 TLS，整套流程下来几十微秒。如果任务本身只执行几微秒（比如一次简单的日志写入），那创建线程的时间比干活的时间还长。</p>
+
+        <p><strong>线程池</strong>的思路是：预先创建一批线程，让它们循环地从队列里取任务执行。线程不是"用完就死"，而是"干完活回来继续等任务"。这样就把线程创建的开销平摊到了每次任务执行中。下面是一个简单的线程池实现：</p>
+
+        <pre><code>#include &lt;pthread.h&gt;
+#include &lt;stdbool.h&gt;
+
+typedef struct task_s {
+    void (*func)(void *arg);
+    void *arg;
+    struct task_s *next;
+} task_t;
+
+typedef struct {
+    pthread_t *threads;     // 线程数组
+    task_t *head, *tail;   // 任务队列（链表）
+    pthread_mutex_t lock;
+    pthread_cond_t notify;
+    bool shutdown;          // "毒丸"信号：优雅关闭
+} thread_pool_t;
+
+void *worker(void *pool) {
+    thread_pool_t *tp = (thread_pool_t *)pool;
+    while (1) {
+        pthread_mutex_lock(&amp;tp->lock);
+        while (tp->head == NULL &amp;&amp; !tp->shutdown)
+            pthread_cond_wait(&amp;tp->notify, &amp;tp->lock);
+        if (tp->shutdown &amp;&amp; tp->head == NULL) {
+            pthread_mutex_unlock(&amp;tp->lock);
+            return NULL;
+        }
+        task_t *t = tp->head;
+        tp->head = t->next;
+        pthread_mutex_unlock(&amp;tp->lock);
+        t->func(t->arg);  // 执行任务（注意：锁已释放）
+        free(t);
+    }
+}
+
+void tp_submit(thread_pool_t *tp, void (*f)(void*), void *arg) {
+    task_t *t = malloc(sizeof(task_t));
+    t->func = f; t->arg = arg; t->next = NULL;
+    pthread_mutex_lock(&amp;tp->lock);
+    if (tp->tail) tp->tail->next = t;
+    else          tp->head = t;
+    tp->tail = t;
+    pthread_cond_signal(&amp;tp->notify);
+    pthread_mutex_unlock(&amp;tp->lock);
+}
+
+void tp_shutdown(thread_pool_t *tp) {
+    pthread_mutex_lock(&amp;tp->lock);
+    tp->shutdown = true;  // 设定"毒丸"
+    pthread_cond_broadcast(&amp;tp->notify);
+    pthread_mutex_unlock(&amp;tp->lock);
+    for (int i = 0; i < NTHREADS; i++)
+        pthread_join(tp->threads[i], NULL);
+}</code></pre>
+
+        <p>这个线程池有几个设计要点值得注意：</p>
+        <ul>
+            <li><strong>工作线程在条件变量上等待</strong>，不需要轮询——这是最省 CPU 的等待方式。</li>
+            <li><strong>任务执行时释放互斥锁</strong>——如果执行任务时还握着锁，其他线程连提交任务都会被阻塞。</li>
+            <li><strong>毒丸（poison pill）</strong>——<code>shutdown = true</code> 是一个信号，告诉所有工作线程"别再等了，准备退出"。</li>
+        </ul>
+
+        <h3>23.3 死锁的预防——四个条件的逐一破解</h3>
+
+        <p>死锁（deadlock）是所有并发程序员的噩梦。Coffman 等人在 1971 年总结出了死锁的<strong>四个必要条件</strong>，缺一不可。换句话说，只要打破其中任意一个，死锁就不可能发生。</p>
+
+        <table>
+            <tr>
+                <th>条件</th>
+                <th>含义</th>
+                <th>破解方法</th>
+            </tr>
+            <tr>
+                <td><strong>互斥（Mutual Exclusion）</strong></td>
+                <td>资源一次只能被一个线程使用</td>
+                <td>用无锁数据结构（lock-free）替代锁，或者用读写锁让读不互斥</td>
+            </tr>
+            <tr>
+                <td><strong>持有并等待（Hold and Wait）</strong></td>
+                <td>线程拿着一个锁的同时去请求另一个锁</td>
+                <td>一次性申请所有锁（原子获取），或者先释放已有锁再获取新锁</td>
+            </tr>
+            <tr>
+                <td><strong>不可抢占（No Preemption）</strong></td>
+                <td>锁一旦被持有，其他线程不能强行夺走</td>
+                <td>用 <code>pthread_mutex_trylock</code>，拿不到就释放已有锁，重试</td>
+            </tr>
+            <tr>
+                <td><strong>循环等待（Circular Wait）</strong></td>
+                <td>线程 A 等 B 的锁，B 等 C 的锁，C 等 A 的锁</td>
+                <td><strong>锁顺序加锁（lock ordering）</strong>——所有线程按固定顺序获取锁</td>
+            </tr>
+        </table>
+
+        <p>实际工程中，最常用也最有效的是<strong>打破循环等待</strong>：给所有锁排一个全局顺序，所有线程必须按照这个顺序加锁，不得违反。比如锁 A 的编号为 1，锁 B 的编号为 2，那么任何线程如果同时需要 A 和 B，必须先锁 A 再锁 B，绝对不能反过来。</p>
+
+        <div class="warning">
+            <p><strong>真实踩坑故事：支付系统的锁顺序翻转</strong>——我有一个朋友（真的不是我自己）曾经在一个支付系统中按"账户 ID 大小"来排序加锁，逻辑上是想避免死锁。结果某次重构时，一个同事在一个新的转账接口中把顺序写反了：先锁 to_account，再锁 from_account。而老接口是先锁 from_account 再锁 to_account。当同时触发 A → B 和 B → A 两笔转账时，两个线程各持一锁、等对方释放——完美死锁。线上服务瞬间全部卡死，支付宝账单信息迟迟不回，直到监控报警手动 kill 进程。教训：<strong>锁顺序必须用代码规范强制执行</strong>，可以写一个 <code>lock_two_accounts(a, b)</code> 的辅助函数，内部按地址大小排序，彻底杜绝人为犯错的余地。</p>
+        </div>
+
+        <div class="highlight">
+            <p><strong>死锁检测工具</strong>：在 Linux 上，可以用 <code>pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK)</code> 来启用 mutex 的错误检查模式——同一个线程重复加锁会立即报错，而不是死锁。如果你在用 GCC 的 <code>-fsanitize=thread</code>，它还能在运行时检测死锁并打印调用栈，诊断效果比肉眼 Review 代码好太多了。</p>
+        </div>
+
+        <h3>23.4 并发调试武器库</h3>
+
+        <p>并发 BUG 是出了名的难以复现——每次运行结果可能都不一样，加个 <code>printf</code> 甚至会让它消失（Heisenbug）。好在工具链已经为我们准备了相当丰富的武器：</p>
+
+        <ul>
+            <li><strong>Valgrind Helgrind</strong>：用 <code>valgrind --tool=helgrind ./your_program</code> 运行。Helgrind 会在运行时检测数据竞争——两个线程同时访问同一变量，且至少一个是写操作——并精确报告变量地址和调用栈。缺点是慢，程序会慢 10-50 倍。</li>
+            <li><strong>ThreadSanitizer（TSan）</strong>：编译时加 <code>-fsanitize=thread -g -O1</code>，运行时自动检测竞态。速度比 Helgrind 快得多（只慢 2-5 倍），精度也更高。是 Google 团队开发的业界标准。</li>
+            <li><strong>GDB 多线程调试</strong>：<code>info threads</code> 列出所有线程及当前指令；<code>thread apply all bt</code> 打印所有线程的完整调用栈——这个命令对于死锁诊断是神兵利器：你能一眼看出哪个线程拿着什么锁，在等什么锁。</li>
+            <li><strong>perf lock</strong>：<code>perf lock record ./your_program</code> 记录内核级锁事件；<code>perf lock report</code> 生成锁竞争报告，显示哪些锁的 contention 最高。</li>
+        </ul>
+
+        <div class="tip">
+            <p><strong>TSan 使用实战</strong>：假设你怀疑程序有数据竞争，但又不知道在哪里。只需三步：(1) CFLAGS 加上 <code>-fsanitize=thread -g -O1 -fno-omit-frame-pointer</code>；(2) 重新编译；(3) 运行。TSan 会在第一次检测到竞态时打印详细报告，包含两个冲突访问的完整调用栈。需要注意：TSan 不能和 <code>-fsanitize=address</code>（ASan）同时使用，两者有冲突。</p>
+        </div>
+
+        <p>学好这些工具，远比在代码里乱加 sleep "等"出 bug 来的靠谱。并发调试是一门"用工具说话"的科学，不是玄学。</p>
+
+        <p>至此，并发编程的理论和模式全部结束。从下一章开始，我们进入 CSAPP 最激动人心的部分——七个经典 Lab 的实战讲解。你把理论学得再好，不动手做 Lab 也终究是纸上谈兵。让我们一起迎接挑战吧。</p>
+
+        <div class="footer-nav">
+            <a href="22.html">← 上一章</a>
+            <a href="index.html">📖 返回目录</a>
+            <a href="24.html">下一章 →</a>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>第6章 程序的机器级表示——过程与栈 — 深入理解计算机系统（CSAPP）</title>
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div class="double-border">
+<div class="container">
+    <div class="sidebar">
+        <h3>💻 课程目录</h3>
+        <ul class="chapter-list">
+            <li><a href="01.html">第1章 计算机系统漫游</a></li>
+            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
+            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
+            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
+            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
+            <li><a href="06.html" class="active">第6章 程序的机器级表示——过程与栈</a></li>
+            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
+            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
+            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
+            <li><a href="10.html">第10章 优化程序性能</a></li>
+            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
+            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
+            <li><a href="13.html">第13章 链接——静态链接</a></li>
+            <li><a href="14.html">第14章 链接——动态链接</a></li>
+            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
+            <li><a href="16.html">第16章 异常控制流——信号</a></li>
+            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
+            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
+            <li><a href="19.html">第19章 系统级I/O</a></li>
+            <li><a href="20.html">第20章 网络编程——基础</a></li>
+            <li><a href="21.html">第21章 网络编程——进阶</a></li>
+            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
+            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
+            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
+            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
+            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
+            <li><a href="27.html">第27章 现代系统新趋势</a></li>
+            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h2>第六章：程序的机器级表示——过程与栈</h2>
+
+        <p>大家好，我是你们的讲师。如果说上一章的控制流是"程序如何做决策"，那么这一章的核心问题就是"<strong>程序如何调用函数</strong>"。</p>
+
+        <p>函数调用是编程中最基本、最频繁的操作。但你真的知道调用背后发生了什么吗？当函数 A 调用函数 B 时：</p>
+        <ul>
+            <li>B 的局部变量存在哪里？A 的局部变量怎么保留下来的？</li>
+            <li>B 执行完后怎么知道回到 A 的哪条指令继续执行？</li>
+            <li>如果 B 又调用了 C（甚至递归调用自身），这个链条怎么保证不乱套？</li>
+        </ul>
+
+        <p>所有这些问题的答案，都指向同一个底层机制——<strong>栈（Stack）</strong>。</p>
+
+        <p>我不久前帮一位同事调试一个诡异的 crash，现象是程序在某个函数返回后栈上的局部变量被莫名其妙改写了。我看了半天 C 源码没发现问题，最后调出汇编一看，函数开头压栈保存了 %rbx，但后续代码中某条路径在修改 %rbx 后<strong>忘记恢复就提前返回了</strong>——导致调用者的 %rbx 被破坏。这就是栈帧管理混乱带来的典型 bug。也是你们学习本章后能避免的错误。</p>
+
+        <h3>6.1 栈帧结构详解</h3>
+
+        <p>x86-64 的程序栈向下增长（栈从高地址向低地址生长）。每个函数调用都会在栈上分配一段连续的区域，叫做<strong>栈帧（Stack Frame）</strong>。典型的栈帧包含以下部分：</p>
+
+        <table>
+            <tr>
+                <th>地址方向</th>
+                <th>栈帧内容</th>
+                <th>说明</th>
+            </tr>
+            <tr>
+                <td rowspan="4"><strong>高地址</strong><br>↑<br>（调用者的栈帧）<br>↓<br><strong>低地址</strong></td>
+                <td>调用者的栈帧（更高地址处）</td>
+                <td>调用者的局部变量和状态</td>
+            </tr>
+            <tr>
+                <td><strong>返回地址</strong>（saved %rip）</td>
+                <td><code>call</code> 指令自动压栈，指向 <code>call</code> 的下一条指令</td>
+            </tr>
+            <tr>
+                <td><strong>被调用者的栈帧</strong></td>
+                <td>
+                    保存的 %rbp（如果函数用帧指针）<br>
+                    保存的 callee-saved 寄存器<br>
+                    局部变量（local variables）<br>
+                    参数构造区（argument build area，用于调用其他函数时传递 >6 个参数）
+                </td>
+            </tr>
+            <tr>
+                <td>← <strong>%rsp</strong>（栈顶指针）</td>
+                <td>当前最低地址处，栈顶</td>
+            </tr>
+        </table>
+
+        <p>在 x86-64 中，<code>%rsp</code> 始终指向栈顶（最低地址）。<code>%rbp</code>（基指针）在编译优化级别较低时用于定位栈帧中的变量（因为当前函数内 %rsp 可能在变化，但 %rbp 固定），在 <code>-O1</code> 及以上优化级别中，编译器往往只使用 %rsp 而省略 %rbp（这样就可以把 %rbp 当作通用寄存器来用）。</p>
+
+        <div class="tip">
+            <p><strong>关于栈溢出</strong>：每个线程/进程的栈空间是有限的（Linux 默认 8 MB）。递归调用过深或分配过大的局部变量（如 <code>char buf[1024*1024]</code>）会导致栈溢出——segmentation fault。运行 <code>ulimit -s</code> 可以查看当前栈大小限制。</p>
+        </div>
+
+        <h3>6.2 call 与 ret 的微操作</h3>
+
+        <p><strong>call</strong> 和 <strong>ret</strong> 是过程调用的核心指令。它们的微操作非常简单且对称：</p>
+
+        <pre><code>callq Label  的等效操作：
+    pushq %rip        # 将当前指令的下一条地址压入栈
+    jmpq  Label       # 跳转到目标函数
+
+retq  的等效操作：
+    popq  %rip        # 从栈顶弹出返回地址，存入 %rip
+                      # 这会自动跳转到 call 的下一条指令</code></pre>
+
+        <p>这里有一个重要的细节：<code>%rip</code> 不能直接通过 <code>pushq</code> 和 <code>popq</code> 操作（x86 指令集中没有显式的 push/pop %rip 指令），所以上述是<strong>逻辑等效</strong>而非实际微操作。但理解了这个逻辑，你就理解了函数调用的本质——<strong>保存返回点 + 跳转</strong>，以及返回——<strong>恢复返回点 + 跳转</strong>。</p>
+
+        <p>为什么 ret 能改变控制流？因为 %rip 寄存器指向当前正在执行的指令地址。popq %rip 从内存中取了一个值写入 %rip，CPU 接下来就会从那个地址取指令。这就是 ret 能跳转回调用者的原因。</p>
+
+        <div class="highlight">
+            <p><strong>安全启示</strong>：正因为 ret 指令从栈中恢复 %rip，如果有人能通过缓冲区溢出改写栈上的返回地址，就能让程序跳转到任意位置——这就是缓冲区溢出攻击的基本原理。我们在下一章会详细展开。</p>
+        </div>
+
+        <h3>6.3 x86-64 调用惯例</h3>
+
+        <p>调用惯例（Calling Convention）是一套函数调用时参数如何传递、寄存器如何保存、返回值如何处理的<strong>约定</strong>。x86-64 的 System V ABI（Linux、macOS 等使用的标准）的规则如下：</p>
+
+        <p><strong>参数传递寄存器：</strong></p>
+
+        <table>
+            <tr>
+                <th>参数序号</th>
+                <th>64 位寄存器</th>
+                <th>32 位子集</th>
+                <th>C 类型示例</th>
+            </tr>
+            <tr>
+                <td>第 1 个参数</td>
+                <td>%rdi</td>
+                <td>%edi</td>
+                <td>int, char*, 结构体指针等</td>
+            </tr>
+            <tr>
+                <td>第 2 个参数</td>
+                <td>%rsi</td>
+                <td>%esi</td>
+                <td>同上</td>
+            </tr>
+            <tr>
+                <td>第 3 个参数</td>
+                <td>%rdx</td>
+                <td>%edx</td>
+                <td>同上</td>
+            </tr>
+            <tr>
+                <td>第 4 个参数</td>
+                <td>%rcx</td>
+                <td>%ecx</td>
+                <td>同上</td>
+            </tr>
+            <tr>
+                <td>第 5 个参数</td>
+                <td>%r8</td>
+                <td>%r8d</td>
+                <td>同上</td>
+            </tr>
+            <tr>
+                <td>第 6 个参数</td>
+                <td>%r9</td>
+                <td>%r9d</td>
+                <td>同上</td>
+            </tr>
+            <tr>
+                <td>第 7 个参数及以后</td>
+                <td colspan="3">从右向左依次压入栈中（调用者清理）</td>
+            </tr>
+        </table>
+
+        <p><strong>返回值：</strong></p>
+        <ul>
+            <li>整数/指针类型返回值 → <code>%rax</code></li>
+            <li>浮点类型返回值 → <code>%xmm0</code></li>
+        </ul>
+
+        <p><strong>寄存器保存规则：</strong></p>
+        <ul>
+            <li><strong>Caller-saved</strong>（调用者保存）：%rax, %rcx, %rdx, %rsi, %rdi, %r8-%r11。如果调用者在调用后还要用到这些寄存器的值，需要自己保存它们（通常压栈）。</li>
+            <li><strong>Callee-saved</strong>（被调用者保存）：%rbx, %rbp, %r12-%r15。如果被调用者想使用这些寄存器，必须先 push 保存原始值，在返回前 pop 恢复。换句话说，被调用者保证返回后这些寄存器的值和调用前一致。</li>
+        </ul>
+
+        <p>来看一个具体例子，演示参数传递：</p>
+
+        <pre><code>// C 代码
+long func(long a, long b, long c, long d,
+          long e, long f, long g, long h)
+{
+    return a + b + c + d + e + f + g + h;
+}
+
+// 对应的汇编（简化）
+func:
+    addq    %rsi, %rdi     # a += b
+    addq    %rdx, %rdi     # a += c
+    addq    %rcx, %rdi     # a += d
+    addq    %r8,  %rdi     # a += e
+    addq    %r9,  %rdi     # a += f
+    addq    8(%rsp), %rdi  # a += 第 7 个参数（g）（已在栈上）
+    addq    16(%rsp), %rdi # a += 第 8 个参数（h）
+    movq    %rdi, %rax     # 返回值 = a
+    ret</code></pre>
+
+        <div class="warning">
+            <p><strong>⚠️ 实战中的常见错误</strong>：在 x86-64 上，如果函数有超过 6 个整数参数，多余的参数在栈上传递，且<strong>位于返回地址之上</strong>（即更高地址）。新手经常用 <code>0(%rsp)</code> 去取第 7 个参数——不对！因为当前函数的栈帧已经改变了 %rsp，第 7 个参数在 <code>8(%rsp)</code>（考虑返回地址占 8 字节）甚至更远的位置。编译器的调试符号会记录这些信息，但这仍然是手写汇编或阅读反汇编时容易困惑的地方。</p>
+        </div>
+
+        <h3>6.4 递归函数的栈行为</h3>
+
+        <p>递归是理解栈帧动态变化的绝佳场景。我们以递归阶乘为例，从汇编层面观察每次递归调用如何分配新的栈帧。</p>
+
+        <pre><code>// C 源码
+long factorial(long n)
+{
+    if (n &lt;= 1)
+        return 1;
+    return n * factorial(n - 1);
+}
+
+// GCC -O1 汇编
+factorial:
+    cmpq    $1, %rdi       # 比较 n 和 1
+    jle     .L_base        # 如果 n &lt;= 1，返回 1
+    pushq   %rbx           # 保存 %rbx（callee-saved）
+    movq    %rdi, %rbx     # %rbx = n （保存起来，因为下面 %rdi 会被覆盖）
+    leaq    -1(%rdi), %rdi # %rdi = n - 1 (参数准备)
+    call    factorial      # 递归调用 factorial(n-1)
+    imulq   %rbx, %rax     # %rax = n * factorial(n-1)
+    popq    %rbx           # 恢复 %rbx
+    ret
+.L_base:
+    movq    $1, %rax       # 返回 1
+    ret</code></pre>
+
+        <p>关键观察：</p>
+        <ul>
+            <li>每次 <code>call factorial</code> 都会自动将下条指令地址压栈</li>
+            <li><code>pushq %rbx</code> 保存当前 <code>%rbx</code>（因为 factorial 要利用它，而它是 callee-saved 寄存器，必须保持原样返回）</li>
+            <li>递归深度为 n 时，栈上同时存在 n 个 factorial 栈帧（每个包含返回地址和 %rbx），总共 16n 字节</li>
+            <li>n = 10 时只占 160 字节；n = 100000 时占 1.6 MB——很可能触发栈溢出！</li>
+        </ul>
+
+        <p>我们用一个 ASCII 图展示递归调用 factorial(3) 的过程栈：</p>
+
+        <pre><code>初始调用 factorial(3):
+
+   地址方向    栈内容
+   ---------   ------------------------------
+   高地址      调用者的栈帧
+               factorial(3) 的返回地址 (to caller)
+               factorial(3) 保存的 %rbx = 3
+               factorial(2) 的返回地址 (回到 factorial+offset)
+               factorial(2) 保存的 %rbx = 2
+               factorial(1) 的返回地址 (回到 factorial+offset)
+               factorial(1) 保存的 %rbx (未使用)
+   ← %rsp     当前栈顶 (factorial(1) 的栈帧底部)
+
+   展开过程：
+   factorial(3): 检查 n=3, push %rbx=3, call factorial(2)
+       factorial(2): 检查 n=2, push %rbx=2, call factorial(1)
+           factorial(1): n<=1, return 1
+       factorial(2): rax=1, imulq %rbx=2 → rax=2, pop %rbx, ret
+   factorial(3): rax=2, imulq %rbx=3 → rax=6, pop %rbx, ret</code></pre>
+
+        <div class="highlight">
+            <p><strong>递归 vs 迭代</strong>：递归的代码通常更简洁优雅，但每次调用都有额外的栈帧开销（函数调用指令本身约 1-2 ns，但栈帧分配和寄存器保存/恢复的代价在 5-10 ns 级别）。更重要的是，递归深度受限于栈空间。在现代高性能软件开发中，递归深度超过几百的情况通常需要改为迭代（或使用尾递归优化——如果编译器支持且函数是真正的尾递归）。GCC 的 <code>-O2</code> 能够对简单的尾递归执行优化，变为循环。</p>
+        </div>
+
+        <p>本章我们深入探索了函数调用在机器层面的完整过程。从栈帧布局到 call/ret 的微操作，从参数传递的寄存器惯例到递归调用中栈帧的动态分配与释放。理解这些机制，你就能真正理解函数调用不是什么"魔法"，而是基于栈和跳转的确定性机械过程。</p>
+
+        <p>下一章我们将完成"程序的机器级表示"系列的最后部分——数组、结构体、联合体在内存中的布局，以及那个让系统安全工程师夜不能寐的话题：<strong>缓冲区溢出</strong>。</p>
+
+        <div class="footer-nav">
+            <a href="05.html">← 上一章</a>
+            <a href="index.html">📖 返回目录</a>
+            <a href="07.html">下一章 →</a>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>
