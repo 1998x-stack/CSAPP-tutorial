@@ -6,11 +6,19 @@
 
 ## 🚀 快速开始
 
-无需安装任何依赖，直接用浏览器打开 `index.html` 即可在线阅读全部章节：
+V0.1 使用原生静态 HTML 页面，**请通过本地 HTTP 服务打开**（首页通过 `fetch('courses.json')` 加载课程数据，直接从 `file://` 打开可能失败）：
 
 ```bash
-open index.html   # macOS
-# 或在浏览器中直接打开 index.html
+python3 -m http.server 8000
+# 浏览器访问 http://localhost:8000
+```
+
+如需构建发布版本，请安装 Node.js 22+、Python 3.10+ 和 C11 编译器：
+
+```bash
+npm test
+npm run build
+python3 -m http.server 8000 -d dist
 ```
 
 ## 📖 章节目录
@@ -46,15 +54,36 @@ open index.html   # macOS
 | 27 | 现代系统新趋势 | RISC-V开放指令集、GPU异构计算CUDA、eBPF内核可编程、CXL新型互联技术 |
 | 28 | 综合项目：手写高性能Web服务器 | epoll事件驱动架构、线程池+任务队列、HTTP Keep-Alive、wrk压测与性能调优 |
 
-## 📂 项目结构
+## 📂 项目结构（V0.1）
 
 ```text
 CSAPP-tutorial/
-├── index.html      # 课程主入口（在线阅读全部章节）
-├── 01.html ~ 28.html   # 各章节正文
-├── courses.json    # 课程元数据（标题/章节/主题）
-└── theme.css       # 统一主题样式
+├── index.html / 01.html ... 28.html / courses.json / theme.css
+│                        # 现有正式课程入口，V0.1 保持兼容
+├── docs/                # VitePress 迁移预备结构（V0.2 启用）
+│   ├── .vitepress/      # 站点配置与主题预留
+│   ├── chapters/        # 正文迁移计划
+│   ├── guides/          # 学习路线与内容规范
+│   ├── labs/            # 实验概览
+│   └── public/
+├── interactive/         # V0.4 交互可视化规格
+├── labs/                # 自主实现的可编译 C 示例与实验规划
+├── scripts/             # 内容、链接、代码样例及静态构建检查
+├── tests/               # 未来内容和浏览器 E2E 测试
+└── .github/workflows/   # CI 与 Pages 发布
 ```
+
+**版本边界：** V0.1 不声称已经完成 28 章的 VitePress 迁移，也不声称旧版 HTML 章节中的所有代码块都可以直接编译。CI 验证课程元数据、相对链接、HTML 代码段存在性和新增的独立 C 样例。
+
+## ✅ V0.1 质量检查与 Pages
+
+- `npm run check:content` — 检查章节映射、元数据与正文基本结构。
+- `npm run check:links` — 检查 29 个 HTML 页面内部资源链接。
+- `npm run check:snippets` — 核实代码块并编译、执行新增的独立 C 样例。
+- `npm run build` — 无额外 npm 依赖地生成 `dist/`，由 Pages 工作流上传部署。
+- Pages 工作流在合入 `main` 后触发，是否成功上线仍取决于仓库 Pages 设置及实际 Actions 结果。
+
+详细说明：[贡献指南](CONTRIBUTING.md) · [学习路线](docs/guides/learning-path.md) · [版权与来源](NOTICE.md)
 
 ## ✨ 课程特色
 
@@ -64,4 +93,4 @@ CSAPP-tutorial/
 - **即开即用**：无需构建、无需服务器，纯静态页面随开随看
 
 ---
-*本课程由 `CSAPP-tutorial/` 项目维护。*
+*本课程为独立中文学习项目，不代表 CS:APP 官方或 CMU。见 [NOTICE](NOTICE.md) 与 [LICENSE](LICENSE)。*

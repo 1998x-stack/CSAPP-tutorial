@@ -76,12 +76,10 @@ int x = matrix[i][j];
 //              = 基址 + i * 16 + j * 4   (因为 C=4, sizeof(int)=4)
 
 // 汇编中，如果 %rdi = 基址，%rsi = i，%rdx = j
-leaq    (%rsi, %rsi, 2), %rax   # %rax = i * 3
-leaq    (%rdi, %rax, 4), %rax   # %rax = base + i*3*4 = base + i*12 (注意这里编译器优化了!)
-                               # 但实际上正确的行步长是 C*4=16，这里不同编译器策略不同
-                               # 直接看地址计算本质即可：base + i*16 + j*4</code></pre>
+leaq    (%rdx, %rsi, 4), %rax   # %rax = j + 4*i（按行优先顺序计算元素索引）
+movl    (%rdi, %rax, 4), %eax   # x = matrix[i][j]，偏移 (4*i+j)*4 字节</code></pre>
 
-        <p>注意地址计算公式中的关键优化机会：如果矩阵的列数 C 是 2 的幂，编译器可以用移位代替乘法；否则需要用 <code>imulq</code> 做乘法——这就是为什么有些高性能代码会刻意选择 2 的幂作为数组的第二维。</p>
+        <p>注意地址计算公式中的关键优化机会：如果矩阵的列数 C 是 2 的幂，编译器可以用移位代替乘法；非 2 的幂也可能被编译器优化为 <code>lea</code>、移位和加法的组合，而不一定需要 <code>imul</code>。应以实际编译结果为准。</p>
 
         <div class="highlight">
             <p><strong>指针运算与数组的关系</strong>：在 C 中，<code>arr[i]</code> 完全等价于 <code>*(arr + i)</code>。编译器对 <code>arr + i</code> 自动做了 <code>sizeof(*arr)</code> 的缩放——这就是所谓的<strong>指针算术</strong>。一个有意思的推论是：<code>arr[2]</code> 和 <code>2[arr]</code> 是等价的，因为 <code>*(arr + 2) == *(2 + arr)</code>。虽然你几乎不应该在实际代码中写 <code>2[arr]</code>，但这个等价关系说明了数组下标操作本质上就是指针算术运算。</p>
