@@ -3,7 +3,7 @@
 [![CI](https://github.com/1998x-stack/CSAPP-tutorial/actions/workflows/ci.yml/badge.svg)](https://github.com/1998x-stack/CSAPP-tutorial/actions/workflows/ci.yml)
 [![Pages](https://github.com/1998x-stack/CSAPP-tutorial/actions/workflows/pages.yml/badge.svg)](https://github.com/1998x-stack/CSAPP-tutorial/actions/workflows/pages.yml)
 
-**28 章中文计算机系统学习资料 · VitePress 文档站 · 可验证 C 语言示例**。
+**28 章中文系统教程 · VitePress 文档站 · V0.3 独立 C11/POSIX 系统实验与黄金测试**。
 
 项目定位为独立学习教程，课程划分不等于 CS:APP 第三版原书章节组织，也不代表 Carnegie Mellon University 或教材作者的官方项目。
 
@@ -24,6 +24,9 @@ npm test              # 内容、链接、可执行示例检查
 npm run build         # 生成 docs/.vitepress/dist
 npm run check:output  # 检查输出和 28 个旧地址跳转页
 npm run docs:preview  # 本地查看构建版本
+
+# 实验：需要 CMake 3.20+、GCC/Clang 和 Python
+npm run test:labs
 ```
 
 ## 课程目录
@@ -71,8 +74,10 @@ CSAPP-tutorial/
 │   ├── public/                   # 图标及历史链接兼容跳转页
 │   └── .vitepress/               # 站点配置、主题和构建产物
 ├── interactive/                  # 后续交互教学器规划
-├── labs/                         # 独立 C 示例及实验规划
+├── labs/                         # 位运算、汇编、Cache、进程、内存与并发实验
+├── CMakeLists.txt                # C11/POSIX 实验构建、CTest 注册
 ├── scripts/                      # 内容、链接、示例、产物验证
+├── tests/labs/                   # 黄金输出、输入 trace、退出码验证
 ├── tests/e2e/                    # Playwright 浏览器验收
 ├── courses.json                  # 章节元数据单一来源
 ├── package.json
@@ -81,7 +86,6 @@ CSAPP-tutorial/
 
 ## 质量与贡献
 
-每次 PR 运行内容验证、VitePress 构建、生成页面检查和浏览器端到端检查。可独立编译的 C 示例放在 `labs/`，书中片段不默认承诺可直接构建。
+每次 PR 运行内容验证、VitePress 构建、生成页面检查、浏览器端到端检查，以及 GCC/Clang 实验编译与 CTest 黄金验收。可独立编译的 C 示例放在 `labs/`，书中片段不默认承诺可直接构建。
 
-[贡献指南](CONTRIBUTING.md) · [内容规范](docs/guides/content-style.md) · [第三方版权说明](NOTICE.md) · [开源许可](LICENSE)
-
+[实验总览](docs/labs/index.md) · [贡献指南](CONTRIBUTING.md) · [内容规范](docs/guides/content-style.md) · [第三方版权说明](NOTICE.md) · [开源许可](LICENSE)

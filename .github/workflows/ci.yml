@@ -1,9 +1,8 @@
-name: V0.2 documentation, content and browser checks
+name: V0.3 course and reproducible lab checks
 
 on:
   push:
   pull_request:
-    branches: [main]
 
 permissions:
   contents: read
@@ -48,3 +47,21 @@ jobs:
       - name: Check live navigation
         run: npm run test:e2e
 
+  laboratory-matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Configure C11 laboratory
+        run: cmake -S . -B .build/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${{ matrix.compiler }}
+      - name: Compile with strict warnings
+        run: cmake --build .build/cmake --parallel
+      - name: Run golden, boundary and concurrency tests
+        run: ctest --test-dir .build/cmake --output-on-failure
