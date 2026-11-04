@@ -9,7 +9,7 @@ description: 从运行程序到预测结果、测试边界与解释行为
 
 ## 1. 位表示与移位
 
-- 预测 `rotl32(0x12345678, 8)` 和位字段提取的结果。
+- 预测 `rotate_left(0x12345678, 8)` 和位字段提取的结果。
 - 思考为何无符号 32 位移位 32 位不能直接执行。
 - 修改输入，再为零位移、完整 32 位字段添加断言。
 - 验收：`ctest --test-dir .build/labs -R "bit_math|endian" --output-on-failure`。
