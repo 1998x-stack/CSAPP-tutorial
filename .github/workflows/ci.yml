@@ -1,0 +1,33 @@
+name: V0.1 content and static site checks
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate course and compile runnable examples
+        run: npm test
+      - name: Build site without external dependencies
+        run: npm run build
+      - name: Verify generated entrypoints
+        run: |
+          test -f dist/index.html
+          test -f dist/courses.json
+          test -f dist/01.html
+          test -f dist/28.html
+
