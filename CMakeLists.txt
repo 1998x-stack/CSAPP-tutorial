@@ -45,6 +45,17 @@ golden(file_offset lab_file_offset file_offset.txt)
 golden(dynamic_array lab_dynamic_array dynamic_array.txt)
 golden(bounded_queue lab_bounded_queue bounded_queue.txt)
 
+# Repeat a concurrent workload to catch intermittent deadlocks and lost items.
+add_test(NAME bounded_queue_stress
+  COMMAND ${Python3_EXECUTABLE}
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/labs/check_case.py
+    --repeat 20
+    --expected ${CMAKE_CURRENT_SOURCE_DIR}/tests/labs/golden/bounded_queue.txt
+    -- "$<TARGET_FILE:lab_bounded_queue>"
+)
+set_tests_properties(bounded_queue_stress PROPERTIES TIMEOUT 60)
+
+
 add_test(NAME cache_invalid_geometry
   COMMAND ${Python3_EXECUTABLE}
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/labs/check_case.py
