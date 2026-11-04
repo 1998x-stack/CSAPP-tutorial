@@ -1,4 +1,4 @@
-name: V0.1 content and static site checks
+name: V0.2 documentation, content and browser checks
 
 on:
   push:
@@ -11,23 +11,40 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Validate course and compile runnable examples
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Content, navigation and C example validation
         run: npm test
-      - name: Build site without external dependencies
+      - name: Build VitePress site
         run: npm run build
-      - name: Verify generated entrypoints
-        run: |
-          test -f dist/index.html
-          test -f dist/courses.json
-          test -f dist/01.html
-          test -f dist/28.html
+      - name: Verify output and legacy routes
+        run: npm run check:output
+  browser:
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+      - name: Build VitePress
+        run: npm run build
+      - name: Check live navigation
+        run: npm run test:e2e
 

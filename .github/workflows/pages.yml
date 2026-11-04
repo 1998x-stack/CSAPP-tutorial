@@ -1,4 +1,4 @@
-name: Deploy legacy course to GitHub Pages
+name: Publish CSAPP VitePress site
 
 on:
   push:
@@ -16,23 +16,32 @@ concurrency:
 
 jobs:
   deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     environment:
       name: github-pages
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Test the published content
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Validate courses
         run: npm test
-      - name: Build legacy static site
+      - name: Build VitePress
         run: npm run build
+      - name: Verify generated URLs
+        run: npm run check:output
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: docs/.vitepress/dist
       - uses: actions/deploy-pages@v4
         id: deployment
 

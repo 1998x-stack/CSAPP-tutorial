@@ -1,4 +1,7 @@
-# 浏览器端到端测试（V0.2 计划）
+# Playwright 浏览器端到端验收
 
-待引入 Playwright：验证首页到 28 章、搜索与移动端导航、键盘可达性、页面构建后资源路径。V0.1 先由链接检查脚本守护静态页面连接。
+本目录包含正式的站点回归测试，覆盖首页、28 个章节路由、历史链接兼容和移动端阅读。
+
+运行：先 npm install && npm run build，再执行 npx playwright install chromium && npm run test:e2e。
+CI 使用独立 Chromium Job 验证；开发者本机可以用 PLAYWRIGHT_BROWSERS_PATH 指定浏览器缓存。
 

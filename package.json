@@ -1,13 +1,25 @@
 {
   "name": "csapp-tutorial",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Chinese CSAPP tutorial, source validation and zero-dependency static site",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
+    "build": "npm run docs:build",
     "check:content": "node scripts/validate-content.mjs",
     "check:links": "node scripts/check-links.mjs",
     "check:snippets": "python3 scripts/verify-snippets.py",
+    "check:output": "node scripts/validate-build.mjs",
     "test": "npm run check:content && npm run check:links && npm run check:snippets",
-    "build": "node scripts/build-static.mjs"
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.58.2",
+    "vitepress": "1.6.4"
   }
 }

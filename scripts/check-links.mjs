@@ -1,34 +1,40 @@
-import { readFileSync, existsSync } from 'node:fs';
-import { resolve, dirname, relative, isAbsolute } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs'
+import { resolve, dirname, extname } from 'node:path'
 
-const root = resolve(import.meta.dirname, '..');
-const manifest = JSON.parse(readFileSync(resolve(root, 'courses.json'), 'utf8'));
-const htmlFiles = ['index.html', ...manifest.chapters.map((c) => c.file)];
-const errors = [];
+const root = resolve(import.meta.dirname, '..')
+const docs = resolve(root, 'docs')
+const read = (path) => readFileSync(resolve(root, path), 'utf8')
+const manifest = JSON.parse(read('courses.json'))
+const files = ['docs/index.md', 'docs/chapters/index.md', 'docs/labs/index.md',
+  'docs/guides/learning-path.md', 'docs/guides/content-style.md',
+  ...manifest.chapters.map((c) => 'docs/chapters/' + c.slug + '.md')]
+const errors = []
 
-for (const file of htmlFiles) {
-  const contents = readFileSync(resolve(root, file), 'utf8');
-  for (const match of contents.matchAll(/\b(?:href|src)\s*=\s*["']([^"']+)["']/g)) {
-    const link = match[1].trim();
-    if (/^javascript:/i.test(link)) {
-      errors.push(file + ': forbidden JavaScript URL ' + link);
-      continue;
+for (const file of files) {
+  const text = read(file)
+  const withoutCode = text.replace(/^\x60{3,}[\s\S]*?^\x60{3,}[ \t]*$/gm, '')
+  for (const match of withoutCode.matchAll(/!?\[[^\]]*]\(([^)\s]+)(?:\s+["'][^"']+["'])?\)/g)) {
+    const uri = match[1]
+    if (/^(?:https?:\/\/|mailto:|#)/i.test(uri)) continue
+    const path = decodeURIComponent(uri.split(/[?#]/, 1)[0])
+    if (!path) continue
+    const target = path.startsWith('/') ? resolve(docs, '.' + path) : resolve(dirname(resolve(root, file)), path)
+    if (!target.startsWith(docs + '/') && target !== docs) {
+      errors.push(file + ': link escapes docs/ ' + uri)
+      continue
     }
-    if (!link || link.startsWith('#') || /^(https?:|mailto:|data:|tel:)/i.test(link)) continue;
-    const decoded = decodeURIComponent(link.split(/[?#]/, 1)[0]);
-    if (!decoded || decoded.startsWith('/')) {
-      errors.push(file + ': unsupported absolute path ' + link);
-      continue;
-    }
-    const target = resolve(root, dirname(file), decoded);
-    const outside = relative(root, target).startsWith('..') || isAbsolute(relative(root, target));
-    if (outside || !existsSync(target)) errors.push(file + ': broken local link ' + link);
+    const candidates = extname(target) ? [target] : [target + '.md', resolve(target, 'index.md')]
+    if (!candidates.some(existsSync)) errors.push(file + ': broken link ' + uri)
   }
 }
+for (const item of manifest.chapters) {
+  const stub = read('docs/public/' + item.file)
+  if (!stub.includes('./chapters/' + item.slug + '.html')) errors.push('broken legacy redirect: ' + item.file)
+}
 if (errors.length) {
-  console.error('Link validation failed:\n- ' + errors.join('\n- '));
-  process.exitCode = 1;
+  console.error('Broken internal links:\n- ' + errors.join('\n- '))
+  process.exitCode = 1
 } else {
-  console.log('Link validation passed for ' + htmlFiles.length + ' pages');
+  console.log('Checked internal Markdown links and 28 legacy redirects')
 }
 

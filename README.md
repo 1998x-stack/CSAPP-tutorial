@@ -1,96 +1,87 @@
-# 💻 深入理解计算机系统（CSAPP）
+# CSAPP 中文实践教程
 
-> 💻 28章 实战体系
+[![CI](https://github.com/1998x-stack/CSAPP-tutorial/actions/workflows/ci.yml/badge.svg)](https://github.com/1998x-stack/CSAPP-tutorial/actions/workflows/ci.yml)
+[![Pages](https://github.com/1998x-stack/CSAPP-tutorial/actions/workflows/pages.yml/badge.svg)](https://github.com/1998x-stack/CSAPP-tutorial/actions/workflows/pages.yml)
 
-一套完整的 **深入理解计算机系统（CSAPP）** 全中文实战课程体系，共 **28 章**。本课程以 HTML 可视化的形式呈现，从基础原理到工程实践循序渐进，适合系统性学习与复习。
+**28 章中文计算机系统学习资料 · VitePress 文档站 · 可验证 C 语言示例**。
 
-## 🚀 快速开始
+项目定位为独立学习教程，课程划分不等于 CS:APP 第三版原书章节组织，也不代表 Carnegie Mellon University 或教材作者的官方项目。
 
-V0.1 使用原生静态 HTML 页面，**请通过本地 HTTP 服务打开**（首页通过 `fetch('courses.json')` 加载课程数据，直接从 `file://` 打开可能失败）：
+## 在线阅读
+
+- 项目规划中的 Pages 站点：[https://1998x-stack.github.io/CSAPP-tutorial/](https://1998x-stack.github.io/CSAPP-tutorial/)（是否可访问以实际 Pages 发布状态为准）。
+- [课程总览](docs/chapters/index.md) · [学习路线](docs/guides/learning-path.md) · [实验总览](docs/labs/index.md)
+- 从旧版网页分享的 `01.html`～`28.html` 地址会跳转至新课程路径。
+
+## 本地运行
+
+需要 Node.js 22+、Python 3.10+ 和 C11 编译器。首次安装开发依赖：
 
 ```bash
-python3 -m http.server 8000
-# 浏览器访问 http://localhost:8000
+npm install
+npm run docs:dev      # 开发服务器
+npm test              # 内容、链接、可执行示例检查
+npm run build         # 生成 docs/.vitepress/dist
+npm run check:output  # 检查输出和 28 个旧地址跳转页
+npm run docs:preview  # 本地查看构建版本
 ```
 
-如需构建发布版本，请安装 Node.js 22+、Python 3.10+ 和 C11 编译器：
+## 课程目录
 
-```bash
-npm test
-npm run build
-python3 -m http.server 8000 -d dist
-```
+| 章节 | 标题 | 核心主题 |
+| --- | --- | --- |
+| 01 | [计算机系统漫游](docs/chapters/01-introduction.md) | hello程序的一生、硬件组成与存储层次 |
+| 02 | [信息的表示与处理——整数](docs/chapters/02-integers.md) | 大小端字节序、补码编码 |
+| 03 | [信息的表示与处理——浮点数](docs/chapters/03-floating-point.md) | IEEE 754格式、规格化与非规格化 |
+| 04 | [程序的机器级表示——基础](docs/chapters/04-machine-basics.md) | x86-64寄存器全景、数据传送与算术指令 |
+| 05 | [程序的机器级表示——控制流](docs/chapters/05-machine-control-flow.md) | 条件码寄存器、条件跳转与CMP/TEST |
+| 06 | [程序的机器级表示——过程与栈](docs/chapters/06-procedures-and-stack.md) | 栈帧结构详解、call/ret微操作 |
+| 07 | [程序的机器级表示——数据与进阶](docs/chapters/07-data-and-memory-layout.md) | 数组与指针的汇编、结构体对齐与填充 |
+| 08 | [处理器体系结构——ISA设计](docs/chapters/08-isa-design.md) | Y86-64指令集、HCL硬件控制语言 |
+| 09 | [处理器体系结构——流水线](docs/chapters/09-pipelining.md) | 流水线原理与性能、数据冒险与转发 |
+| 10 | [优化程序性能](docs/chapters/10-performance-optimization.md) | CPE性能度量、编译器优化与局限 |
+| 11 | [存储器层次结构——技术](docs/chapters/11-memory-hierarchy.md) | SRAM/DRAM/SSD对比、时间与空间局部性 |
+| 12 | [存储器层次结构——Cache](docs/chapters/12-cache.md) | 缓存组织结构(S/E/B)、直接映射/组相联 |
+| 13 | [链接——静态链接](docs/chapters/13-static-linking.md) | ELF目标文件格式、符号与符号表 |
+| 14 | [链接——动态链接](docs/chapters/14-dynamic-linking.md) | 共享库(.so)机制、GOT与PLT延迟绑定 |
+| 15 | [异常控制流——异常与进程](docs/chapters/15-exceptions-and-processes.md) | 异常四种分类、fork写时复制 |
+| 16 | [异常控制流——信号](docs/chapters/16-signals.md) | 信号发送与接收、信号处理函数安全写法 |
+| 17 | [虚拟内存——地址翻译](docs/chapters/17-virtual-memory.md) | 虚拟寻址的动机、多级页表结构 |
+| 18 | [虚拟内存——内存分配](docs/chapters/18-memory-allocation.md) | mmap与munmap、显式分配器设计策略 |
+| 19 | [系统级I/O](docs/chapters/19-system-io.md) | Unix I/O模型与FD、open/read/write调用 |
+| 20 | [网络编程——基础](docs/chapters/20-network-fundamentals.md) | TCP/IP协议栈、套接字接口详解 |
+| 21 | [网络编程——进阶](docs/chapters/21-network-advanced.md) | 迭代/并发服务器模型、CGI动态内容生成 |
+| 22 | [并发编程——线程基础](docs/chapters/22-thread-basics.md) | 线程vs进程对比、Pthreads API |
+| 23 | [并发编程——高阶模式](docs/chapters/23-concurrency-patterns.md) | 读写锁(rwlock)、线程池设计与实现 |
+| 24 | [经典Lab实战(I)](docs/chapters/24-classic-labs-i.md) | Data Lab位运算挑战、Bomb Lab GDB拆弹 |
+| 25 | [经典Lab实战(II)](docs/chapters/25-classic-labs-ii.md) | Cache Lab缓存模拟、Shell Lab进程管理 |
+| 26 | [经典Lab实战(III)——Proxy Lab](docs/chapters/26-proxy-lab.md) | 并发Web代理架构、生产者消费者模型 |
+| 27 | [现代系统新趋势](docs/chapters/27-modern-systems.md) | RISC-V开放指令集、GPU异构计算CUDA |
+| 28 | [综合项目：手写高性能Web服务器](docs/chapters/28-web-server.md) | epoll事件驱动架构、线程池+任务队列 |
 
-## 📖 章节目录
-
-| # | 章节 | 核心主题 |
-|---|------|----------|
-| 01 | 计算机系统漫游 | hello程序的一生、硬件组成与存储层次、操作系统三大抽象、Amdahl定律 |
-| 02 | 信息的表示与处理——整数 | 大小端字节序、补码编码、有符号/无符号转换、整数溢出与安全 |
-| 03 | 信息的表示与处理——浮点数 | IEEE 754格式、规格化与非规格化、舍入策略、0.1+0.2≠0.3揭秘 |
-| 04 | 程序的机器级表示——基础 | x86-64寄存器全景、数据传送与算术指令、lea指令妙用、寻址模式详解 |
-| 05 | 程序的机器级表示——控制流 | 条件码寄存器、条件跳转与CMP/TEST、if-else/switch实现、循环的三种汇编模式 |
-| 06 | 程序的机器级表示——过程与栈 | 栈帧结构详解、call/ret微操作、x86-64调用惯例、递归的栈行为 |
-| 07 | 程序的机器级表示——数据与进阶 | 数组与指针的汇编、结构体对齐与填充、缓冲区溢出原理、栈金丝雀与ROP防御 |
-| 08 | 处理器体系结构——ISA设计 | Y86-64指令集、HCL硬件控制语言、SEQ顺序处理器、CISC vs RISC设计哲学 |
-| 09 | 处理器体系结构——流水线 | 流水线原理与性能、数据冒险与转发、控制冒险与分支预测、Spectre/Meltdown背景 |
-| 10 | 优化程序性能 | CPE性能度量、编译器优化与局限、代码移动与循环展开、指令级并行利用 |
-| 11 | 存储器层次结构——技术 | SRAM/DRAM/SSD对比、时间与空间局部性、存储山实验、SSD写放大陷阱 |
-| 12 | 存储器层次结构——Cache | 缓存组织结构(S/E/B)、直接映射/组相联、缓存未命中三类型、分块矩阵乘法优化 |
-| 13 | 链接——静态链接 | ELF目标文件格式、符号与符号表、静态库与ar工具、强符号与弱符号陷阱 |
-| 14 | 链接——动态链接 | 共享库(.so)机制、GOT与PLT延迟绑定、位置无关代码(PIC)、LD_PRELOAD插桩技术 |
-| 15 | 异常控制流——异常与进程 | 异常四种分类、fork写时复制、execve加载程序、孤儿与僵尸进程 |
-| 16 | 异常控制流——信号 | 信号发送与接收、信号处理函数安全写法、sigaction与信号阻塞、setjmp/longjmp跳转 |
-| 17 | 虚拟内存——地址翻译 | 虚拟寻址的动机、多级页表结构、TLB翻译后备缓冲、缺页与Demand Paging |
-| 18 | 虚拟内存——内存分配 | mmap与munmap、显式分配器设计策略、碎片问题与合并、GC标记清除算法 |
-| 19 | 系统级I/O | Unix I/O模型与FD、open/read/write调用、I/O重定向(dup2)、RIO鲁棒I/O包设计 |
-| 20 | 网络编程——基础 | TCP/IP协议栈、套接字接口详解、HTTP请求响应格式、getaddrinfo协议编程 |
-| 21 | 网络编程——进阶 | 迭代/并发服务器模型、CGI动态内容生成、select I/O多路复用、网络调试工具链 |
-| 22 | 并发编程——线程基础 | 线程vs进程对比、Pthreads API、竞态条件与互斥锁、条件变量与生产者消费者 |
-| 23 | 并发编程——高阶模式 | 读写锁(rwlock)、线程池设计与实现、死锁预防与诊断、Helgrind/TSan调试 |
-| 24 | 经典Lab实战(I) | Data Lab位运算挑战、Bomb Lab GDB拆弹、Attack Lab缓冲区攻击 |
-| 25 | 经典Lab实战(II) | Cache Lab缓存模拟、Shell Lab进程管理、Malloc Lab分配器 |
-| 26 | 经典Lab实战(III)——Proxy Lab | 并发Web代理架构、生产者消费者模型、HTTP缓存层实现、ab压测性能调优 |
-| 27 | 现代系统新趋势 | RISC-V开放指令集、GPU异构计算CUDA、eBPF内核可编程、CXL新型互联技术 |
-| 28 | 综合项目：手写高性能Web服务器 | epoll事件驱动架构、线程池+任务队列、HTTP Keep-Alive、wrk压测与性能调优 |
-
-## 📂 项目结构（V0.1）
+## 仓库结构
 
 ```text
 CSAPP-tutorial/
-├── index.html / 01.html ... 28.html / courses.json / theme.css
-│                        # 现有正式课程入口，V0.1 保持兼容
-├── docs/                # VitePress 迁移预备结构（V0.2 启用）
-│   ├── .vitepress/      # 站点配置与主题预留
-│   ├── chapters/        # 正文迁移计划
-│   ├── guides/          # 学习路线与内容规范
-│   ├── labs/            # 实验概览
-│   └── public/
-├── interactive/         # V0.4 交互可视化规格
-├── labs/                # 自主实现的可编译 C 示例与实验规划
-├── scripts/             # 内容、链接、代码样例及静态构建检查
-├── tests/               # 未来内容和浏览器 E2E 测试
-└── .github/workflows/   # CI 与 Pages 发布
+├── docs/
+│   ├── index.md                  # 首页
+│   ├── chapters/                 # 正式 28 章 Markdown 教程
+│   ├── guides/                   # 学习路线、内容规范
+│   ├── labs/                     # 实验说明
+│   ├── public/                   # 图标及历史链接兼容跳转页
+│   └── .vitepress/               # 站点配置、主题和构建产物
+├── interactive/                  # 后续交互教学器规划
+├── labs/                         # 独立 C 示例及实验规划
+├── scripts/                      # 内容、链接、示例、产物验证
+├── tests/e2e/                    # Playwright 浏览器验收
+├── courses.json                  # 章节元数据单一来源
+├── package.json
+└── .github/workflows/           # CI 与 GitHub Pages 部署
 ```
 
-**版本边界：** V0.1 不声称已经完成 28 章的 VitePress 迁移，也不声称旧版 HTML 章节中的所有代码块都可以直接编译。CI 验证课程元数据、相对链接、HTML 代码段存在性和新增的独立 C 样例。
+## 质量与贡献
 
-## ✅ V0.1 质量检查与 Pages
+每次 PR 运行内容验证、VitePress 构建、生成页面检查和浏览器端到端检查。可独立编译的 C 示例放在 `labs/`，书中片段不默认承诺可直接构建。
 
-- `npm run check:content` — 检查章节映射、元数据与正文基本结构。
-- `npm run check:links` — 检查 29 个 HTML 页面内部资源链接。
-- `npm run check:snippets` — 核实代码块并编译、执行新增的独立 C 样例。
-- `npm run build` — 无额外 npm 依赖地生成 `dist/`，由 Pages 工作流上传部署。
-- Pages 工作流在合入 `main` 后触发，是否成功上线仍取决于仓库 Pages 设置及实际 Actions 结果。
+[贡献指南](CONTRIBUTING.md) · [内容规范](docs/guides/content-style.md) · [第三方版权说明](NOTICE.md) · [开源许可](LICENSE)
 
-详细说明：[贡献指南](CONTRIBUTING.md) · [学习路线](docs/guides/learning-path.md) · [版权与来源](NOTICE.md)
-
-## ✨ 课程特色
-
-- **全中文实战体系**：面向中文读者，由浅入深，覆盖原理与工程实践
-- **28 章完整内容**：系统化章节编排，形成完整知识闭环
-- **可视化呈现**：HTML 图文并茂，适合快速浏览与重点回顾
-- **即开即用**：无需构建、无需服务器，纯静态页面随开随看
-
----
-*本课程为独立中文学习项目，不代表 CS:APP 官方或 CMU。见 [NOTICE](NOTICE.md) 与 [LICENSE](LICENSE)。*

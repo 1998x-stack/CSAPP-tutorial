@@ -13,7 +13,8 @@
         "操作系统三大抽象",
         "Amdahl定律"
       ],
-      "file": "01.html"
+      "file": "01.html",
+      "slug": "01-introduction"
     },
     {
       "num": "02",
@@ -24,7 +25,8 @@
         "有符号/无符号转换",
         "整数溢出与安全"
       ],
-      "file": "02.html"
+      "file": "02.html",
+      "slug": "02-integers"
     },
     {
       "num": "03",
@@ -35,7 +37,8 @@
         "舍入策略",
         "0.1+0.2≠0.3揭秘"
       ],
-      "file": "03.html"
+      "file": "03.html",
+      "slug": "03-floating-point"
     },
     {
       "num": "04",
@@ -46,7 +49,8 @@
         "lea指令妙用",
         "寻址模式详解"
       ],
-      "file": "04.html"
+      "file": "04.html",
+      "slug": "04-machine-basics"
     },
     {
       "num": "05",
@@ -57,7 +61,8 @@
         "if-else/switch实现",
         "循环的三种汇编模式"
       ],
-      "file": "05.html"
+      "file": "05.html",
+      "slug": "05-machine-control-flow"
     },
     {
       "num": "06",
@@ -68,7 +73,8 @@
         "x86-64调用惯例",
         "递归的栈行为"
       ],
-      "file": "06.html"
+      "file": "06.html",
+      "slug": "06-procedures-and-stack"
     },
     {
       "num": "07",
@@ -79,7 +85,8 @@
         "缓冲区溢出原理",
         "栈金丝雀与ROP防御"
       ],
-      "file": "07.html"
+      "file": "07.html",
+      "slug": "07-data-and-memory-layout"
     },
     {
       "num": "08",
@@ -90,7 +97,8 @@
         "SEQ顺序处理器",
         "CISC vs RISC设计哲学"
       ],
-      "file": "08.html"
+      "file": "08.html",
+      "slug": "08-isa-design"
     },
     {
       "num": "09",
@@ -101,7 +109,8 @@
         "控制冒险与分支预测",
         "Spectre/Meltdown背景"
       ],
-      "file": "09.html"
+      "file": "09.html",
+      "slug": "09-pipelining"
     },
     {
       "num": "10",
@@ -112,7 +121,8 @@
         "代码移动与循环展开",
         "指令级并行利用"
       ],
-      "file": "10.html"
+      "file": "10.html",
+      "slug": "10-performance-optimization"
     },
     {
       "num": "11",
@@ -123,7 +133,8 @@
         "存储山实验",
         "SSD写放大陷阱"
       ],
-      "file": "11.html"
+      "file": "11.html",
+      "slug": "11-memory-hierarchy"
     },
     {
       "num": "12",
@@ -134,7 +145,8 @@
         "缓存未命中三类型",
         "分块矩阵乘法优化"
       ],
-      "file": "12.html"
+      "file": "12.html",
+      "slug": "12-cache"
     },
     {
       "num": "13",
@@ -145,7 +157,8 @@
         "静态库与ar工具",
         "强符号与弱符号陷阱"
       ],
-      "file": "13.html"
+      "file": "13.html",
+      "slug": "13-static-linking"
     },
     {
       "num": "14",
@@ -156,7 +169,8 @@
         "位置无关代码(PIC)",
         "LD_PRELOAD插桩技术"
       ],
-      "file": "14.html"
+      "file": "14.html",
+      "slug": "14-dynamic-linking"
     },
     {
       "num": "15",
@@ -167,7 +181,8 @@
         "execve加载程序",
         "孤儿与僵尸进程"
       ],
-      "file": "15.html"
+      "file": "15.html",
+      "slug": "15-exceptions-and-processes"
     },
     {
       "num": "16",
@@ -178,7 +193,8 @@
         "sigaction与信号阻塞",
         "setjmp/longjmp跳转"
       ],
-      "file": "16.html"
+      "file": "16.html",
+      "slug": "16-signals"
     },
     {
       "num": "17",
@@ -189,7 +205,8 @@
         "TLB翻译后备缓冲",
         "缺页与Demand Paging"
       ],
-      "file": "17.html"
+      "file": "17.html",
+      "slug": "17-virtual-memory"
     },
     {
       "num": "18",
@@ -200,7 +217,8 @@
         "碎片问题与合并",
         "GC标记清除算法"
       ],
-      "file": "18.html"
+      "file": "18.html",
+      "slug": "18-memory-allocation"
     },
     {
       "num": "19",
@@ -211,7 +229,8 @@
         "I/O重定向(dup2)",
         "RIO鲁棒I/O包设计"
       ],
-      "file": "19.html"
+      "file": "19.html",
+      "slug": "19-system-io"
     },
     {
       "num": "20",
@@ -222,7 +241,8 @@
         "HTTP请求响应格式",
         "getaddrinfo协议编程"
       ],
-      "file": "20.html"
+      "file": "20.html",
+      "slug": "20-network-fundamentals"
     },
     {
       "num": "21",
@@ -233,7 +253,8 @@
         "select I/O多路复用",
         "网络调试工具链"
       ],
-      "file": "21.html"
+      "file": "21.html",
+      "slug": "21-network-advanced"
     },
     {
       "num": "22",
@@ -244,7 +265,8 @@
         "竞态条件与互斥锁",
         "条件变量与生产者消费者"
       ],
-      "file": "22.html"
+      "file": "22.html",
+      "slug": "22-thread-basics"
     },
     {
       "num": "23",
@@ -255,7 +277,8 @@
         "死锁预防与诊断",
         "Helgrind/TSan调试"
       ],
-      "file": "23.html"
+      "file": "23.html",
+      "slug": "23-concurrency-patterns"
     },
     {
       "num": "24",
@@ -265,7 +288,8 @@
         "Bomb Lab GDB拆弹",
         "Attack Lab缓冲区攻击"
       ],
-      "file": "24.html"
+      "file": "24.html",
+      "slug": "24-classic-labs-i"
     },
     {
       "num": "25",
@@ -275,7 +299,8 @@
         "Shell Lab进程管理",
         "Malloc Lab分配器"
       ],
-      "file": "25.html"
+      "file": "25.html",
+      "slug": "25-classic-labs-ii"
     },
     {
       "num": "26",
@@ -286,7 +311,8 @@
         "HTTP缓存层实现",
         "ab压测性能调优"
       ],
-      "file": "26.html"
+      "file": "26.html",
+      "slug": "26-proxy-lab"
     },
     {
       "num": "27",
@@ -297,7 +323,8 @@
         "eBPF内核可编程",
         "CXL新型互联技术"
       ],
-      "file": "27.html"
+      "file": "27.html",
+      "slug": "27-modern-systems"
     },
     {
       "num": "28",
@@ -308,7 +335,8 @@
         "HTTP Keep-Alive",
         "wrk压测与性能调优"
       ],
-      "file": "28.html"
+      "file": "28.html",
+      "slug": "28-web-server"
     }
   ]
 }
