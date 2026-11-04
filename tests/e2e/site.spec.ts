@@ -44,3 +44,12 @@ test('mobile chapter navigation and reading are usable', async ({ page }) => {
   await expect(page.locator('body')).not.toHaveCSS('overflow-x', 'scroll')
 })
 
+
+test('local search can find systems concepts', async ({ page }) => {
+  await page.goto(base)
+  await page.locator('.VPNavBarSearchButton').click()
+  const input = page.locator('.VPLocalSearchBox input')
+  await expect(input).toBeVisible()
+  await input.fill('虚拟内存')
+  await expect(page.locator('.VPLocalSearchBox a[href*="17-virtual-memory"]').first()).toBeVisible()
+})
