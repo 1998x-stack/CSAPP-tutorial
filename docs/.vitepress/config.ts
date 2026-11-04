@@ -46,6 +46,7 @@ export default defineConfig({
       ],
       '/labs/': [
         { text: '实验总览', link: '/labs/' },
+        { text: '实验练习与验收', link: '/labs/exercises' },
       ],
     },
     outline: { level: [2, 3], label: '本页目录' },
@@ -82,4 +83,3 @@ export default defineConfig({
     },
   },
 })
-
