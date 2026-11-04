@@ -47,9 +47,9 @@ test('mobile chapter navigation and reading are usable', async ({ page }) => {
 
 test('local search can find systems concepts', async ({ page }) => {
   await page.goto(base)
-  await page.locator('.VPNavBarSearchButton').click()
-  const input = page.locator('.VPLocalSearchBox input')
+  await page.locator('#local-search .DocSearch-Button').click()
+  const input = page.locator('#localsearch-input')
   await expect(input).toBeVisible()
   await input.fill('虚拟内存')
-  await expect(page.locator('.VPLocalSearchBox a[href*="17-virtual-memory"]').first()).toBeVisible()
+  await expect(page.locator('.VPLocalSearchBox a.result[href*="17-virtual-memory"]').first()).toBeVisible()
 })
