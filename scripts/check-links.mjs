@@ -7,6 +7,7 @@ const read = (path) => readFileSync(resolve(root, path), 'utf8')
 const manifest = JSON.parse(read('courses.json'))
 const files = ['docs/index.md', 'docs/chapters/index.md', 'docs/labs/index.md',
   'docs/guides/learning-path.md', 'docs/guides/content-style.md',
+  'docs/labs/exercises.md',
   ...manifest.chapters.map((c) => 'docs/chapters/' + c.slug + '.md')]
 const errors = []
 
@@ -37,4 +38,3 @@ if (errors.length) {
 } else {
   console.log('Checked internal Markdown links and 28 legacy redirects')
 }
-
