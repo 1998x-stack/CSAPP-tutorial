@@ -128,9 +128,15 @@ float 版本的误差大约在 1.19e-7 量级（相对误差约 4e-7），double
 ::: tip
 **正确比较浮点数的方法**：永远不要直接用 `==` 比较浮点数。而是检查两个数的差是否在某个可接受的 **epsilon** 范围内：
 
-ZZCSAPPBLOCK004ZZ
+~~~c
+#include <math.h>
 
-注意：epsilon 不能选得太小（可能永远返回 false），也不能选得太大（误判错误值）。对于大多数科学计算，`1e-9` 或相对 epsilon 是合理的选择。
+int approx_equal(double a, double b, double eps) {
+    return fabs(a - b) < eps;
+}
+~~~
+
+注意：epsilon 不能选得太小（可能永远返回 false），也不能选得太大（误判错误值）。容差应结合量纲、数据范围和算法误差分析选择，不能把 `1e-9` 当作通用阈值。
 :::
 
 ::: warning
