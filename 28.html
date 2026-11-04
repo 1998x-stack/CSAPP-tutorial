@@ -47,7 +47,7 @@
 
         <p>欢迎来到全书的最后一章。如果你一路坚持到了这里，恭喜——你已经看完了计算机系统的每一个层次：从晶体管级别的数字逻辑，到 CPU 流水线和指令集，到内存层次和虚拟内存，再到链接、异常控制流、网络和并发编程。现在是时候把这些知识<strong>全部串起来</strong>，做一个真正的综合项目了。</p>
 
-        <p>我们要写的不是 CSAPP 教材里的 Tiny Web Server 玩具——它是一个基于 epoll + 线程池的、支持 HTTP/1.1 Keep-Alive 的高性能 Web 服务器，设计目标是达到工业级水准的单机十万级并发连接（C10K 的 10 倍以上）。这听起来可能有点吓人，但别担心——我会带你一步步走完整个设计过程。当你在 wrk 压测中看到自己的服务器每秒处理超过 5 万次请求时，你会感觉到前面 27 章的所有付出都是值得的。</p>
+        <p>我们要写的不是 CSAPP 教材里的 Tiny Web Server 玩具——它是一个基于 epoll + 线程池的、支持 HTTP/1.1 Keep-Alive 的高性能 Web 服务器，探索目标是支撑较高的并发连接数；十万连接属于待验证的目标，而非本仓库已经实现的结果。这听起来可能有点吓人，但别担心——我会带你一步步走完整个设计过程。如果你将来能在可复现的 wrk 基准测试中达到每秒五万次请求，你会感觉到前面 27 章的所有付出都是值得的。</p>
 
         <p>这不仅仅是一个编程练习，这是你作为<strong>系统工程师的"毕业设计"</strong>。</p>
 
@@ -55,7 +55,7 @@
 
         <p>这个服务器的核心是 <strong>epoll</strong>——Linux 上最高效的 I/O 事件通知机制。为什么要用 epoll 而不是 select 或 poll？答案写在第 19 章：select 有 FD_SETSIZE 限制（默认 1024），poll 虽然没有上限但每次调用都要传递完整的文件描述符数组——O(n) 的遍历成本在多连接场景下是灾难。而 epoll 只返回<strong>就绪的事件集合</strong>，复杂度 O(k)——k 是实际就绪的 fd 数量，和总连接数无关。</p>
 
-        <p>我们的 epoll 事件循环骨架如下：</p>
+        <p>下面是讲解事件调度的<strong>结构性伪代码</strong>，其中部分 helper 尚未定义，也未涵盖全部错误检查、资源回收、过载处理和线程同步，不能直接用于生产环境：</p>
 
         <pre><code>#define MAX_EVENTS 1024
 #define PORT 8080
@@ -95,11 +95,11 @@ int main() {
                 ev.data.fd = conn_fd;
                 epoll_ctl(epoll_fd, EPOLL_CTL_ADD, conn_fd, &amp;ev);
 
-                // 将连接交给线程池处理
-                thread_pool_add_task(pool, handle_client, &amp;conn_fd);
+                // 连接已注册，等待事件就绪后再派发；不能传递局部变量的地址给异步任务
             } else {
                 // 已有 fd 就绪（数据可读/可写）
-                handle_io_event(epoll_fd, events[i]);
+                // 伪代码：派发拥有稳定生命周期的任务上下文
+                dispatch_io_event(pool, epoll_fd, events[i]);
             }
         }
     }
@@ -110,7 +110,7 @@ int main() {
 
         <ul>
             <li><strong>EPOLLET（边缘触发）</strong>：只通知状态变化而非状态本身。如果使用 EPOLLET，你必须准备好一次性读取所有数据（while 循环 read 到 EAGAIN）。这样做的好处是减少 epoll 事件数量——在水平触发下，只要缓冲区还有数据就会不停通知，而边缘触发只在"从无到有"时通知一次。</li>
-            <li><strong>EPOLLONESHOT</strong>：事件被触发一次后自动从 epoll 中移除，避免同一个 fd 被多个线程同时处理。这一点在"主线程监听 + 工作线程处理"的架构下至关重要——没有 EPOLLONESHOT，一个连接上的数据可能被多个工作线程同时读到，导致数据竞争。</li>
+            <li><strong>EPOLLONESHOT</strong>：事件触发一次后该 fd 的后续通知被暂时禁用（并非从 epoll 自动删除）。工作线程完成处理后，必须在适当时机使用 EPOLL_CTL_MOD 重新激活通知；这有助于避免同一连接被重复派发。这一点在"主线程监听 + 工作线程处理"的架构下至关重要——没有 EPOLLONESHOT，一个连接上的数据可能被多个工作线程同时读到，导致数据竞争。</li>
             <li><strong>SOCK_NONBLOCK</strong>：所有套接字都设置为非阻塞。边缘触发 + 非阻塞 I/O 是黄金搭档——同步接口不会阻塞线程，可以由事件驱动来调度。</li>
         </ul>
 
@@ -390,7 +390,7 @@ Transfer/sec:    125.32MB</code></pre>
         <div class="footer-nav">
             <a href="27.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
-            <a href="javascript:void(0)">下一章 →</a>
+            <span aria-current="page">课程完结</span>
         </div>
     </div>
 </div>

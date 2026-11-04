@@ -1,4 +1,4 @@
-<!-- slate-blue.css — Slate-Blue Theme for Systems/Infra tutorials (Docker, K8s, Linux, Nginx, CI/CD) -->
+/* slate-blue.css — shared typography and layout for CSAPP chapters */
 
 * { margin:0; padding:0; box-sizing:border-box; }
 
@@ -154,4 +154,10 @@ th {
     .sidebar { border-right: none; border-bottom: 2px solid #cbd5e1; }
     body { padding: 10px; }
     .main-content { padding: 20px; }
+}
+
+/* Visible keyboard focus for chapter and bottom navigation. */
+a:focus-visible { outline: 3px solid #0f766e; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }

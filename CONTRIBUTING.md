@@ -6,9 +6,9 @@
 
 要求 Node.js 22+、Python 3.10+ 和 C11 编译器（GCC/Clang）：
 
-1. \`npm test\`：校验 28 章、相对链接及编译运行独立 C 样例。
-2. \`npm run build\`：生成仍然以原生 HTML 为入口的 \`dist/\` 静态站点。
-3. \`python3 -m http.server 8000 -d dist\`：浏览器访问 \`http://localhost:8000\`。
+1. `npm test`：校验 28 章、相对链接及编译运行独立 C 样例。
+2. `npm run build`：生成仍然以原生 HTML 为入口的 `dist/` 静态站点。
+3. `python3 -m http.server 8000 -d dist`：浏览器访问 `http://localhost:8000`。
 
 ## PR 规范
 
@@ -20,6 +20,6 @@
 
 ## 分阶段迁移
 
-V0.1 保留 \`01.html\` 至 \`28.html\` 不变的页面地址，工程目录为后续版本预留。
-V0.2 才正式迁移正文到 \`docs/chapters/*.md\`，届时需要同步链接和页面测试。
+V0.1 保留 `01.html` 至 `28.html` 不变的页面地址，工程目录为后续版本预留。
+V0.2 才正式迁移正文到 `docs/chapters/*.md`，届时需要同步链接和页面测试。
 

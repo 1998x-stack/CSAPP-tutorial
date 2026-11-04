@@ -266,7 +266,7 @@ void cache_lookup(cache_t *cache, const char *uri,
 
         <p>代理写好了，它到底有多快？我们用 <strong>ApacheBench (ab)</strong> 来做压力测试。ab 是一个轻量级的 HTTP 压测工具，可以指定并发数和总请求数，输出吞吐量、延迟分布等关键指标。</p>
 
-        <p>先测一个最简单的场景：代理直接转发（缓存未命中）。</p>
+        <p>以下输出仅演示性能报告的格式，<strong>不是本仓库在真实环境中复现的测量结果</strong>。正式测试须记录 CPU、系统版本、编译选项、服务端负载和完整测试脚本。</p>
 
         <pre><code>$ ab -n 10000 -c 50 http://localhost:8888/http://example.com/
 
@@ -282,7 +282,7 @@ Percentage of requests served within a certain time (ms):
   90%    25
   99%    48</code></pre>
 
-        <p>单线程代理 vs 预线程化代理（4 个工作线程）的对比：</p>
+        <p>不同代理模型的<strong>示意性假设数据</strong>（未验证，不能用于性能结论）：</p>
 
         <table>
             <tr>
@@ -327,16 +327,16 @@ Percentage of requests served within a certain time (ms):
             </tr>
         </table>
 
-        <p>数据说明一切：</p>
+        <p>这些假设结果可以用来讨论影响性能的因素，但实际结论必须通过统一环境的重复基准测试证明：</p>
         <ul>
             <li>单线程模型的问题在于——一个慢请求会 blocking 后续所有请求。因为 <code>accept()</code> 之后的服务过程是串行的</li>
             <li>每连接一线程模型虽然解决了并发问题，但线程创建/销毁的开销在连接频繁断开时非常显著</li>
-            <li>预线程化模型将线程的创建成本前置到启动阶段，Worker 线程在程序生命周期内永不消亡——这是最高效的方案</li>
+            <li>预线程化模型将线程的创建成本前置到启动阶段，Worker 线程在程序生命周期内永不消亡——具体收益依赖负载，不能断言在所有情况下都是最高效的方案</li>
             <li>缓存命中时性能提升极其显著（3 倍以上）——这说明磁盘/网络 I/O 是真正的瓶颈，缓存减少了绝大部分的网络往返</li>
         </ul>
 
         <div class="highlight">
-            <p><strong>实战洞察</strong>：做 Proxy Lab 的性能测试时，我遇到过一个非常反直觉的现象——增加 Worker 线程数到一定程度后，吞吐量<strong>不再增长甚至下降</strong>。分析后发现原因是：过多的线程导致上下文切换开销超过了并发带来的收益。在 Linux 上，用 <code>perf context-switches</code> 可以清楚地看到这一点。这再次印证了 Amdahl 定律——如果代理的瓶颈在网络 I/O（即等待网络响应的空闲时间），那么线程数 = 期望的并发连接数就足够了，而不是越多越好。</p>
+            <p><strong>实战洞察</strong>：做 Proxy Lab 的性能测试时，我遇到过一个非常反直觉的现象——增加 Worker 线程数到一定程度后，吞吐量<strong>不再增长甚至下降</strong>。分析后发现原因是：过多的线程导致上下文切换开销超过了并发带来的收益。在 Linux 上，用 <code>perf context-switches</code> 可以清楚地看到这一点。这再次印证了 Amdahl 定律——如果代理的瓶颈在网络 I/O（即等待网络响应的空闲时间），那么工作线程数不应简单等同于并发连接数，应结合非阻塞 I/O、任务队列、实际阻塞时间及吞吐和尾延迟测试调整。</p>
         </div>
 
         <p>Proxy Lab 是 CSAPP 课程中通往综合能力的最后一块拼图。它要求你把网络编程（socket API、HTTP 协议）、并发编程（信号量、线程池、读写锁）和系统性能思维（缓存、瓶颈分析）融会贯通。写好这个 Lab，你已经具备了开发中等规模系统软件的基本能力。</p>

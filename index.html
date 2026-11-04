@@ -287,7 +287,7 @@
         <div class="sub"></div>
     </div>
 
-    <div id="cardContainer" class="course-grid"></div>
+    <main id="cardContainer" class="course-grid" aria-live="polite"></main>
 
     <div style="text-align:center;">
         <div class="footer"></div>
@@ -303,7 +303,11 @@
         var footerEl = document.querySelector('.footer');
 
         function showError(msg) {
-            container.innerHTML = '<div class="state-msg error">' + msg + '</div>';
+            container.replaceChildren();
+            var errorEl = document.createElement('div');
+            errorEl.className = 'state-msg error';
+            errorEl.textContent = msg;
+            container.appendChild(errorEl);
         }
 
         fetch('courses.json')
@@ -316,7 +320,7 @@
                 emojiEl.textContent = data.emoji;
                 titleEl.textContent = data.title;
                 subEl.textContent = data.subtitle;
-                footerEl.innerHTML = '<span>' + data.chapterCount + '章</span> 实战体系 · 从入门到精通';
+                footerEl.textContent = data.chapterCount + '章 实战体系 · 从入门到精通';
 
                 if (!data.chapters || data.chapters.length === 0) {
                     showError('暂无课程数据');

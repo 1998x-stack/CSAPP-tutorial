@@ -6,20 +6,20 @@
 
 ## 🚀 快速开始
 
-V0.1 使用原生静态 HTML 页面，**请通过本地 HTTP 服务打开**（首页通过 \`fetch('courses.json')\` 加载课程数据，直接从 \`file://\` 打开可能失败）：
+V0.1 使用原生静态 HTML 页面，**请通过本地 HTTP 服务打开**（首页通过 `fetch('courses.json')` 加载课程数据，直接从 `file://` 打开可能失败）：
 
-\`\`\`bash
+```bash
 python3 -m http.server 8000
 # 浏览器访问 http://localhost:8000
-\`\`\`
+```
 
 如需构建发布版本，请安装 Node.js 22+、Python 3.10+ 和 C11 编译器：
 
-\`\`\`bash
+```bash
 npm test
 npm run build
 python3 -m http.server 8000 -d dist
-\`\`\`
+```
 
 ## 📖 章节目录
 
@@ -56,7 +56,7 @@ python3 -m http.server 8000 -d dist
 
 ## 📂 项目结构（V0.1）
 
-\`\`\`text
+```text
 CSAPP-tutorial/
 ├── index.html / 01.html ... 28.html / courses.json / theme.css
 │                        # 现有正式课程入口，V0.1 保持兼容
@@ -71,17 +71,17 @@ CSAPP-tutorial/
 ├── scripts/             # 内容、链接、代码样例及静态构建检查
 ├── tests/               # 未来内容和浏览器 E2E 测试
 └── .github/workflows/   # CI 与 Pages 发布
-\`\`\`
+```
 
 **版本边界：** V0.1 不声称已经完成 28 章的 VitePress 迁移，也不声称旧版 HTML 章节中的所有代码块都可以直接编译。CI 验证课程元数据、相对链接、HTML 代码段存在性和新增的独立 C 样例。
 
 ## ✅ V0.1 质量检查与 Pages
 
-- \`npm run check:content\` — 检查章节映射、元数据与正文基本结构。
-- \`npm run check:links\` — 检查 29 个 HTML 页面内部资源链接。
-- \`npm run check:snippets\` — 核实代码块并编译、执行新增的独立 C 样例。
-- \`npm run build\` — 无额外 npm 依赖地生成 \`dist/\`，由 Pages 工作流上传部署。
-- Pages 工作流在合入 \`main\` 后触发，是否成功上线仍取决于仓库 Pages 设置及实际 Actions 结果。
+- `npm run check:content` — 检查章节映射、元数据与正文基本结构。
+- `npm run check:links` — 检查 29 个 HTML 页面内部资源链接。
+- `npm run check:snippets` — 核实代码块并编译、执行新增的独立 C 样例。
+- `npm run build` — 无额外 npm 依赖地生成 `dist/`，由 Pages 工作流上传部署。
+- Pages 工作流在合入 `main` 后触发，是否成功上线仍取决于仓库 Pages 设置及实际 Actions 结果。
 
 详细说明：[贡献指南](CONTRIBUTING.md) · [学习路线](docs/guides/learning-path.md) · [版权与来源](NOTICE.md)
 
