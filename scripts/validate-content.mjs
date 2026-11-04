@@ -48,6 +48,20 @@ for (const [index, chapter] of manifest.chapters.entries()) {
     fail('redirect destination incorrect ' + redirectPath)
   }
 }
+
+const inlineRegression = {
+  '01-introduction': '#include <stdio.h>',
+  '19-system-io': '<fcntl.h>',
+  '24-classic-labs-i': 'x/s <地址>',
+  '25-classic-labs-ii': 'bg <job>',
+  '27-modern-systems': 'vec_add_kernel<<<blocks, threads>>>',
+  '28-web-server': 'strace -c -p <pid>',
+}
+for (const [slug, snippet] of Object.entries(inlineRegression)) {
+  const item = read('docs/chapters/' + slug + '.md')
+  if (!item.includes(snippet)) fail('inline code lost during migration: ' + slug)
+}
+
 const actual = readdirSync(resolve(root, 'docs/chapters')).filter((name) => /^\d\d-.*\.md$/.test(name))
 if (actual.length !== manifest.chapters.length) fail('orphan/missing Markdown chapters')
 if (!read('docs/.vitepress/config.ts').includes("courseManifest from '../../courses.json'")) fail('config not linked to manifest')

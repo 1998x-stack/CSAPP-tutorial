@@ -78,7 +78,7 @@ void access_cache(unsigned long address) {
 
 Shell Lab 要求你实现 `tsh`（Tiny Shell），一个支持作业控制的简易 Unix Shell。你需要处理以下核心机制：
 
-- **内置命令**：`quit`（退出 shell）、`jobs`（列出所有作业）、`bg `（后台继续运行）、`fg `（前台继续运行）。
+- **内置命令**：`quit`（退出 shell）、`jobs`（列出所有作业）、`bg <job>`（后台继续运行）、`fg <job>`（前台继续运行）。
 - **前台/后台作业管理**：用 `&` 后缀启动后台作业，否则为前台作业。前台作业独占终端，后台作业在后台执行。维护一个作业列表（job list），记录每个作业的 PID、JID、状态。
 - **SIGCHLD 信号收割**：子进程终止时向父进程发送 SIGCHLD。父进程的信号处理程序调用 `waitpid` 回收子进程，并更新作业状态。
 - **信号阻塞防止竞态**：在 `fork` 之后、将子进程加入 job list 之前，必须阻塞 SIGCHLD，否则子进程可能在父进程添加作业前就终止并被回收，导致作业被添加到列表两次或出现 dangling 条目。

@@ -30,7 +30,7 @@ Unix 的设计哲学里有一句经典名言——**"Everything is a file"**（�
 
 ## 19.2 open/read/write/close 系统调用
 
-让我们看看这几个最核心的系统调用。它们的声明在 ``、`` 中：
+让我们看看这几个最核心的系统调用。它们的声明在 `<fcntl.h>`、`<unistd.h>` 中：
 
 ```c
 #include <fcntl.h>

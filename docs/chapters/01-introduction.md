@@ -38,7 +38,7 @@ $ gcc -o hello hello.c
 
 **第一阶段：预处理（Preprocessing）—— hello.c → hello.i**
 
-预处理器根据 `#` 开头的指令处理源代码。`#include ` 会被替换为标准库头文件的全部内容——你可以想象，仅仅这行代码就会插入几百行声明。此外，宏定义被展开，条件编译被处理。你可以用 `gcc -E hello.c -o hello.i` 来单独查看预处理后的结果。
+预处理器根据 `#` 开头的指令处理源代码。`#include <stdio.h>` 会被替换为标准库头文件的全部内容——你可以想象，仅仅这行代码就会插入几百行声明。此外，宏定义被展开，条件编译被处理。你可以用 `gcc -E hello.c -o hello.i` 来单独查看预处理后的结果。
 
 **第二阶段：编译（Compilation）—— hello.i → hello.s**
 
