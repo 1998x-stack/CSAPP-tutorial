@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第18章 虚拟内存——内存分配 — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="olah-chapters.css">
 </head>
-<body>
+<body class="olah-lesson">
+<a href="#chapter-main" class="skip-link">跳转至正文</a>
 <div class="double-border">
 <div class="container">
     <div class="sidebar">
@@ -43,131 +45,92 @@
         </ul>
     </div>
     <div class="main-content">
-        <h2>第十八章：虚拟内存——内存分配</h2>
 
-        <p>上一章我们讨论了虚拟地址如何翻译成物理地址。你在写 C/C++ 的时候，可能无数次地调用过 <code>malloc</code> 和 <code>free</code>，但有没有想过：当你调用 <code>malloc(1024)</code> 时，内核到底做了什么？它是怎么在茫茫多的虚拟地址空间中"找到"一块 1024 字节的连续区域的？多次 malloc/free 之后，内存为什么会"碎片化"？</p>
-
-        <p>本章我们回答这些问题。先从内核态的内存映射接口 <code>mmap</code> 讲起，再深入到用户态分配器（如 glibc 的 malloc）的设计策略，最后看看垃圾收集是怎么一回事。理解这些，你就能写出更"内存友好"的程序。</p>
-
-        <h3>18.1 mmap与munmap</h3>
-
-        <p><code>mmap</code> 是 Linux 内核提供给用户态的最底层内存映射接口。它可以在进程的虚拟地址空间中创建新的映射区域：</p>
-
-        <pre><code>#include &lt;sys/mman.h&gt;
-#include &lt;unistd.h&gt;
+<main id="chapter-main" class="reading-page"><article>
+<header class="chapter-hero"><p class="eyebrow">虚拟内存 / 18</p><h1>malloc(100) 真的向内核要了 100 字节吗？</h1>
+<p class="lede">通常不会。<code>malloc</code> 面对的是<strong>进程已有的虚拟地址空间和分配器维护的块</strong>；是否需要请求新的映射、何时获得真实物理页、何时把内存归还给内核，都取决于内存分配器和操作系统。理解这层区别，才能真正解释碎片、驻留集和分配失败。</p>
+<p class="chapter-scope">实例以 Linux/POSIX <code>mmap</code> 与 C11 分配接口为主；分配器组织策略使用教学模型，不把某个 glibc 版本的阈值、时间复杂度或碎片率当成跨平台定律。</p></header>
+<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c18-mmap">01 映射与物理页</a><a href="#c18-heap">02 分配器管理块</a><a href="#c18-frag">03 内外碎片</a><a href="#c18-gc">04 回收与 GC</a><a href="#c18-lab">05 安全代码实验</a></nav>
+<section id="c18-mmap"><h2>18.1 映射虚拟区域，不等于立即分配全部物理页</h2>
+<p><code>mmap</code> 在进程的虚拟地址空间创建映射，并指定权限、共享方式与后备对象。对于常见的私有匿名映射，读写页可能在首次访问时才逐步关联物理内存；有些读操作能共享只读零页，而写入通常需要可写的实际页面。具体何时兑现内存受内核、预取、页面大小和内存压力影响。</p>
+<figure class="lesson-figure"><img src="chapter-assets/18-mmap.svg" alt="mmap创建虚拟映射，尚未触碰的匿名页可能没有单独的物理页；首次写入引发缺页后分配清零的页框；munmap撤销映射。" width="880" height="300"><figcaption>图 18-1：<strong>地址空间映射 → 按需触页 → 页框关联</strong>是常见路径，不是所有 <code>mmap</code> 参数和系统都必须经历的固定顺序。</figcaption></figure>
+<pre><code>#define _GNU_SOURCE  /* Linux: MAP_ANONYMOUS */
+#include &lt;sys/mman.h&gt;
 #include &lt;stdio.h&gt;
+#include &lt;unistd.h&gt;
 
-int main() {
-    // 匿名映射：分配 4MB 虚拟内存
-    size_t len = 4 * 1024 * 1024;  // 4MB
-    void *addr = mmap(NULL, len,
-                      PROT_READ | PROT_WRITE,      // 可读写
-                      MAP_PRIVATE | MAP_ANONYMOUS, // 私有匿名映射
-                      -1, 0);                      // 无文件关联
-
-    if (addr == MAP_FAILED) {
-        perror("mmap failed");
-        return 1;
-    }
-    printf("mmap 分配在: %p\n", addr);
-
-    // 此时只是分配了虚拟地址——物理页面还没来
-    // 直到实际写入时才触发缺页，分配物理页
-
-    // 释放映射
-    munmap(addr, len);
-    return 0;
+int main(void) {
+    long ps = sysconf(_SC_PAGESIZE);
+    if (ps &lt;= 0) return 1;
+    size_t len = (size_t)ps * 2;
+    void *p = mmap(NULL, len, PROT_READ | PROT_WRITE,
+                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (p == MAP_FAILED) { perror("mmap"); return 1; }
+    ((volatile char *)p)[0] = 7; /* 触碰第一页 */
+    if (munmap(p, len) == -1) { perror("munmap"); return 1; }
+    puts("mapping-released=1");
 }</code></pre>
+<p>文件映射还要区分 <code>MAP_SHARED</code> 与 <code>MAP_PRIVATE</code>：前者的修改对同一映射对象的其他共享映射可见，后者的修改属于写时复制，不会直接回写原始文件。持久化与写回时机不能简单等同于“写内存立刻写磁盘”；<code>msync()</code> 可用于受支持的同步场景。参阅 <a href="https://man7.org/linux/man-pages/man2/mmap.2.html">mmap(2)</a>。</p>
+</section>
+<section id="c18-heap"><h2>18.2 malloc 与内核之间还有一个分配器</h2>
+<p><code>malloc(100)</code> 请求的是<strong>至少可用 100 字节的对象存储</strong>，不是要求内核为该调用新建 100 字节物理页。分配器可从已有空闲块切出一段，维护元数据与对齐，也可能向系统请求更多虚拟区域。<code>free</code> 把块交还给分配器，<strong>不保证立即降低进程 RSS，更不保证立即调用 <code>munmap</code></strong>。</p>
+<figure class="lesson-figure"><img src="chapter-assets/18-allocator.svg" alt="用户调用malloc，分配器先查找现有空闲块并可能分割；空间不足时再向系统请求更多映射或堆空间，返回的是可用对象地址而非物理地址。" width="880" height="300"><figcaption>图 18-2：把用户分配请求、分配器元数据和内核映射分成三层，才能解释多次小分配为什么不需要多次系统调用。</figcaption></figure>
+<table><thead><tr><th>组织方式（教学分类）</th><th>搜索对象</th><th>主要权衡</th></tr></thead><tbody>
+<tr><td>隐式空闲链表</td><td>顺着块头遍历所有块</td><td>简单但搜索可能较慢</td></tr>
+<tr><td>显式空闲链表</td><td>只遍历空闲块</td><td>额外维护前后指针与合并逻辑</td></tr>
+<tr><td>分离空闲链表</td><td>按大小类选择链表或桶</td><td>有利于减少搜索，但不能保证所有请求 O(1)</td></tr></tbody></table>
+<p>对同一组织方式，放置策略还可选 first fit、next fit、best fit 等。<strong>Best fit 不保证碎片一定最少</strong>；较好的局部利用率可能换来搜索成本和小剩余块。现实实现还会使用线程缓存、arena、大小类等机制。glibc 的 <code>mmap</code> 分配阈值可动态调整，不能机械地写成“每次超过 128 KiB 就必定调用 <code>mmap</code>”。</p>
+</section>
+<section id="c18-frag"><h2>18.3 总空闲空间够了，为什么还放不下一块？</h2>
+<p><strong>内部碎片</strong>是已分配块内因对齐、块尺寸或管理开销而未用于负载的部分；<strong>外部碎片</strong>是空闲空间被切成相互分离的小块，使大请求无法放进单个连续空闲块。注意：这是<strong>一个固定池的教学例子</strong>，不能据此断定现实中的 <code>malloc</code> 必然失败——真实分配器可能扩展堆或申请新的映射。</p>
+<figure class="lesson-figure"><img src="chapter-assets/18-fragmentation.svg" alt="固定内存池中的空闲块为64、32、64字节，中间穿插已分配块；总空闲160字节但最大连续空闲块仅64字节，因此96字节请求在这个池里无法满足。" width="880" height="300"><figcaption>图 18-3：固定池中空闲块分别为 64、32、64 字节（合计 160 字节），但最大连续空闲块只有 64 字节。</figcaption></figure>
+<div class="math-scroll" tabindex="0" role="group" aria-label="外部碎片造成的可用空间不足">
+<math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><mrow><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mn>3</mn></munderover><msub><mi>F</mi><mi>i</mi></msub><mo>=</mo><mn>160</mn><mo>≥</mo><mn>96</mn><mo>,</mo><mspace width="0.8em"/><mrow><mi>max</mi><mo>(</mo><msub><mi>F</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><mn>64</mn><mo>&lt;</mo><mn>96</mn></mrow></math></div>
+<div class="micro-lab"><h3>交互：这个固定池能否满足请求？</h3><div class="seg-buttons" role="group" aria-label="选择请求字节数">
+<button type="button" data-request="32" aria-pressed="true">申请 32 B</button>
+<button type="button" data-request="64" aria-pressed="false">申请 64 B</button>
+<button type="button" data-request="96" aria-pressed="false">申请 96 B</button>
+</div><output id="fragment-result" aria-live="polite">申请 32 B：可以放入 64 B 空闲块（或 32 B 空闲块）。</output>
+<p class="small-note">只考虑相互隔离的三个空闲块，不允许扩展池，也未计块头或对齐；真实分配器行为更复杂。</p></div>
+<p>相邻空闲块可以<strong>合并（coalescing）</strong>，减少外部碎片；为了定位相邻块，教学分配器常用块头/块尾记录大小和占用状态。但生产分配器的元数据安排可能完全不同。请求大小、释放顺序、对齐和生命周期通常比“一味补齐结构体大小”更值得测量。</p>
+</section>
+<section id="c18-gc"><h2>18.4 回收：手动释放、引用计数、追踪式 GC 解决的问题不同</h2>
+<p>显式分配器需要调用者决定对象何时结束生命周期。追踪式 Mark–Sweep GC 则从栈、全局引用等根集合出发标记可达对象，再回收不可达对象；它可回收不可达引用环，但“可达”不等于“业务上仍需要”，仍然可能出现逻辑内存泄漏。</p>
+<p>引用计数在计数归零时释放对象，却通常无法单独回收互相引用的不可达环。保守式 GC 在缺少精确类型信息时可能把看起来像指针的整数当作引用，导致对象被暂时保留。不同语言运行时和库有各自的最终化与安全约束；GC 也不是“自动修复所有资源管理问题”。</p>
+<div class="insight"><strong>分清四个“释放”</strong><p>对象不再被使用、分配器认为块空闲、虚拟映射被撤销、物理页最终可回收，是<strong>不同层次的事件</strong>，不保证同时发生。</p></div>
+</section>
+<section id="c18-lab"><h2>18.5 可复现安全实验：先检查长度，再分配</h2>
+<p>即使懂得分配器的内部组织，也必须先写对调用者的长度计算。避免 <code>count * size</code> 在 <code>size_t</code> 中回绕导致意外分配过小：</p>
+<pre><code>#include &lt;stdint.h&gt;
+#include &lt;stdlib.h&gt;
 
-        <div class="tip">
-            <p><strong>mmap 的两种模式</strong>：<code>mmap</code> 有两种主要用法。文件映射将文件内容映射到进程的虚拟地址空间，修改内存就能直接修改文件（写回时机取决于 <code>MS_SYNC</code>/<code>MS_ASYNC</code>）。匿名映射（<code>MAP_ANONYMOUS</code>）只分配内存，不与任何文件关联——<code>malloc</code> 分配大块内存时，底层使用的就是匿名映射。</p>
-        </div>
+int *allocate_ints(size_t count) {
+    if (count &gt; SIZE_MAX / sizeof(int)) return NULL;
+    /* count == 0 的业务语义由调用者决定 */
+    return malloc(count * sizeof(int));
+}</code></pre>
+<p>对于某些实现，申请成功与未来触页成功也不是同一件事；内核的内存提交和 OOM 行为需要另行考虑。完整示例见 <code>examples/olah-ch18-allocator.c</code>，其中还包含 <code>mmap</code> / <code>munmap</code> 的错误检查。可用 AddressSanitizer 做越界与生命周期检测，但它不能“证明”程序没有所有内存错误。</p>
+<div class="exercise"><h3>自测</h3><p><code>free(p)</code> 返回后，操作系统必然减少该进程的物理内存占用吗？</p><details><summary>查看答案</summary><p>不必然。分配器可能把空间保留在 arena 或空闲链表中，供后续复用；是否减少 RSS 或调用 <code>munmap</code> 取决于分配器、映射类型与实际触页情况。</p></details></div></section>
+<section id="c18-close"><h2>归纳：分配地址、分配块和占用物理页是三件事</h2><p>虚拟内存负责映射与权限，分配器负责块组织与复用，实际物理页由内核在适当时机管理。下章讨论系统级 I/O 时，文件映射与内核页缓存的联系会再次出现。</p>
+<h3>延伸阅读</h3><p><a href="https://man7.org/linux/man-pages/man2/mmap.2.html">mmap(2)</a>、<a href="https://man7.org/linux/man-pages/man3/malloc.3.html">malloc(3)</a>、<a href="https://sourceware.org/glibc/manual/latest/html_node/Memory-Allocation.html">GNU libc：Memory Allocation</a>。图中固定池与块尺寸属于教学演示，不代表任何特定生产分配器。</p></section>
+</article></main>
+<script>
+(() => {
+  const buttons = [...document.querySelectorAll('[data-request]')];
+  const output = document.getElementById('fragment-result');
+  if (!buttons.length || !output) return;
+  buttons.forEach(btn => btn.addEventListener('click', () => {
+    const bytes = Number(btn.dataset.request);
+    const canFit = bytes <= 64;
+    output.textContent = '申请 ' + bytes + ' B：' + (canFit
+      ? '固定池中至少有一个足够大的连续空闲块。'
+      : '虽然总空闲有 160 B，但最大空闲块只有 64 B；此固定池无法满足。');
+    buttons.forEach(x => x.setAttribute('aria-pressed', String(x === btn)));
+  }));
+})();
+</script>
 
-        <p>这里有一个重要的性能洞察：<code>mmap</code> 是<strong>惰性分配</strong>的。调用 <code>mmap</code> 只是修改了进程的页表结构（建立了虚拟地址到"未分配"的映射），并没有真正分配物理页面。物理页面要到第一次访问（读或写）时，通过缺页机制才真正分配。这也是为什么 <code>mmap</code> 分配 1GB 内存几乎是瞬时的——只有真正用到的部分才占物理内存。</p>
-
-        <p>相比而言，<code>sbrk()</code>（传统的堆扩展接口）已经逐渐被淘汰——它只能线性扩展堆，不如 <code>mmap</code> 灵活。现代 glibc 的 malloc 实现中，大于 128KB 的分配直接走 <code>mmap</code>，小于 128KB 的从堆（arena）中分配。</p>
-
-        <h3>18.2 显式分配器的设计</h3>
-
-        <p>用户态的堆内存管理由<strong>显式分配器</strong>负责——最著名的就是 C 标准库的 <code>malloc</code> 和 <code>free</code>。分配器维护一个"空闲块"的数据结构，在 malloc 时找到足够大的块分割出去，在 free 时把块放回去。</p>
-
-        <p>三种主要的空闲块组织策略：</p>
-
-        <table>
-            <tr>
-                <th>策略</th>
-                <th>结构</th>
-                <th>优势</th>
-                <th>劣势</th>
-            </tr>
-            <tr>
-                <td><strong>隐式空闲链表</strong></td>
-                <td>块头部含大小信息，遍历整个堆查找空闲块</td>
-                <td>实现简单，易于验证正确性</td>
-                <td>分配时遍历所有块（包括已分配的），开销线性</td>
-            </tr>
-            <tr>
-                <td><strong>显式空闲链表</strong></td>
-                <td>只将空闲块用链表/双向链表链接起来</td>
-                <td>分配时只遍历空闲块，比隐式快</td>
-                <td>空闲块需额外空间存储指针</td>
-            </tr>
-            <tr>
-                <td><strong>分离空闲链表</strong></td>
-                <td>按块大小分多个链表（如 16B、32B、64B...）</td>
-                <td>分配时直接找对应大小，近似 O(1)</td>
-                <td>实现最复杂，需平衡链表数量与碎片</td>
-            </tr>
-        </table>
-
-        <p>每种策略还需要决定<strong>放置策略</strong>——从空闲链表中选哪个块：</p>
-        <ul>
-            <li><strong>First Fit</strong>：选第一个足够大的块。简单但容易在堆前部产生小碎片。</li>
-            <li><strong>Best Fit</strong>：遍历所有空闲块，选刚好够用且最小的。碎片少但慢。</li>
-            <li><strong>Next Fit</strong>：从上一次分配的位置继续找。比 First Fit 更均匀地使用堆。</li>
-        </ul>
-
-        <p>边界标记（boundary tag）是另一个重要的设计模式——每个块的头部和尾部都存储块大小和分配状态。这使得释放一个块时能快速检查前后邻居是否也是空闲的，便于合并。</p>
-
-        <div class="highlight">
-            <p><strong>CSAPP 经典 Lab</strong>：讲解分配器策略不是为了让你重新实现 malloc——但 CSAPP 的 Malloc Lab 确实要求你在一个框架内实现自己的分配器。这个 Lab 是所有 CSAPP Lab 中最有含金量的之一，完成它，你会对内存管理有脱胎换骨的理解。</p>
-        </div>
-
-        <h3>18.3 碎片问题</h3>
-
-        <p>为什么 malloc 越多、free 越乱，新 malloc 就越容易失败——即使"总空闲空间"足够大？这就是碎片问题。</p>
-
-        <p><strong>内部碎片</strong>：分配器给了一个块比你要求的更大。比如你要 30 字节，分配器给你一个 48 字节的块——多出来的 18 字节就是内部碎片。内部碎片来源于：对齐要求（通常 8 或 16 字节对齐）、元数据开销（每个块的头部字节）、分配器的最小块大小。</p>
-
-        <p><strong>外部碎片</strong>：堆上有足够的总空闲内存，但没有一个连续的空闲块能满足请求。比如堆上有 1000 字节空闲，但拆成了 10 个 100 字节的小块夹在已分配块之间——此时 <code>malloc(200)</code> 就会失败。</p>
-
-        <p>对抗外部碎片的主要武器是<strong>合并（coalescing）</strong>：</p>
-        <ul>
-            <li><strong>立即合并</strong>：每次 free 时立即检查前后邻居，如果空闲就合并成大块。实现简单，但如果程序反复分配和释放同一大小的块，会导致频繁的分割和合并。</li>
-            <li><strong>延迟合并</strong>：先不合并，等分配失败时再扫描并合并所有空闲块。效率更高，但实现复杂。</li>
-        </ul>
-
-        <div class="warning">
-            <p><strong>踩坑故事</strong>：有一个 C++ 网络服务跑了大约 3 天就莫名其妙地 <code>bad_alloc</code> 崩溃。检查发现程序仍然有数百 MB 的空闲堆空间——但都被外部碎片困住了。原因是一个模块频繁分配和释放 17 字节的小对象，而分配器的最小块是 32 字节。这些 32 字节块交替分配和释放，形成了大量"已分配 + 空闲 + 已分配 + 空闲"的交替模式，导致任何超过 32 字节的分配都会失败。最后的修复是把那个 17 字节的结构体对齐填充到 32 字节——听起来浪费，但实际消除了碎片模式。</p>
-        </div>
-
-        <h3>18.4 垃圾收集简介</h3>
-
-        <p>手动管理内存（malloc/free）容易出错——忘记 free 导致内存泄漏，重复 free 导致 double free。垃圾收集（Garbage Collection, GC）自动回收不再使用的内存。最常见的两种算法：</p>
-
-        <p><strong>Mark-Sweep（标记-清除）</strong>：从一组"根"（root set：全局变量、寄存器、栈帧中的指针）出发，遍历所有可达的对象并做标记。然后扫描整个堆，把未被标记的块归还给自由链表。这是<strong>追踪式</strong>收集的代表。</p>
-
-        <p><strong>引用计数</strong>：每个对象维护一个计数器，记录有多少引用指向它。引用增加时计数加 1，减少时减 1。计数归零时立即回收。优点是实时性好，缺点是无法处理循环引用（A 引用 B，B 引用 A，但两者都已不可达）。</p>
-
-        <p>Boehm GC 是一个著名的 C/C++ 保守式垃圾收集器——它不需要你修改代码，替换掉 <code>malloc</code>/<code>free</code> 就可以使用。之所以叫"保守式"，是因为 C 没有类型安全的内存模型，GC 无法准确区分"整数恰好等于一个地址"和"真正的指针"，所以它<strong>保守</strong>地假设任何看起来像地址的值都是指针。</p>
-
-        <div class="tip">
-            <p><strong>现实世界的分配器</strong>：今天你在生产环境中大概率不会遇到自己实现的 malloc，而是以下三个中的一种：<strong>ptmalloc2</strong>（glibc 默认，通用性好但在多线程下性能一般）、<strong>tcmalloc</strong>（Google 出品，每个线程有自己的缓存，减少锁竞争）、<strong>jemalloc</strong>（FreeBSD/Apple/meta 使用，通过 per-thread arena 达到极好的多核扩展性）。Redis 替换为 jemalloc 后，碎片率从 30% 降到了 5%，分配性能也大幅提升。理解分配器的工作方式，能帮你在碰到内存性能问题时，做出正确的选型决策。</p>
-        </div>
-
-        <p>至此，我们完成了虚拟内存的两大部分——地址翻译和内存分配。虚拟内存是系统中最强大的抽象之一，提供了隔离、保护、共享和超分配等核心能力，是现代计算机系统的基础。从下一章开始，我们将把这些知识整合起来，进入<strong>系统级 I/O</strong> 的世界，看看读写操作是如何在内核和硬件之间协同完成的。</p>
-
-        <div class="footer-nav">
+<div class="footer-nav">
             <a href="17.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="19.html">下一章 →</a>
