@@ -1,270 +1,333 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>第10章 优化程序性能 — 深入理解计算机系统（CSAPP）</title>
-    <link rel="stylesheet" href="theme.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="从一段 hello.c 出发，理解字节、编译与链接、CPU、存储层次、操作系统抽象和 Amdahl 定律。">
+<title>第 10 章 · 程序为什么慢？先看依赖链 | CSAPP</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+:root{--paper:#fffdf9;--ink:#203035;--muted:#56686e;--accent:#147f80;--transform:#bf6343;--structure:#6b5da5;--edge:#d9e1dd;--wash:#f1f6f3}
+html{scroll-behavior:smooth;scroll-padding-top:1rem}
+body{padding:0;margin:0;background:#edf2ef;color:var(--ink);font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:17px;line-height:1.85}
+a{color:#096c70;text-underline-offset:.18em}a:hover{color:#a75337}
+a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.skip-link{position:absolute;top:-100px;left:12px;z-index:99;background:white;padding:8px 14px}.skip-link:focus{top:12px}
+.book-layout{display:grid;grid-template-columns:minmax(210px,254px) minmax(0,1fr);max-width:1420px;margin:auto;min-height:100vh;background:var(--paper);box-shadow:0 12px 70px #20303512}
+.book-sidebar{border-right:1px solid var(--edge);background:#f6f8f5;padding:24px 16px;position:relative}
+.sticky{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto}
+.brand{display:block;font-size:1.07rem;font-weight:800;color:var(--ink);text-decoration:none;padding:0 10px 12px;letter-spacing:-.02em}
+.brand small{display:block;font-size:.72rem;font-weight:550;color:var(--muted);letter-spacing:.1em}
+.chapter-nav{font-size:.8rem;line-height:1.5}
+.chapter-nav h2{font-size:.73rem;letter-spacing:.16em;color:var(--muted);border:0;padding:0;margin:8px 10px 12px}
+.chapter-nav ul{list-style:none;padding:0;margin:0}.chapter-nav li{margin:0}
+.chapter-nav a{display:flex;gap:9px;align-items:baseline;padding:8px 10px;color:#465960;border-radius:8px;text-decoration:none;font-weight:450}
+.chapter-nav a:hover{background:#e8f0ed;transform:none}
+.chapter-nav a span{font-size:.69rem;color:#7e928e;font-variant-numeric:tabular-nums}
+.chapter-nav a[aria-current]{background:#deece6;color:#085c5e;font-weight:750}
+.mobile-chapters{display:none}
+.essay{width:100%;min-width:0;padding:70px clamp(20px,6vw,96px) 80px}
+.article-body{max-width:850px;margin:0 auto}
+.eyebrow{color:var(--accent);font-size:.77rem;letter-spacing:.15em;text-transform:uppercase;font-weight:800}
+.essay h1{font-size:clamp(2.25rem,5vw,4.25rem);font-weight:800;letter-spacing:-.055em;line-height:1.2;margin:16px 0 23px;color:#182d30}
+.essay .dek{font-size:clamp(1.1rem,2vw,1.38rem);line-height:1.8;color:#435d60;max-width:40em}
+.essay p{margin:17px 0;color:var(--ink);line-height:1.9}
+.essay h2{font-size:clamp(1.55rem,3vw,2.12rem);margin:0 0 22px;padding:0;border:0;color:#1a3537;letter-spacing:-.035em;line-height:1.35}
+.essay h3{font-size:1.17rem;margin:29px 0 13px;color:#27454a}
+.essay section{margin-top:84px;scroll-margin-top:22px}
+.essay strong{color:#123c3f}
+.essay ul,.essay ol{padding-left:1.2rem;margin:18px 0}
+.essay li{padding-left:4px;margin:7px 0}
+.essay pre{border-radius:12px;background:#172a2e;color:#edf9f5;line-height:1.65;padding:20px;overflow-x:auto;font-size:.87rem;margin:22px 0;white-space:pre}
+.essay pre code{color:inherit;background:none;padding:0;font-size:inherit}
+.essay code{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-size:.84em;background:#eaf1ec;border-radius:4px;padding:2px 5px;overflow-wrap:anywhere}
+.essay figure{margin:30px 0 12px}
+.essay figcaption{font-size:.86rem;line-height:1.7;color:var(--muted);margin-top:10px}
+.essay svg{display:block;width:100%;height:auto}
+.section-no{display:block;font-size:.73rem;font-weight:800;letter-spacing:.17em;color:var(--accent);margin-bottom:11px}
+.lede-line{height:3px;width:66px;background:var(--accent);margin:28px 0}
+.inline-toc{display:flex;gap:8px;flex-wrap:wrap;margin:30px 0 0}
+.inline-toc a{font-size:.8rem;background:#eaf3ee;border:1px solid #cee3d8;border-radius:999px;padding:4px 11px;text-decoration:none;color:#21585a}
+.quote{border-left:3px solid var(--accent);padding:8px 0 8px 22px;font-size:1.09rem;color:#33595c;line-height:1.8;margin:30px 0}
+.figure-card{border:1px solid var(--edge);border-radius:18px;background:#fbfdfb;padding:clamp(12px,2.5vw,24px);box-shadow:0 12px 25px #102b2410}
+.pill{display:inline-block;font-size:.72rem;letter-spacing:.06em;font-weight:750;border-radius:5px;padding:2px 8px;background:#e9f3ec;color:#176f68}
+.trace-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:22px 0 12px}
+.step-button{cursor:pointer;border:1px solid #c7d8d0;border-radius:10px;padding:13px 8px;background:white;color:#31545a;text-align:center;font-weight:700;font:inherit;font-size:.85rem;line-height:1.4}
+.step-button[aria-pressed=true]{background:#176f70;color:white;border-color:#176f70}
+.step-button span{display:block;font-size:.68rem;opacity:.75;margin-bottom:2px}
+.step-detail{border-left:4px solid var(--accent);background:#eef5ef;padding:16px 20px;border-radius:0 10px 10px 0;min-height:104px}
+.step-detail p{margin:7px 0;font-size:.96rem}
+.diagram-step{transition:opacity .2s,filter .2s}
+[data-step-active="0"] .diagram-step:not([data-step-node="0"]),[data-step-active="1"] .diagram-step:not([data-step-node="1"]),[data-step-active="2"] .diagram-step:not([data-step-node="2"]),[data-step-active="3"] .diagram-step:not([data-step-node="3"]){opacity:.55}
+.callout{background:#f0f5f1;border-left:4px solid var(--accent);padding:15px 20px;border-radius:0 12px 12px 0;margin:25px 0}
+.callout p{margin:4px 0}
+.caution{background:#fff6ea;border-left-color:#ba7b32}
+.check-list{display:grid;gap:10px;margin:22px 0}
+.check-list div{border-top:1px solid var(--edge);padding:12px 0}
+.check-list b{display:block;color:var(--accent);font-size:.76rem;letter-spacing:.08em}
+.memory-bars{display:grid;gap:8px;margin:24px 0}
+.memory-row{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:center}
+.memory-row b{font-size:.88rem}
+.memory-track{height:40px;display:flex;align-items:center;border-radius:8px;background:#e8efeb;overflow:hidden}
+.memory-fill{height:100%;display:flex;align-items:center;padding-left:12px;color:white;font-size:.79rem;font-weight:750;min-width:104px}
+.memory-fill.level1{width:28%;background:#147f80}.memory-fill.level2{width:46%;background:#427eaa}.memory-fill.level3{width:72%;background:#7767a9}.memory-fill.level4{width:100%;background:#b46c4d}
+.small-note{font-size:.83rem!important;color:var(--muted)!important}
+.triad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:24px 0}
+.triad>div{border:1px solid var(--edge);border-radius:12px;padding:18px 16px;background:#fafbf8}
+.triad h3{margin:0 0 6px;color:#215c5e;font-size:1.08rem}
+.triad p{font-size:.9rem;margin:0;line-height:1.7}
+.math-panel{border-radius:14px;border:1px solid #d8e4dc;background:#f5f8f4;padding:16px 20px;margin:23px 0}
+.math-scroll{overflow-x:auto;max-width:100%;min-width:0;padding:8px 0}
+.math-scroll math[display=block]{width:max-content;min-width:100%;font-size:1.35rem;color:#1b4140}
+.math-label{font-size:.79rem;color:var(--muted);text-align:right}
+.widget{border:1px solid #cee0d9;border-radius:16px;padding:24px;margin:25px 0;background:#f5faf6}
+.widget h3{margin:0 0 8px}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:20px 0}
+.controls label{display:block;font-size:.91rem;font-weight:700}
+.controls input{width:100%;accent-color:var(--accent);margin:12px 0 0;cursor:pointer}
+.widget-output{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;border-top:1px solid #d2e3d9;padding-top:16px}
+.widget-output output{font-size:2.3rem;line-height:1.2;font-weight:800;color:#0d6c70;font-variant-numeric:tabular-nums}
+.widget-output p{margin:2px 0;font-size:.86rem}
+.table-wrap{max-width:100%;overflow-x:auto}
+.essay table{min-width:570px;font-size:.9rem;margin:16px 0;border-collapse:collapse}
+.essay th,.essay td{padding:10px 12px;border:1px solid #d6e1da;vertical-align:top}
+.essay th{background:#e8f1eb;color:#285354}
+.references{font-size:.88rem}
+.references li{overflow-wrap:anywhere}
+.footer-nav{margin-top:65px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--edge);padding:22px 0}
+.footer-nav a{background:#eaf2ee;padding:8px 16px;border-radius:999px;text-decoration:none}
+@media(max-width:900px){.book-layout{display:block}.book-sidebar{padding:9px 18px;border:0;border-bottom:1px solid var(--edge)}.sticky{position:static;max-height:none;overflow:visible}.brand{padding:5px 2px;font-size:.92rem}.brand small{display:inline;margin-left:8px}.chapter-nav{display:none}.mobile-chapters{display:block;font-size:.86rem;padding:6px 2px}.mobile-chapters summary{cursor:pointer;color:#315d5d;font-weight:700}.mobile-chapters ul{max-height:185px;overflow-y:auto;list-style:none;padding:0;margin:8px 0}.mobile-chapters li{margin:0}.mobile-chapters a{display:block;padding:5px}.essay{padding:42px 22px 60px}}
+@media(max-width:580px){.figure-card figure{max-width:100%;overflow-x:auto}.essay .figure-card svg{min-width:660px}.essay{padding:36px 16px 60px}.essay section{margin-top:62px}.trace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.controls,.triad{grid-template-columns:1fr}.memory-row{grid-template-columns:72px minmax(0,1fr);gap:7px}.memory-row b{font-size:.76rem}.figure-card{padding:10px}.essay pre{font-size:.75rem;padding:14px}.essay h1{letter-spacing:-.035em}.essay svg{min-width:0}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important}}
+@media print{body{background:white;font-size:11pt}.book-layout{display:block;box-shadow:none}.book-sidebar,.inline-toc,.trace-grid,.controls,.skip-link{display:none!important}.essay{padding:0}.article-body{max-width:none}.essay section{margin-top:24pt;break-inside:auto}.figure-card,.math-panel,.widget{break-inside:avoid;box-shadow:none}.math-scroll{overflow:visible}.math-scroll math[display=block]{font-size:1.15rem}.references a::after{content:" (" attr(href) ")";font-size:.75em}}
+.essay .figure-card svg{max-width:100%;height:auto}.essay .step-button:focus-visible{outline:3px solid #147f80;outline-offset:3px}.essay .step-button{min-height:45px}.essay .figure-card{overflow-x:auto}@media(max-width:580px){.essay .figure-card figure{min-width:640px}.essay .figure-card svg{min-width:0}}@media print{.essay .widget .trace-grid{display:none}}</style>
 </head>
 <body>
-<div class="double-border">
-<div class="container">
-    <div class="sidebar">
-        <h3>💻 课程目录</h3>
-        <ul class="chapter-list">
-            <li><a href="01.html">第1章 计算机系统漫游</a></li>
-            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
-            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
-            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
-            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
-            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
-            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
-            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
-            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
-            <li><a href="10.html" class="active">第10章 优化程序性能</a></li>
-            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
-            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
-            <li><a href="13.html">第13章 链接——静态链接</a></li>
-            <li><a href="14.html">第14章 链接——动态链接</a></li>
-            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
-            <li><a href="16.html">第16章 异常控制流——信号</a></li>
-            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
-            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
-            <li><a href="19.html">第19章 系统级I/O</a></li>
-            <li><a href="20.html">第20章 网络编程——基础</a></li>
-            <li><a href="21.html">第21章 网络编程——进阶</a></li>
-            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
-            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
-            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
-            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
-            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
-            <li><a href="27.html">第27章 现代系统新趋势</a></li>
-            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
-        </ul>
-    </div>
-    <div class="main-content">
-        <h2>第十章：优化程序性能</h2>
+<a class="skip-link" href="#content">跳转到正文</a>
+<div class="book-layout">
+<aside class="book-sidebar">
+  <div class="sticky">
+    <a class="brand" href="index.html">CSAPP · 系统漫游<small>COMPUTER SYSTEMS</small></a>
+    <nav class="chapter-nav" aria-label="课程章节目录">
+      <h2>课程 · 28 讲</h2><ul><li><a href="01.html"><span>01</span>计算机系统漫游</a></li>
+<li><a href="02.html"><span>02</span>信息的表示与处理——整数</a></li>
+<li><a href="03.html"><span>03</span>信息的表示与处理——浮点数</a></li>
+<li><a href="04.html"><span>04</span>程序的机器级表示——基础</a></li>
+<li><a href="05.html"><span>05</span>程序的机器级表示——控制流</a></li>
+<li><a href="06.html"><span>06</span>程序的机器级表示——过程与栈</a></li>
+<li><a href="07.html"><span>07</span>程序的机器级表示——数据与进阶</a></li>
+<li><a href="08.html"><span>08</span>处理器体系结构——ISA设计</a></li>
+<li><a href="09.html"><span>09</span>处理器体系结构——流水线</a></li>
+<li><a aria-current="page" href="10.html"><span>10</span>优化程序性能</a></li>
+<li><a href="11.html"><span>11</span>存储器层次结构——技术</a></li>
+<li><a href="12.html"><span>12</span>存储器层次结构——Cache</a></li>
+<li><a href="13.html"><span>13</span>链接——静态链接</a></li>
+<li><a href="14.html"><span>14</span>链接——动态链接</a></li>
+<li><a href="15.html"><span>15</span>异常控制流——异常与进程</a></li>
+<li><a href="16.html"><span>16</span>异常控制流——信号</a></li>
+<li><a href="17.html"><span>17</span>虚拟内存——地址翻译</a></li>
+<li><a href="18.html"><span>18</span>虚拟内存——内存分配</a></li>
+<li><a href="19.html"><span>19</span>系统级I/O</a></li>
+<li><a href="20.html"><span>20</span>网络编程——基础</a></li>
+<li><a href="21.html"><span>21</span>网络编程——进阶</a></li>
+<li><a href="22.html"><span>22</span>并发编程——线程基础</a></li>
+<li><a href="23.html"><span>23</span>并发编程——高阶模式</a></li>
+<li><a href="24.html"><span>24</span>经典Lab实战(I)</a></li>
+<li><a href="25.html"><span>25</span>经典Lab实战(II)</a></li>
+<li><a href="26.html"><span>26</span>经典Lab实战(III)——Proxy Lab</a></li>
+<li><a href="27.html"><span>27</span>现代系统新趋势</a></li>
+<li><a href="28.html"><span>28</span>综合项目：手写高性能Web服务器</a></li></ul>
+    </nav>
+    <details class="mobile-chapters"><summary>浏览全部 28 章</summary><ul><li><a href="01.html"><span>01</span>计算机系统漫游</a></li>
+<li><a href="02.html"><span>02</span>信息的表示与处理——整数</a></li>
+<li><a href="03.html"><span>03</span>信息的表示与处理——浮点数</a></li>
+<li><a href="04.html"><span>04</span>程序的机器级表示——基础</a></li>
+<li><a href="05.html"><span>05</span>程序的机器级表示——控制流</a></li>
+<li><a href="06.html"><span>06</span>程序的机器级表示——过程与栈</a></li>
+<li><a href="07.html"><span>07</span>程序的机器级表示——数据与进阶</a></li>
+<li><a href="08.html"><span>08</span>处理器体系结构——ISA设计</a></li>
+<li><a href="09.html"><span>09</span>处理器体系结构——流水线</a></li>
+<li><a aria-current="page" href="10.html"><span>10</span>优化程序性能</a></li>
+<li><a href="11.html"><span>11</span>存储器层次结构——技术</a></li>
+<li><a href="12.html"><span>12</span>存储器层次结构——Cache</a></li>
+<li><a href="13.html"><span>13</span>链接——静态链接</a></li>
+<li><a href="14.html"><span>14</span>链接——动态链接</a></li>
+<li><a href="15.html"><span>15</span>异常控制流——异常与进程</a></li>
+<li><a href="16.html"><span>16</span>异常控制流——信号</a></li>
+<li><a href="17.html"><span>17</span>虚拟内存——地址翻译</a></li>
+<li><a href="18.html"><span>18</span>虚拟内存——内存分配</a></li>
+<li><a href="19.html"><span>19</span>系统级I/O</a></li>
+<li><a href="20.html"><span>20</span>网络编程——基础</a></li>
+<li><a href="21.html"><span>21</span>网络编程——进阶</a></li>
+<li><a href="22.html"><span>22</span>并发编程——线程基础</a></li>
+<li><a href="23.html"><span>23</span>并发编程——高阶模式</a></li>
+<li><a href="24.html"><span>24</span>经典Lab实战(I)</a></li>
+<li><a href="25.html"><span>25</span>经典Lab实战(II)</a></li>
+<li><a href="26.html"><span>26</span>经典Lab实战(III)——Proxy Lab</a></li>
+<li><a href="27.html"><span>27</span>现代系统新趋势</a></li>
+<li><a href="28.html"><span>28</span>综合项目：手写高性能Web服务器</a></li></ul></details>
+  </div>
+</aside>
+<main class="essay" id="content"><article class="article-body">
 
-        <p>前两章我们站在 CPU 设计者的角度思考问题。现在让我们切换回程序员视角——我们不需要设计 CPU，但我们需要让程序跑得更快。</p>
-
-        <p>你可能有这样的经历：同样是实现一个算法，别人写的代码跑得飞快，你的代码却慢了一个数量级。差异可能不在算法复杂度上，而在于你是否利用了处理器微体系结构的特点。一个不了解流水线和 Cache 的程序员，就像在不了解交通规则的情况下开车——速度上不去是小事，还可能撞车。</p>
-
-        <p>这一章我们不讨论算法优化（那是数据结构课的内容），而是聚焦于<strong>程序级优化</strong>——在算法不变的前提下，通过调整代码结构来榨干硬件的每一分性能。这些技巧不依赖于特定的编译器或平台，而是建立在处理器运作的底层规律之上。</p>
-
-        <h3>10.1 性能度量——CPE</h3>
-
-        <p>要优化程序，首先要能<strong>度量</strong>性能。CSAPP 中常用的度量单位是 CPE（Cycles Per Element，每元素周期数）。在处理向量、数组或循环时，CPE 比单纯的"总执行时间"更有意义——它消除了数据规模的影响，让你看到代码本身的"效率基线"。</p>
-
-        <p>举个例子，对一个长度为 n 的整数数组求和：</p>
-        <ul>
-            <li>最简单的 for 循环：CPE 约为 3-5（取决于处理器和编译器优化）</li>
-            <li>展开 2 次循环：CPE 可能降到 2-3</li>
-            <li>展开 4 次 + 4 路并行：CPE 可以接近 1</li>
-        </ul>
-
-        <p>下面是一些常见操作的 CPE 参考值（在 Intel Core i7 上测试）：</p>
-
-        <table>
-            <tr>
-                <th>操作</th>
-                <th>-O1 优化</th>
-                <th>-O2 优化</th>
-                <th>-O3 优化</th>
-                <th>极限</th>
-            </tr>
-            <tr>
-                <td>整数求和（连续内存）</td>
-                <td>~4.0</td>
-                <td>~2.5</td>
-                <td>~1.2</td>
-                <td>1.0</td>
-            </tr>
-            <tr>
-                <td>整数求和（链表遍历）</td>
-                <td>~10.0</td>
-                <td>~10.0</td>
-                <td>~10.0</td>
-                <td>~8.0</td>
-            </tr>
-            <tr>
-                <td>浮点乘法累加</td>
-                <td>~5.0</td>
-                <td>~3.0</td>
-                <td>~1.5</td>
-                <td>1.0</td>
-            </tr>
-            <tr>
-                <td>条件分支密集型</td>
-                <td>~12.0</td>
-                <td>~8.0</td>
-                <td>~7.0</td>
-                <td>~3.0</td>
-            </tr>
-        </table>
-
-        <p>测量 CPE 的工具：Linux 上的 <code>perf</code> 工具。使用 <code>perf stat ./your_program</code> 可以统计程序的周期数、指令数、Cache 命中率等数据，然后手动计算 CPE。更专业的可以用 <code>perf record</code> + <code>perf report</code> 来分析热点函数。</p>
-
-        <pre><code>$ perf stat ./sum_array 1000000
-
- Performance counter stats for './sum_array 1000000':
-    2,500,000,000      cycles
-    4,000,000,000      instructions
-              ...      # 计算 CPE = cycles / 元素数 = 2500</code></pre>
-
-        <div class="tip">
-            <p><strong>先测量，再优化</strong>：这是性能优化的第一条法则。不要靠"感觉"来判断程序慢在哪里。你的直觉可能完全错误——热点可能在一个你完全没想到的小函数里。每次优化前后都要重新测量，让数据说话。</p>
-        </div>
-
-        <h3>10.2 编译器优化能力与局限</h3>
-
-        <p>编译器是你最强大的性能优化助手，但它不是万能的。GCC 的优化级别从 -O0（无优化）到 -O3（激进优化）再到 -Ofast（甚至违反标准），每一级都开启更多优化 pass。</p>
-
-        <pre><code># -O0: 最直接的翻译，每条 C 语句对应一组汇编，便于调试
-$ gcc -O0 -S sum.c -o sum_O0.s
-
-# -O1: 基本优化，删除死代码、常量折叠
-$ gcc -O1 -S sum.c -o sum_O1.s
-
-# -O2: 更激进的优化，循环优化、内联函数、指令调度
-$ gcc -O2 -S sum.c -o sum_O2.s
-
-# -O3: 包括向量化（auto-vectorization）、循环展开等
-$ gcc -O3 -S sum.c -o sum_O3.s</code></pre>
-
-        <p>编译器无法优化的两个典型场景：</p>
-        <p><strong>1. 内存别名（Memory Aliasing）</strong></p>
-
-        <pre><code>void twiddle1(long *xp, long *yp) {
-    *xp += *yp;  // 编译器可能认为 xp == yp，不能乱优化
-    *xp += *yp;  // 每次都必须重新读取 *yp
+<header><div class="eyebrow">Chapter 10 · Optimizing Program Performance</div><h1>程序为什么慢？<br>先看依赖链</h1>
+<p class="dek">从 CPE 的可信测量开始，区分编译器能做什么、指针别名阻碍了什么，以及循环展开何时真的缩短关键路径。</p>
+<div class="lede-line" aria-hidden="true"></div>
+<p>两个版本的求和循环可能拥有相同的时间复杂度，却在同一机器上显示不同的执行时间。原因可能是函数调用、访存、数据依赖、分支，也可能只是实验噪声。<strong>优化的第一步不是改代码，而是建立可重复的基线。</strong></p>
+<nav class="inline-toc" aria-label="本章阅读路径"><a href="#metric">如何测量</a><a href="#barriers">优化障碍</a><a href="#motion">代码移动</a><a href="#ilp">多路累加</a><a href="#bound">性能下界</a><a href="#lab">可运行实验</a></nav>
+</header>
+<section id="metric" aria-labelledby="metric-title"><span class="section-no">01 / MEASUREMENT</span><h2 id="metric-title">CPE 是直线的斜率，不是随口报出的常数</h2>
+<p>CPE（Cycles Per Element，每个处理元素所需周期）适合描述长度为 <code>n</code> 的数组循环。对不同规模测量总周期 <code>T(n)</code>，在输入足够大、运行条件相近且规模处于相同性能区间时，常用近似：</p>
+<div class="math-panel"><div class="math-scroll" tabindex="0" role="region" aria-label="总周期与每元素周期的线性关系"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>T</mi><mo>(</mo><mi>n</mi><mo>)</mo><mo>≈</mo><mi>C</mi><mo>+</mo><mi>n</mi><mo>×</mo><mi>CPE</mi></mrow></math></div><p class="math-label">C 是固定启动开销；CPE 是这一区间的拟合斜率，可能随工作集、指令与平台改变。</p></div>
+<div class="figure-card"><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 278" role="img" aria-labelledby="cpe-svg-title cpe-svg-desc">
+<title id="cpe-svg-title">通过不同输入规模估算 CPE 斜率</title>
+<desc id="cpe-svg-desc">横轴元素数 n，纵轴总周期 T，理论示意呈一条有固定开销 C 和斜率 CPE 的直线。数值并非实测。</desc>
+<g font-family="system-ui,sans-serif">
+<path d="M100 22 V221 H787" fill="none" stroke="#496d6d" stroke-width="3"/>
+<text x="26" y="28" font-size="17" fill="#496d6d">周期 T</text><text x="762" y="249" font-size="17" fill="#496d6d">元素 n</text>
+<path d="M102 180 L750 57" fill="none" stroke="#177e7c" stroke-width="5"/>
+<circle cx="102" cy="180" r="6" fill="#b66b4a"/><text x="123" y="197" font-size="15" fill="#a65b3b">固定成本 C</text>
+<circle cx="228" cy="156" r="7" fill="#177e7c" stroke="white" stroke-width="2"/><circle cx="368" cy="129.5" r="7" fill="#177e7c" stroke="white" stroke-width="2"/><circle cx="508" cy="103" r="7" fill="#177e7c" stroke="white" stroke-width="2"/><circle cx="648" cy="76.5" r="7" fill="#177e7c" stroke="white" stroke-width="2"/>
+<path d="M410 123 H555 V95" fill="none" stroke="#b46e50" stroke-width="2" stroke-dasharray="5 5"/>
+<text x="566" y="95" font-size="18" font-weight="700" fill="#a15a3e">斜率 = CPE</text>
+<text x="248" y="43" font-size="16" fill="#315b5c">T(n) ≈ C + n × CPE</text>
+<text x="104" y="267" font-size="14" fill="#617976">示意图：不同 n 测得的点需要重复实验，再拟合出稳定斜率</text>
+</g></svg><figcaption>图 1 · 比较多种 <code>n</code> 才有机会区分固定开销和循环本身的单位成本。各点和直线仅为概念示意，不是 Core i7 或其他芯片的测量结果。</figcaption></figure></div>
+<p>Linux 上可借助 <code>perf stat</code> 观测硬件周期数（取决于系统权限及硬件事件支持）。不要混淆墙钟时间与 CPU cycles，也不要把一次 <code>perf stat</code> 的总周期直接除以 <code>n</code> 就称为普适 CPE。</p>
+<pre><code>gcc -O3 -std=c11 -Wall -Wextra sum.c -o sum
+# 确保输入规模相同、结果被使用，并在同一机器多次运行
+perf stat -r 5 -e cycles,instructions ./sum 10000000
+# 若受 perf_event_paranoid 等限制，可改用可靠的计时实验；不伪造数据</code></pre>
+<p>进行对照时尽量固定编译器选项、CPU 频率条件和工作负载；预热、重复采样，并检查向量化、缓存行为与数据规模改变后结果是否还成立。</p>
+</section>
+<section id="barriers" aria-labelledby="barriers-title"><span class="section-no">02 / COMPILER</span><h2 id="barriers-title">编译器为什么不敢合并这两次内存访问？</h2>
+<p>编译器可以做常量传播、循环优化与自动向量化，但必须保持 C 程序被标准定义的可观察行为。下面两个函数看起来都在“加两次 <code>*yp</code>”，<strong>当指针别名时却根本不等价</strong>：</p>
+<pre><code>void twiddle1(long *xp, long *yp) {
+    *xp += *yp;
+    *xp += *yp;
 }
-
 void twiddle2(long *xp, long *yp) {
-    *xp += 2 * (*yp);  // 等价但只读一次 *yp，更利于优化
-}</code></pre>
-
-        <p>当 xp 和 yp 指向同一块内存时，twiddle1 的两次读取必须都执行（因为第一次写入 *xp 后，*yp 的值可能变了）。这就是内存别名——指针指向的地址可能重叠，编译器为了正确性，不敢做优化。</p>
-
-        <p><strong>2. 函数调用副作用</strong></p>
-
-        <pre><code>int count = 0;
-
-int f(int x) {
-    count++;
-    return x * x;
+    *xp += 2 * (*yp);
 }
+/* 若 xp == yp 且初值为 5（无溢出）：
+   twiddle1 得到 20，twiddle2 得到 15。 */</code></pre>
+<div class="callout caution"><p><strong>不可盲改：</strong><code>restrict</code> 表达程序员对不重叠访问的承诺；只有调用者确实满足它的约束才能添加。把原函数无条件换成第二个，不是性能优化而是语义改变。</p></div>
+<p>函数调用也可能观察或修改全局状态。编译器无法证明调用无副作用时，不能随意把它移出循环。相反，把真正在循环中不变且可安全缓存的数据写得明确，可帮助优化器。</p>
+</section>
+<section id="motion" aria-labelledby="motion-title"><span class="section-no">03 / CODE MOTION</span><h2 id="motion-title">把重复寻找长度，改成一次寻找</h2>
+<p>若字符串内容只做 ASCII 大写到小写的就地转换，且输入是有效的以 NUL 结尾的字符串，这个转换不会改变字符串长度。于是长度检查不必每轮重新扫描：</p>
+<pre><code>#include &lt;stddef.h&gt;
+#include &lt;string.h&gt;
 
-// 编译器不能把 f(i) 外提出循环，因为 f 有副作用（修改全局 count）
-void loop(int n) {
-    int sum = 0;
-    for (int i = 0; i &lt; n; i++) {
-        sum += f(i);
-    }
-}</code></pre>
-
-        <p>如果 f 是纯函数（没有副作用），编译器可以把 f(i) 的结果缓存起来。但大多数情况下，编译器不能确定函数是否有副作用，所以保守地每次调用。</p>
-
-        <div class="highlight">
-            <p><strong>编译器优化的"安全"原则</strong>：编译器永远以<strong>正确性</strong>优先。如果一个优化可能改变程序的行为（哪怕是在极端的边缘情况），编译器会选择不做。因此，程序员需要帮助编译器——通过写"编译器友好"的代码，让优化可以安全地进行。最典型的方法就是用局部变量代替指针，消除内存别名的可能性。</p>
-        </div>
-
-        <h3>10.3 消除循环的低效率</h3>
-
-        <p>循环是程序性能最集中的地方——一个慢循环可能占据 90% 的执行时间。消除循环低效率的最有效手段之一是<strong>代码移动（Code Motion）</strong>：把循环不变量提取到循环外面。</p>
-
-        <p><strong>优化前：</strong></p>
-
-        <pre><code>// 每次迭代都调用 strlen，而字符串长度不会变化！
-void lower1(char *s) {
-    for (int i = 0; i &lt; strlen(s); i++) {
+void ascii_lower(char *s) {
+    size_t n = strlen(s);         /* O(n) 一次 */
+    for (size_t i = 0; i &lt; n; ++i) {
         if (s[i] &gt;= 'A' &amp;&amp; s[i] &lt;= 'Z')
-            s[i] -= ('A' - 'a');
+            s[i] = (char)(s[i] - 'A' + 'a');
     }
 }</code></pre>
-
-        <p>这个代码的问题是：strlen(s) 在每次循环迭代时都被调用，而字符串 s 的长度在循环过程中不会变！strlen 本身需要遍历整个字符串——结果这个函数的时间复杂度从 O(n) 变成了 O(n^2)。</p>
-
-        <p><strong>优化后：</strong></p>
-
-        <pre><code>// 把 strlen 结果提到循环外面
-void lower2(char *s) {
-    int len = strlen(s);
-    for (int i = 0; i &lt; len; i++) {
-        if (s[i] &gt;= 'A' &amp;&amp; s[i] &lt;= 'Z')
-            s[i] -= ('A' - 'a');
+<p>这比每轮在条件中都写 <code>strlen(s)</code> 更清楚地表达了循环不变量。注意：若循环会写入字符串终止符、指针可别名到相关存储，或输入根本没有合法终止符，就不能照搬“先缓存长度”的结论。</p>
+<p>“<code>strlen</code> 在循环里一定导致 O(n²)”也不是可靠的实测结论：足够聪明的编译器有时会把它移出，具体行为取决于源码、别名分析、优化选项与库实现。<strong>要检查生成的汇编，而不是只凭源代码预测速度。</strong></p>
+</section>
+<section id="ilp" aria-labelledby="ilp-title"><span class="section-no">04 / DEPENDENCIES</span><h2 id="ilp-title">循环展开本身不会打断依赖链</h2>
+<p>假设每次浮点加法都依赖上次产生的累计值。即使把循环展开四次，写成连续四句 <code>acc += a[i]</code>，关键路径仍然串行。改成 <strong>4 条独立累加链</strong>，处理器才可能同时调度多个加法。</p>
+<div class="figure-card"><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 870 302" role="img" aria-labelledby="ilp-svg-title ilp-svg-desc">
+<title id="ilp-svg-title">单一累加器与四个独立累加器的数据依赖图</title>
+<desc id="ilp-svg-desc">左边同一个累加值经过四次串联加法；右边四条独立累加链分别执行一次加法，并在循环结束后合并结果。多累加器可缩短关键依赖链，但浮点合并次序不同。</desc>
+<g font-family="system-ui,sans-serif" text-anchor="middle">
+<text x="180" y="28" font-size="18" font-weight="700" fill="#225f5c">串行：同一条依赖链</text>
+<text x="637" y="28" font-size="18" font-weight="700" fill="#225f5c">并行机会：4 条独立链</text>
+<rect x="115" y="43" width="134" height="43" rx="10" fill="#fff0e6" stroke="#d3ad96"/><text x="182" y="70" font-size="17" font-weight="700" fill="#31595b">acc += a[0]</text><rect x="115" y="98" width="134" height="43" rx="10" fill="#e5f1ed" stroke="#82b5a7"/><text x="182" y="125" font-size="17" font-weight="700" fill="#31595b">acc += a[1]</text><rect x="115" y="153" width="134" height="43" rx="10" fill="#fff0e6" stroke="#d3ad96"/><text x="182" y="180" font-size="17" font-weight="700" fill="#31595b">acc += a[2]</text><rect x="115" y="208" width="134" height="43" rx="10" fill="#e5f1ed" stroke="#82b5a7"/><text x="182" y="235" font-size="17" font-weight="700" fill="#31595b">acc += a[3]</text>
+<path d="M182 86 V98" stroke="#ad6144" stroke-width="3"/><path d="M175 94 l7 8 7 -8" fill="none" stroke="#ad6144" stroke-width="2"/><path d="M182 141 V153" stroke="#ad6144" stroke-width="3"/><path d="M175 149 l7 8 7 -8" fill="none" stroke="#ad6144" stroke-width="2"/><path d="M182 196 V208" stroke="#ad6144" stroke-width="3"/><path d="M175 204 l7 8 7 -8" fill="none" stroke="#ad6144" stroke-width="2"/>
+<rect x="430" y="87" width="101" height="72" rx="11" fill="#e2f1e9" stroke="#8cbcae"/><text x="480" y="114" font-size="17" font-weight="700" fill="#465b68">acc0</text><text x="480" y="139" font-size="15" fill="#465b68">+= a[0]</text><path d="M480 159 V211" stroke="#768d99" stroke-width="2"/><rect x="540" y="87" width="101" height="72" rx="11" fill="#ede8f7" stroke="#a798ce"/><text x="590" y="114" font-size="17" font-weight="700" fill="#465b68">acc1</text><text x="590" y="139" font-size="15" fill="#465b68">+= a[1]</text><path d="M590 159 V211" stroke="#768d99" stroke-width="2"/><rect x="650" y="87" width="101" height="72" rx="11" fill="#e2f1e9" stroke="#8cbcae"/><text x="700" y="114" font-size="17" font-weight="700" fill="#465b68">acc2</text><text x="700" y="139" font-size="15" fill="#465b68">+= a[2]</text><path d="M700 159 V211" stroke="#768d99" stroke-width="2"/><rect x="760" y="87" width="101" height="72" rx="11" fill="#ede8f7" stroke="#a798ce"/><text x="810" y="114" font-size="17" font-weight="700" fill="#465b68">acc3</text><text x="810" y="139" font-size="15" fill="#465b68">+= a[3]</text><path d="M810 159 V211" stroke="#768d99" stroke-width="2"/>
+<rect x="515" y="211" width="242" height="44" rx="11" fill="#f7eee2" stroke="#cea684"/>
+<text x="636" y="239" font-size="17" font-weight="700" fill="#925b3f">最后合并 acc0…acc3</text>
+<text x="180" y="285" font-size="15" fill="#647b77">四次加法形成连续依赖</text>
+<text x="638" y="285" font-size="15" fill="#647b77">减少链长 ≠ 保证四倍提速</text>
+</g></svg><figcaption>图 2 · 左侧同一累计值被连续更新；右侧四个寄存器各自前进，最后再合并。图中没有表达真实硬件的端口数、时延或提速比例。</figcaption></figure></div>
+<pre><code>double sum4(const double *a, size_t n) {
+    double s0=0, s1=0, s2=0, s3=0;
+    size_t i = 0;
+    for (; i + 3 &lt; n; i += 4) {
+        s0 += a[i];     s1 += a[i+1];
+        s2 += a[i+2];   s3 += a[i+3];
     }
+    double out = (s0 + s1) + (s2 + s3);
+    for (; i &lt; n; ++i) out += a[i];
+    return out;
 }</code></pre>
+<p><strong>浮点语义边界：</strong>由于舍入误差、NaN、带符号零等细节，改变加法结合顺序可能改变结果，甚至逐位不一致。需要逐位一致的场景不能直接使用这种重组；允许数值容差也应明确误差目标。</p>
+</section>
+<section id="bound" aria-labelledby="bound-title"><span class="section-no">05 / BOTTLENECK</span><h2 id="bound-title">延迟与吞吐上限，会在哪儿相遇？</h2>
+<p>一个<strong>仅用于直觉的模型</strong>：假定每个元素做一次同类操作，操作延迟为 <code>L</code> 周期，处理器每周期最多启动 <code>r</code> 次该操作，循环维护 <code>k</code> 条相互独立的累加链，忽略访存、分支与乱序窗口限制。则单元素平均周期的理论下界：</p>
+<div class="math-panel"><div class="math-scroll" tabindex="0" role="region" aria-label="延迟与吞吐下界的 MathML 表达式"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>CPE</mi><mo>≥</mo><mi>max</mi><mo>(</mo><mfrac><mi>L</mi><mi>k</mi></mfrac><mo>,</mo><mfrac><mn>1</mn><mi>r</mi></mfrac><mo>)</mo></mrow></math></div><p class="math-label">仅对该简化独立链模型成立；实际瓶颈可能是加载带宽、缓存未命中、前端或编译器优化。</p></div>
+<div class="widget" aria-labelledby="cpe-widget-title"><h3 id="cpe-widget-title">交互 · 增加独立累加器能降低多少理论下界？</h3>
+<div class="controls">
+<label for="cpe-l">操作延迟 L：<strong id="cpe-l-text">4</strong> 周期<input id="cpe-l" type="range" min="1" max="10" step="1" value="4"></label>
+<label for="cpe-k">独立链 k：<strong id="cpe-k-text">1</strong> 条<input id="cpe-k" type="range" min="1" max="8" step="1" value="1"></label>
+<label for="cpe-r">最大吞吐 r：<strong id="cpe-r-text">2</strong> 次/周期<input id="cpe-r" type="range" min="1" max="4" step="1" value="2"></label>
+</div><div class="widget-output"><div><p>简化模型给出的 CPE 下界</p><output id="cpe-output" aria-live="polite">4.00</output></div><p id="cpe-reason">当前由依赖链延迟限制。</p></div></div>
+<p>如果 <code>k</code> 增加而下界不再下降，说明这个模型已受到操作发射吞吐上限约束；但真实优化依旧需要测量确认，不能把这个值当成某颗 CPU 的基准。</p>
+</section>
+<section id="lab" aria-labelledby="lab-title"><span class="section-no">06 / REPRODUCE</span><h2 id="lab-title">一个可编译的微基准：先确保结果没被优化掉</h2>
+<p>复制下面完整的 C11 示例到 <code>sum.c</code>。串行和四路函数在同一输入上计算，并打印结果，避免“看似跑了循环、实际被编译器删除”的最常见陷阱。它只负责功能对照，正式性能比较仍需多次采样及检查汇编。</p>
+<pre><code>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;stdint.h&gt;
 
-        <p>这个改动把 O(n^2) 变成了 O(n)。如果用 profiler 来分析 lower1，你会发现 strlen 占用了约 80% 的执行时间——仅仅因为一个代码移动的疏忽，性能差了上百倍（对于长字符串）。</p>
-
-        <p>还有一个常见的优化是<strong>减少过程调用</strong>。比如在循环中调用一个简单的 getter/setter 函数，不如直接访问数据结构。但这需要权衡封装性和性能——在性能关键路径上，打破封装是值得的。</p>
-
-        <div class="warning">
-            <p><strong>真实踩坑故事</strong>：我参与过一个实时视频处理系统，帧率始终达不到 30fps。翻遍代码，最后发现罪魁祸首是日志函数——每个像素的处理循环里都调用了 <code>log_debug()</code>，而 log_debug 内部又调用了 gettimeofday() 和 snprintf()。虽然每条日志只花几微秒，但乘以数百万像素，帧率直接腰斩。优化方法：把日志移到循环外面，或者只在 debug 模式下启用。这件事给我的教训是：不要在任何热点路径上做"看起来很小但会执行几百万次"的操作。</p>
-        </div>
-
-        <h3>10.4 指令级并行与循环展开</h3>
-
-        <p>现代 CPU 不仅流水线深，还<strong>超标量（Superscalar）</strong>——每个周期能发射多条指令。这意味着 CPU 内部有多个执行单元（ALU、FPU、load/store 单元等），可以并行执行独立的指令。</p>
-
-        <p>为了利用指令级并行（ILP, Instruction-Level Parallelism），我们可以对循环做<strong>展开（Loop Unrolling）</strong>——一次迭代处理多个元素，减少循环控制开销，同时也给编译器更多空间来调度指令。</p>
-
-        <p><strong>未展开版本：</strong></p>
-
-        <pre><code>float sum(float *a, int n) {
-    float result = 0;
-    for (int i = 0; i &lt; n; i++)
-        result += a[i];
-    return result;
-}</code></pre>
-
-        <p><strong>2×2 展开（两次展开 + 两次累积）：</strong></p>
-
-        <pre><code>float sum_unroll_2x2(float *a, int n) {
-    float result0 = 0, result1 = 0;
-    int i;
-    for (i = 0; i &lt; n-1; i += 2) {
-        result0 += a[i];
-        result1 += a[i+1];
+static double sum1(const double *a, size_t n) {
+    double s = 0;
+    for (size_t i = 0; i &lt; n; ++i) s += a[i];
+    return s;
+}
+static double sum4(const double *a, size_t n) {
+    double s0=0, s1=0, s2=0, s3=0;
+    size_t i = 0;
+    for (; i + 3 &lt; n; i += 4) {
+        s0 += a[i]; s1 += a[i+1];
+        s2 += a[i+2]; s3 += a[i+3];
     }
-    for (; i &lt; n; i++)    // 处理剩余元素
-        result0 += a[i];
-    return result0 + result1;
+    double out = (s0+s1)+(s2+s3);
+    for (; i &lt; n; ++i) out += a[i];
+    return out;
+}
+int main(int argc, char **argv) {
+    if (argc != 2) return 2;
+    char *end = NULL;
+    unsigned long long requested = strtoull(argv[1], &amp;end, 10);
+    if (end == argv[1] || *end || !requested ||
+        requested &gt; SIZE_MAX / sizeof(double)) return 2;
+    size_t n = (size_t)requested;
+    double *a = malloc(n * sizeof(*a));
+    if (!a) return 1;
+    for (size_t i = 0; i &lt; n; ++i)
+        a[i] = (double)(i % 37) / 37.0;
+    printf("sum1=%.17g sum4=%.17g\n", sum1(a,n), sum4(a,n));
+    free(a);
+    return 0;
 }</code></pre>
-
-        <p><strong>4×4 展开 + 4 路并行：</strong></p>
-
-        <pre><code>float sum_unroll_4x4(float *a, int n) {
-    float result0 = 0, result1 = 0, result2 = 0, result3 = 0;
-    int i;
-    for (i = 0; i &lt; n-3; i += 4) {
-        result0 += a[i];
-        result1 += a[i+1];
-        result2 += a[i+2];
-        result3 += a[i+3];
-    }
-    for (; i &lt; n; i++)
-        result0 += a[i];
-    return result0 + result1 + result2 + result3;
-}</code></pre>
-
-        <p>为什么分开累加比一个累加器更快？因为浮点加法是有延迟的（通常 3-5 个周期），每步加法必须等上一步完成（数据相关）。如果只用一个累加器，无论怎么展开循环，CPE 都受限于加法的延迟。但如果用多个累加器——每个加法链是独立的——CPU 的多个 FPU 可以并行工作，CPE 可以降到接近于加法延迟的倒数。</p>
-
-        <p>这就是<strong>reassociation 变换</strong>的核心思想：通过改变运算的关联方式，打破数据依赖链，让多条流水线并行工作。</p>
-
-        <div class="highlight">
-            <p><strong>从底层到上层的性能思维</strong>：当你理解了流水线和 ILP，你就能理解为什么"展开循环 + 多路并行"有效——不是因为代码更短了，而是因为你在利用 CPU 内部<strong>多个独立执行单元并行工作</strong>。每次你写一个循环，都应该想一想：这个循环的每两次迭代之间有数据依赖吗？如果有，能不能用多个累加器/多个临时变量来打破依赖？当然，这些优化在大多数情况下可以让编译器帮你做（-O3 会自动做循环展开和向量化），但你至少要能看懂编译器生成的汇编代码，确认它确实做了你期望的优化。使用 <code>perf top</code> 可以在程序运行时实时查看热点函数的汇编指令——这是性能调优的神器。</p>
-        </div>
-
-        <p>这一章我们建立了性能优化的完整框架：从 CPE 度量开始，理解了编译器优化的能力和局限，学会了代码移动消除循环低效，再到利用指令级并行做循环展开和多路累加。下一章，我们将进入计算机系统中对性能影响最大的部分之一——存储器层次结构。你会发现，很多时候程序慢不是因为 CPU 不够快，而是因为数据没在正确的地方。</p>
-
-        <div class="footer-nav">
-            <a href="09.html">← 上一章</a>
-            <a href="index.html">📖 返回目录</a>
-            <a href="11.html">下一章 →</a>
-        </div>
-    </div>
-</div>
-</div>
-</body>
-</html>
+<p class="small-note">执行：<code>gcc -O3 -std=c11 -Wall -Wextra sum.c -o sum && ./sum 1000000</code>。若使用 <code>-ffast-math</code> 或 <code>-Ofast</code>，浮点语义和优化空间会发生变化，不能与严格编译条件下的结果混为一谈。</p>
+</section>
+<section id="references" class="references" aria-labelledby="references-title"><span class="section-no">REFERENCES</span><h2 id="references-title">参考与边界</h2>
+<ol><li>Bryant、O'Hallaron，《<a href="https://csapp.cs.cmu.edu/3e/">CS:APP 第三版</a>》第 5 章“Optimizing Program Performance”，CPE、代码移动与指令级并行。</li>
+<li><a href="https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html">GCC Optimize Options</a>：编译优化级别和浮点相关选项。</li>
+<li><a href="https://man7.org/linux/man-pages/man1/perf-stat.1.html">Linux perf stat(1)</a>：计数器测量的用法和局限。</li></ol><p class="small-note">本章没有伪造任何测量表；图和交互给出的是假设明确的教学模型。实际数值依 CPU、编译器、输入和内存系统而定。</p></section>
+<nav class="footer-nav" aria-label="章节导航"><a href="09.html">← 第 9 章</a><a href="index.html">课程目录</a><a href="11.html">第 11 章：存储器层次 →</a></nav>
+</article></main></div>
+<script>
+(function(){
+"use strict";
+const l=document.getElementById("cpe-l"), k=document.getElementById("cpe-k"),r=document.getElementById("cpe-r");
+function update(){
+const L=Number(l.value),K=Number(k.value),R=Number(r.value);
+const dependency=L/K,throughput=1/R;
+document.getElementById("cpe-l-text").textContent=String(L);
+document.getElementById("cpe-k-text").textContent=String(K);
+document.getElementById("cpe-r-text").textContent=String(R);
+document.getElementById("cpe-output").textContent=Math.max(dependency,throughput).toFixed(2);
+document.getElementById("cpe-reason").textContent=dependency>=throughput?"当前由依赖链延迟限制。":"当前由操作发射吞吐限制。";
+}
+[l,k,r].forEach(el=>el.addEventListener("input",update));update();
+})();
+</script>
+</body></html>
