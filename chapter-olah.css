@@ -1,0 +1,82 @@
+/* Progressive technical reading layer for chapters 13–15.
+   Shared legacy theme remains the default for every other chapter. */
+body.chapter-refined {background:#f4f3ee; color:#203035; padding:16px; font-size:17px;}
+.chapter-refined .double-border {max-width:1380px; background:#fffdf9; border:1px solid #deded3; box-shadow:0 10px 35px rgba(32,48,53,.08); border-radius:18px;}
+.chapter-refined .container {grid-template-columns:minmax(208px,250px) minmax(0,1fr);}
+.chapter-refined .sidebar {background:#f9f8f4; border-color:#e1e5e0;}
+.chapter-refined .sidebar h3 {color:#28444b; border-left-color:#147f80; font-size:1.1rem;}
+.chapter-refined .chapter-list a {font-size:.83rem; padding:7px 10px; color:#3c5559;}
+.chapter-refined .chapter-list .active {background:#147f80; color:white;}
+.chapter-refined .main-content {min-width:0; background:#fffdf9; padding:36px clamp(20px,4vw,64px) 65px;}
+.chapter-refined .chapter-olah {max-width:840px; margin-inline:auto;}
+.chapter-refined .chapter-olah h1 {font-size:clamp(1.8rem,3.8vw,2.6rem); line-height:1.32; margin:0 0 15px; letter-spacing:-.025em;color:#203035;}
+.chapter-refined .chapter-olah h2 {border:0; padding:0; font-size:clamp(1.4rem,2.4vw,1.75rem); line-height:1.38; margin:3.25rem 0 1.2rem; color:#244d55;}
+.chapter-refined .chapter-olah h3 {font-size:1.15rem; margin:2rem 0 .9rem;color:#314d52;}
+.chapter-refined .chapter-olah p, .chapter-refined .chapter-olah li {color:#25393e;line-height:1.86;}
+.chapter-refined .chapter-olah p {margin:1rem 0;}
+.chapter-refined .chapter-olah strong {color:#204f52;}
+.chapter-refined .chapter-olah .chapter-eyebrow {font-size:.83rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#147f80;}
+.chapter-refined .chapter-olah .dek {font-size:1.12rem;color:#53676d;line-height:1.7; margin-bottom:2rem;}
+.chapter-refined .chapter-olah .chapter-map {border-block:1px solid #e2e9e5;padding:1rem 0;margin:2rem 0 2.5rem;}
+.chapter-refined .chapter-olah .chapter-map strong {display:block;margin-bottom:.65rem;}
+.chapter-refined .chapter-olah .chapter-map a {display:inline-block;color:#116b70;margin:.15rem 1rem .15rem 0;font-size:.93rem;text-decoration:underline;text-underline-offset:.2em;}
+.chapter-refined .chapter-olah a {color:#0e6d74;}
+.chapter-refined .chapter-olah .tip {background:#eaf5f3;border-color:#147f80;}
+.chapter-refined .chapter-olah .warning {background:#fff2e9;border-color:#d06d4d;}
+.chapter-refined .chapter-olah .highlight {background:#f5f2e7;border-color:#ddc89c;}
+.chapter-refined .chapter-olah table {display:block; overflow-x:auto; max-width:100%;background:transparent;font-size:.91rem;}
+.chapter-refined .chapter-olah th {background:#eaf1ee;color:#284d50;}
+.chapter-refined .chapter-olah td {background:#fffdf9;}
+.chapter-refined .chapter-olah th, .chapter-refined .chapter-olah td {border-color:#d5dfdc;vertical-align:top;}
+.chapter-refined .chapter-olah pre {background:#17292e;border-radius:12px;line-height:1.65;font-size:.86rem;padding:1.25rem;overflow-x:auto;}
+.chapter-refined .chapter-olah code {overflow-wrap:anywhere;}
+.chapter-refined .chapter-olah pre code {overflow-wrap:normal;}
+.chapter-refined .chapter-olah figure {margin:2rem 0;background:#f7faf8;border:1px solid #dae7e3;border-radius:18px;padding:clamp(12px,2vw,22px);}
+.chapter-refined .chapter-olah figcaption {margin-top:1rem;color:#53676d;font-size:.9rem;line-height:1.65;}
+.chapter-refined .chapter-olah .diagram-scroll {max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;}
+.chapter-refined .chapter-olah .diagram-scroll svg {width:100%;min-width:630px;height:auto;display:block;}
+.chapter-refined .chapter-olah .concept-steps {margin:2rem 0;}
+.chapter-refined .chapter-olah .concept-steps figure {margin-bottom:0;}
+.chapter-refined .chapter-olah .signal {opacity:.38;transition:opacity .2s ease;}
+.chapter-refined .chapter-olah [data-stage="a"] .signal-a,
+.chapter-refined .chapter-olah [data-stage="b"] .signal-b,
+.chapter-refined .chapter-olah [data-stage="c"] .signal-c {opacity:1;}
+.chapter-refined .chapter-olah .step-controls {display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0;}
+.chapter-refined .chapter-olah .step-controls button {cursor:pointer;border:1px solid #accbc5;background:#fffdf9;border-radius:999px;padding:.45rem .95rem;color:#23575b;font-size:.92rem;}
+.chapter-refined .chapter-olah .step-controls button[aria-pressed="true"] {background:#147f80;border-color:#147f80;color:white;}
+.chapter-refined .chapter-olah .step-reading {min-height:3.5rem;border-left:3px solid #147f80;margin:.8rem 0 1.7rem;padding:.4rem 1rem;color:#30474b;}
+.chapter-refined .chapter-olah .equation {overflow-x:auto;max-width:100%;padding:.65rem 1rem;background:#f1f4ef;border-radius:8px;}
+.chapter-refined .chapter-olah .references {border-top:1px solid #d7e1de;margin-top:4rem;padding-top:1.2rem;font-size:.93rem;}
+.chapter-refined .chapter-olah .references a {overflow-wrap:anywhere;}
+.chapter-refined .chapter-olah .footer-nav {gap:.6rem;flex-wrap:wrap;}
+.chapter-refined .chapter-olah .footer-nav a {background:#eaf1ef;color:#175d62;padding:9px 16px;}
+.chapter-refined .skip-link {position:absolute;top:-100px;left:16px;z-index:1000;background:#fff;padding:10px;color:#065b61;}
+.chapter-refined .skip-link:focus {top:8px;}
+.chapter-refined :is(a,button,summary,.diagram-scroll,.equation):focus-visible {outline:3px solid #147f80;outline-offset:3px;}
+@media (max-width:900px) {
+  .chapter-refined .container {grid-template-columns:minmax(0,1fr);}
+  .chapter-refined .sidebar {border-right:0;border-bottom:1px solid #d7e1de;padding:14px;}
+  .chapter-refined .sidebar h3 {margin-bottom:.6rem;}
+  .chapter-refined .chapter-list {display:flex;gap:.5rem;overflow-x:auto;white-space:nowrap;padding-bottom:.35rem;}
+  .chapter-refined .chapter-list li {flex:none;}
+  .chapter-refined .main-content {padding:26px clamp(16px,4vw,45px);}
+}
+@media (max-width:480px) {
+  body.chapter-refined {padding:0;}
+  .chapter-refined .double-border {border-radius:0;border:0;}
+  .chapter-refined .main-content {padding:25px 17px 45px;}
+  .chapter-refined .chapter-olah pre {font-size:.78rem;}
+}
+@media (prefers-reduced-motion:reduce) {
+  .chapter-refined .chapter-olah .signal {transition:none;}
+}
+@media print {
+  body.chapter-refined {padding:0;background:white;}
+  .chapter-refined .double-border {box-shadow:none;border:none;}
+  .chapter-refined .container {display:block;}
+  .chapter-refined .sidebar,.chapter-refined .chapter-map,.chapter-refined .step-controls {display:none!important;}
+  .chapter-refined .main-content {padding:0;}
+  .chapter-refined .chapter-olah figure,.chapter-refined .chapter-olah pre {break-inside:avoid;}
+  .chapter-refined .chapter-olah .diagram-scroll {overflow:visible;}
+  .chapter-refined .chapter-olah .diagram-scroll svg {min-width:0;}
+}
