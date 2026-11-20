@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c15-title c15-desc" viewBox="0 0 760 245">
+<title id="c15-title">从 fork 到 execve 再到 waitpid 的进程生命周期</title>
+<desc id="c15-desc">父进程调用 fork，产生有独立 PID 的子进程；子进程调用 execve 替换程序映像，退出后保留待回收状态；父进程通过 waitpid 回收退出状态。</desc>
+<rect x="12" y="34" width="170" height="158" rx="14" fill="#e8f3f0" stroke="#94c7bd"/>
+<text x="28" y="66" font-size="18" font-weight="700" fill="#1d6063">父进程</text>
+<text x="28" y="98" font-size="15" fill="#29434a">fork()</text>
+<text x="28" y="128" font-size="13" fill="#53676d">父返回 child PID</text>
+<g class="signal signal-c"><rect x="28" y="150" width="132" height="27" rx="7" fill="#147f80"/><text x="40" y="168" font-size="13" fill="white">waitpid(child)</text></g>
+<path d="M185 107 H225" stroke="#147f80" stroke-width="3"/><path d="M217 100 l11 7 -11 7" stroke="#147f80" fill="none" stroke-width="3"/>
+<rect x="233" y="34" width="164" height="158" rx="14" fill="#e8f3f0" stroke="#94c7bd"/>
+<text x="249" y="66" font-size="18" font-weight="700" fill="#1d6063">子进程</text>
+<text x="249" y="98" font-size="15" fill="#29434a">fork 返回 0</text>
+<g class="signal signal-a"><rect x="249" y="125" width="133" height="47" rx="8" fill="#147f80"/><text x="258" y="144" font-size="13" fill="white">独立 PID、地址空间</text><text x="258" y="161" font-size="13" fill="white">私有页按需 COW</text></g>
+<path d="M400 107 H437" stroke="#d06d4d" stroke-width="3"/><path d="M430 100 l11 7 -11 7" stroke="#d06d4d" fill="none" stroke-width="3"/>
+<rect x="445" y="34" width="154" height="158" rx="14" fill="#fff2e9" stroke="#e2b69a"/>
+<text x="460" y="66" font-size="18" font-weight="700" fill="#8b4f31">execve()</text>
+<text x="460" y="97" font-size="14" fill="#29434a">替换程序映像</text>
+<text x="460" y="121" font-size="13" fill="#53676d">PID 不变</text>
+<g class="signal signal-b"><rect x="459" y="141" width="125" height="32" rx="8" fill="#d06d4d"/><text x="469" y="161" font-size="13" fill="white">新代码、栈和数据</text></g>
+<path d="M602 107 H631" stroke="#7461ba" stroke-width="3"/><path d="M625 100 l11 7 -11 7" stroke="#7461ba" fill="none" stroke-width="3"/>
+<rect x="640" y="55" width="108" height="116" rx="14" fill="#f0edfa" stroke="#b8acdf"/>
+<text x="650" y="83" font-size="16" font-weight="700" fill="#5b4d94">exit</text>
+<text x="649" y="111" font-size="13" fill="#29434a">待回收状态</text>
+<text x="649" y="139" font-size="13" fill="#53676d">父 wait</text>
+<path d="M692 180 V218 H96 V194" fill="none" stroke="#7461ba" stroke-width="2" stroke-dasharray="5 5"/>
+<text x="247" y="212" font-size="13" fill="#53676d">子退出并不等于父已经读取退出状态</text>
+</svg>
