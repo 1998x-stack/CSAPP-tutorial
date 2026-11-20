@@ -1,310 +1,413 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>第1章 计算机系统漫游 — 深入理解计算机系统（CSAPP）</title>
-    <link rel="stylesheet" href="theme.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="从一段 hello.c 出发，理解字节、编译与链接、CPU、存储层次、操作系统抽象和 Amdahl 定律。">
+<title>第 1 章：计算机系统漫游 · CSAPP 中文教程</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+:root{--paper:#fffdf9;--ink:#203035;--muted:#56686e;--accent:#147f80;--transform:#bf6343;--structure:#6b5da5;--edge:#d9e1dd;--wash:#f1f6f3}
+html{scroll-behavior:smooth;scroll-padding-top:1rem}
+body{padding:0;margin:0;background:#edf2ef;color:var(--ink);font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:17px;line-height:1.85}
+a{color:#096c70;text-underline-offset:.18em}a:hover{color:#a75337}
+a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.skip-link{position:absolute;top:-100px;left:12px;z-index:99;background:white;padding:8px 14px}.skip-link:focus{top:12px}
+.book-layout{display:grid;grid-template-columns:minmax(210px,254px) minmax(0,1fr);max-width:1420px;margin:auto;min-height:100vh;background:var(--paper);box-shadow:0 12px 70px #20303512}
+.book-sidebar{border-right:1px solid var(--edge);background:#f6f8f5;padding:24px 16px;position:relative}
+.sticky{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto}
+.brand{display:block;font-size:1.07rem;font-weight:800;color:var(--ink);text-decoration:none;padding:0 10px 12px;letter-spacing:-.02em}
+.brand small{display:block;font-size:.72rem;font-weight:550;color:var(--muted);letter-spacing:.1em}
+.chapter-nav{font-size:.8rem;line-height:1.5}
+.chapter-nav h2{font-size:.73rem;letter-spacing:.16em;color:var(--muted);border:0;padding:0;margin:8px 10px 12px}
+.chapter-nav ul{list-style:none;padding:0;margin:0}.chapter-nav li{margin:0}
+.chapter-nav a{display:flex;gap:9px;align-items:baseline;padding:8px 10px;color:#465960;border-radius:8px;text-decoration:none;font-weight:450}
+.chapter-nav a:hover{background:#e8f0ed;transform:none}
+.chapter-nav a span{font-size:.69rem;color:#7e928e;font-variant-numeric:tabular-nums}
+.chapter-nav a[aria-current]{background:#deece6;color:#085c5e;font-weight:750}
+.mobile-chapters{display:none}
+.essay{width:100%;min-width:0;padding:70px clamp(20px,6vw,96px) 80px}
+.article-body{max-width:850px;margin:0 auto}
+.eyebrow{color:var(--accent);font-size:.77rem;letter-spacing:.15em;text-transform:uppercase;font-weight:800}
+.essay h1{font-size:clamp(2.25rem,5vw,4.25rem);font-weight:800;letter-spacing:-.055em;line-height:1.2;margin:16px 0 23px;color:#182d30}
+.essay .dek{font-size:clamp(1.1rem,2vw,1.38rem);line-height:1.8;color:#435d60;max-width:40em}
+.essay p{margin:17px 0;color:var(--ink);line-height:1.9}
+.essay h2{font-size:clamp(1.55rem,3vw,2.12rem);margin:0 0 22px;padding:0;border:0;color:#1a3537;letter-spacing:-.035em;line-height:1.35}
+.essay h3{font-size:1.17rem;margin:29px 0 13px;color:#27454a}
+.essay section{margin-top:84px;scroll-margin-top:22px}
+.essay strong{color:#123c3f}
+.essay ul,.essay ol{padding-left:1.2rem;margin:18px 0}
+.essay li{padding-left:4px;margin:7px 0}
+.essay pre{border-radius:12px;background:#172a2e;color:#edf9f5;line-height:1.65;padding:20px;overflow-x:auto;font-size:.87rem;margin:22px 0;white-space:pre}
+.essay pre code{color:inherit;background:none;padding:0;font-size:inherit}
+.essay code{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-size:.84em;background:#eaf1ec;border-radius:4px;padding:2px 5px;overflow-wrap:anywhere}
+.essay figure{margin:30px 0 12px}
+.essay figcaption{font-size:.86rem;line-height:1.7;color:var(--muted);margin-top:10px}
+.essay svg{display:block;width:100%;height:auto}
+.section-no{display:block;font-size:.73rem;font-weight:800;letter-spacing:.17em;color:var(--accent);margin-bottom:11px}
+.lede-line{height:3px;width:66px;background:var(--accent);margin:28px 0}
+.inline-toc{display:flex;gap:8px;flex-wrap:wrap;margin:30px 0 0}
+.inline-toc a{font-size:.8rem;background:#eaf3ee;border:1px solid #cee3d8;border-radius:999px;padding:4px 11px;text-decoration:none;color:#21585a}
+.quote{border-left:3px solid var(--accent);padding:8px 0 8px 22px;font-size:1.09rem;color:#33595c;line-height:1.8;margin:30px 0}
+.figure-card{border:1px solid var(--edge);border-radius:18px;background:#fbfdfb;padding:clamp(12px,2.5vw,24px);box-shadow:0 12px 25px #102b2410}
+.pill{display:inline-block;font-size:.72rem;letter-spacing:.06em;font-weight:750;border-radius:5px;padding:2px 8px;background:#e9f3ec;color:#176f68}
+.trace-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:22px 0 12px}
+.step-button{cursor:pointer;border:1px solid #c7d8d0;border-radius:10px;padding:13px 8px;background:white;color:#31545a;text-align:center;font-weight:700;font:inherit;font-size:.85rem;line-height:1.4}
+.step-button[aria-pressed=true]{background:#176f70;color:white;border-color:#176f70}
+.step-button span{display:block;font-size:.68rem;opacity:.75;margin-bottom:2px}
+.step-detail{border-left:4px solid var(--accent);background:#eef5ef;padding:16px 20px;border-radius:0 10px 10px 0;min-height:104px}
+.step-detail p{margin:7px 0;font-size:.96rem}
+.diagram-step{transition:opacity .2s,filter .2s}
+[data-step-active="0"] .diagram-step:not([data-step-node="0"]),[data-step-active="1"] .diagram-step:not([data-step-node="1"]),[data-step-active="2"] .diagram-step:not([data-step-node="2"]),[data-step-active="3"] .diagram-step:not([data-step-node="3"]){opacity:.55}
+.callout{background:#f0f5f1;border-left:4px solid var(--accent);padding:15px 20px;border-radius:0 12px 12px 0;margin:25px 0}
+.callout p{margin:4px 0}
+.caution{background:#fff6ea;border-left-color:#ba7b32}
+.check-list{display:grid;gap:10px;margin:22px 0}
+.check-list div{border-top:1px solid var(--edge);padding:12px 0}
+.check-list b{display:block;color:var(--accent);font-size:.76rem;letter-spacing:.08em}
+.memory-bars{display:grid;gap:8px;margin:24px 0}
+.memory-row{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:center}
+.memory-row b{font-size:.88rem}
+.memory-track{height:40px;display:flex;align-items:center;border-radius:8px;background:#e8efeb;overflow:hidden}
+.memory-fill{height:100%;display:flex;align-items:center;padding-left:12px;color:white;font-size:.79rem;font-weight:750;min-width:104px}
+.memory-fill.level1{width:28%;background:#147f80}.memory-fill.level2{width:46%;background:#427eaa}.memory-fill.level3{width:72%;background:#7767a9}.memory-fill.level4{width:100%;background:#b46c4d}
+.small-note{font-size:.83rem!important;color:var(--muted)!important}
+.triad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:24px 0}
+.triad>div{border:1px solid var(--edge);border-radius:12px;padding:18px 16px;background:#fafbf8}
+.triad h3{margin:0 0 6px;color:#215c5e;font-size:1.08rem}
+.triad p{font-size:.9rem;margin:0;line-height:1.7}
+.math-panel{border-radius:14px;border:1px solid #d8e4dc;background:#f5f8f4;padding:16px 20px;margin:23px 0}
+.math-scroll{overflow-x:auto;max-width:100%;min-width:0;padding:8px 0}
+.math-scroll math[display=block]{width:max-content;min-width:100%;font-size:1.35rem;color:#1b4140}
+.math-label{font-size:.79rem;color:var(--muted);text-align:right}
+.widget{border:1px solid #cee0d9;border-radius:16px;padding:24px;margin:25px 0;background:#f5faf6}
+.widget h3{margin:0 0 8px}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:20px 0}
+.controls label{display:block;font-size:.91rem;font-weight:700}
+.controls input{width:100%;accent-color:var(--accent);margin:12px 0 0;cursor:pointer}
+.widget-output{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;border-top:1px solid #d2e3d9;padding-top:16px}
+.widget-output output{font-size:2.3rem;line-height:1.2;font-weight:800;color:#0d6c70;font-variant-numeric:tabular-nums}
+.widget-output p{margin:2px 0;font-size:.86rem}
+.table-wrap{max-width:100%;overflow-x:auto}
+.essay table{min-width:570px;font-size:.9rem;margin:16px 0;border-collapse:collapse}
+.essay th,.essay td{padding:10px 12px;border:1px solid #d6e1da;vertical-align:top}
+.essay th{background:#e8f1eb;color:#285354}
+.references{font-size:.88rem}
+.references li{overflow-wrap:anywhere}
+.footer-nav{margin-top:65px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--edge);padding:22px 0}
+.footer-nav a{background:#eaf2ee;padding:8px 16px;border-radius:999px;text-decoration:none}
+@media(max-width:900px){.book-layout{display:block}.book-sidebar{padding:9px 18px;border:0;border-bottom:1px solid var(--edge)}.sticky{position:static;max-height:none;overflow:visible}.brand{padding:5px 2px;font-size:.92rem}.brand small{display:inline;margin-left:8px}.chapter-nav{display:none}.mobile-chapters{display:block;font-size:.86rem;padding:6px 2px}.mobile-chapters summary{cursor:pointer;color:#315d5d;font-weight:700}.mobile-chapters ul{max-height:185px;overflow-y:auto;list-style:none;padding:0;margin:8px 0}.mobile-chapters li{margin:0}.mobile-chapters a{display:block;padding:5px}.essay{padding:42px 22px 60px}}
+@media(max-width:580px){.essay{padding:36px 16px 60px}.essay section{margin-top:62px}.trace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.controls,.triad{grid-template-columns:1fr}.memory-row{grid-template-columns:72px minmax(0,1fr);gap:7px}.memory-row b{font-size:.76rem}.figure-card{padding:10px}.essay pre{font-size:.75rem;padding:14px}.essay h1{letter-spacing:-.035em}.essay svg{min-width:0}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important}}
+@media print{body{background:white;font-size:11pt}.book-layout{display:block;box-shadow:none}.book-sidebar,.inline-toc,.trace-grid,.controls,.skip-link{display:none!important}.essay{padding:0}.article-body{max-width:none}.essay section{margin-top:24pt;break-inside:auto}.figure-card,.math-panel,.widget{break-inside:avoid;box-shadow:none}.math-scroll{overflow:visible}.math-scroll math[display=block]{font-size:1.15rem}.references a::after{content:" (" attr(href) ")";font-size:.75em}}
+</style>
 </head>
 <body>
-<div class="double-border">
-<div class="container">
-    <div class="sidebar">
-        <h3>💻 课程目录</h3>
-        <ul class="chapter-list">
-            <li><a href="01.html" class="active">第1章 计算机系统漫游</a></li>
-            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
-            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
-            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
-            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
-            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
-            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
-            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
-            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
-            <li><a href="10.html">第10章 优化程序性能</a></li>
-            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
-            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
-            <li><a href="13.html">第13章 链接——静态链接</a></li>
-            <li><a href="14.html">第14章 链接——动态链接</a></li>
-            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
-            <li><a href="16.html">第16章 异常控制流——信号</a></li>
-            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
-            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
-            <li><a href="19.html">第19章 系统级I/O</a></li>
-            <li><a href="20.html">第20章 网络编程——基础</a></li>
-            <li><a href="21.html">第21章 网络编程——进阶</a></li>
-            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
-            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
-            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
-            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
-            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
-            <li><a href="27.html">第27章 现代系统新趋势</a></li>
-            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
-        </ul>
-    </div>
-    <div class="main-content">
-        <h2>第一章：计算机系统漫游</h2>
+<a class="skip-link" href="#content">跳转到正文</a>
+<div class="book-layout">
+<aside class="book-sidebar">
+  <div class="sticky">
+    <a class="brand" href="index.html">CSAPP · 系统漫游<small>COMPUTER SYSTEMS</small></a>
+    <nav class="chapter-nav" aria-label="课程章节目录">
+      <h2>课程 · 28 讲</h2><ul><li><a aria-current="page" href="01.html"><span>01</span>计算机系统漫游</a></li>
+<li><a href="02.html"><span>02</span>信息的表示与处理——整数</a></li>
+<li><a href="03.html"><span>03</span>信息的表示与处理——浮点数</a></li>
+<li><a href="04.html"><span>04</span>程序的机器级表示——基础</a></li>
+<li><a href="05.html"><span>05</span>程序的机器级表示——控制流</a></li>
+<li><a href="06.html"><span>06</span>程序的机器级表示——过程与栈</a></li>
+<li><a href="07.html"><span>07</span>程序的机器级表示——数据与进阶</a></li>
+<li><a href="08.html"><span>08</span>处理器体系结构——ISA设计</a></li>
+<li><a href="09.html"><span>09</span>处理器体系结构——流水线</a></li>
+<li><a href="10.html"><span>10</span>优化程序性能</a></li>
+<li><a href="11.html"><span>11</span>存储器层次结构——技术</a></li>
+<li><a href="12.html"><span>12</span>存储器层次结构——Cache</a></li>
+<li><a href="13.html"><span>13</span>链接——静态链接</a></li>
+<li><a href="14.html"><span>14</span>链接——动态链接</a></li>
+<li><a href="15.html"><span>15</span>异常控制流——异常与进程</a></li>
+<li><a href="16.html"><span>16</span>异常控制流——信号</a></li>
+<li><a href="17.html"><span>17</span>虚拟内存——地址翻译</a></li>
+<li><a href="18.html"><span>18</span>虚拟内存——内存分配</a></li>
+<li><a href="19.html"><span>19</span>系统级I/O</a></li>
+<li><a href="20.html"><span>20</span>网络编程——基础</a></li>
+<li><a href="21.html"><span>21</span>网络编程——进阶</a></li>
+<li><a href="22.html"><span>22</span>并发编程——线程基础</a></li>
+<li><a href="23.html"><span>23</span>并发编程——高阶模式</a></li>
+<li><a href="24.html"><span>24</span>经典Lab实战(I)</a></li>
+<li><a href="25.html"><span>25</span>经典Lab实战(II)</a></li>
+<li><a href="26.html"><span>26</span>经典Lab实战(III)——Proxy Lab</a></li>
+<li><a href="27.html"><span>27</span>现代系统新趋势</a></li>
+<li><a href="28.html"><span>28</span>综合项目：手写高性能Web服务器</a></li></ul>
+    </nav>
+    <details class="mobile-chapters"><summary>浏览全部 28 章</summary><ul><li><a aria-current="page" href="01.html"><span>01</span>计算机系统漫游</a></li>
+<li><a href="02.html"><span>02</span>信息的表示与处理——整数</a></li>
+<li><a href="03.html"><span>03</span>信息的表示与处理——浮点数</a></li>
+<li><a href="04.html"><span>04</span>程序的机器级表示——基础</a></li>
+<li><a href="05.html"><span>05</span>程序的机器级表示——控制流</a></li>
+<li><a href="06.html"><span>06</span>程序的机器级表示——过程与栈</a></li>
+<li><a href="07.html"><span>07</span>程序的机器级表示——数据与进阶</a></li>
+<li><a href="08.html"><span>08</span>处理器体系结构——ISA设计</a></li>
+<li><a href="09.html"><span>09</span>处理器体系结构——流水线</a></li>
+<li><a href="10.html"><span>10</span>优化程序性能</a></li>
+<li><a href="11.html"><span>11</span>存储器层次结构——技术</a></li>
+<li><a href="12.html"><span>12</span>存储器层次结构——Cache</a></li>
+<li><a href="13.html"><span>13</span>链接——静态链接</a></li>
+<li><a href="14.html"><span>14</span>链接——动态链接</a></li>
+<li><a href="15.html"><span>15</span>异常控制流——异常与进程</a></li>
+<li><a href="16.html"><span>16</span>异常控制流——信号</a></li>
+<li><a href="17.html"><span>17</span>虚拟内存——地址翻译</a></li>
+<li><a href="18.html"><span>18</span>虚拟内存——内存分配</a></li>
+<li><a href="19.html"><span>19</span>系统级I/O</a></li>
+<li><a href="20.html"><span>20</span>网络编程——基础</a></li>
+<li><a href="21.html"><span>21</span>网络编程——进阶</a></li>
+<li><a href="22.html"><span>22</span>并发编程——线程基础</a></li>
+<li><a href="23.html"><span>23</span>并发编程——高阶模式</a></li>
+<li><a href="24.html"><span>24</span>经典Lab实战(I)</a></li>
+<li><a href="25.html"><span>25</span>经典Lab实战(II)</a></li>
+<li><a href="26.html"><span>26</span>经典Lab实战(III)——Proxy Lab</a></li>
+<li><a href="27.html"><span>27</span>现代系统新趋势</a></li>
+<li><a href="28.html"><span>28</span>综合项目：手写高性能Web服务器</a></li></ul></details>
+  </div>
+</aside>
+<main class="essay" id="content"><article class="article-body">
+<header>
+  <div class="eyebrow">Chapter 01 · A tour of computer systems</div>
+  <h1>一行 Hello，<br>为什么要惊动整台计算机？</h1>
+  <p class="dek">从源代码中的几个字符，到终端里的一行输出：我们借这条最短的路径，拆开编译器、处理器、存储器与操作系统之间的协作。</p>
+  <div class="lede-line" aria-hidden="true"></div>
+  <p>下面这段程序几乎没有算法。可是，如果没有编译器、链接器、加载机制、CPU、内存、系统调用和终端，它连一个字符都无法输出。</p>
+  <pre><code>#include &lt;stdio.h&gt;
 
-        <p>大家好，我是你们的讲师。在开始这门课程之前，我想先问大家一个问题：你写过无数遍的 <code>hello.c</code>，从按下保存键到在终端里看到 "Hello, World" 输出，这短短的几秒钟里，计算机内部到底发生了哪些事情？</p>
-
-        <p>可能有人会说："不就是编译器把源代码翻译成机器码，然后 CPU 执行吗？" 说得没错，但这里的每一层——编译器的前端后端、操作系统的进程管理、存储器的层次调度、链接器的符号解析——任何一个环节出问题，你的程序就会崩溃，而且崩溃得莫名其妙。我在一线写代码的头几年，遇到过太多这样的"灵异事件"：同样的代码换个编译器版本就挂、内存里的数据莫名其妙被改掉、多线程下程序时好时坏……其实这些都不是"灵异事件"，而是我们没能真正<strong>理解计算机系统</strong>。</p>
-
-        <p>计算机系统就像一座冰山。大多数工程师只看到水面之上的部分——编程语言、框架、API。但这门课，<strong>深入理解计算机系统</strong>（CSAPP: Computer Systems: A Programmer's Perspective），要带你潜入水下，看看那些决定程序性能、正确性和安全性的底层机制。学完这门课，你再写代码时，脑子里会有 CPU 流水线在跑、Cache 在缓存、页表在翻译——你写的每一行代码，都能映射到硬件的实际行为上。</p>
-
-        <p>好，咱们开始第一章的漫游之旅。</p>
-
-        <h3>1.1 从hello.c到可执行文件</h3>
-
-        <p>假设我们有这样一个最简单的 C 程序：</p>
-
-        <pre><code>#include &lt;stdio.h&gt;
-
-int main()
-{
-    printf("Hello, World!\n");
+int main(void) {
+    printf("Hello, world!\n");
     return 0;
 }</code></pre>
+  <p class="quote">理解系统，不是记住所有硬件名词，而是追问：<strong>这一次数据究竟经过了哪一层、为什么必须经过它？</strong></p>
+  <nav class="inline-toc" aria-label="本章阅读路径">
+    <a href="#bits">字符与字节</a><a href="#compile">四段翻译</a><a href="#run">如何执行</a><a href="#memory">存储层次</a><a href="#os">操作系统</a><a href="#amdahl">性能上限</a><a href="#lab">动手验证</a>
+  </nav>
+</header>
 
-        <p>在 Linux 系统上，用 GCC 将其转化为可执行文件只需要一条命令：</p>
+<section id="bits" aria-labelledby="bits-title">
+  <span class="section-no">01 / REPRESENTATION</span>
+  <h2 id="bits-title">屏幕上的字符，存储器里只有位</h2>
+  <p>源码在磁盘上是一串字节。以 ASCII 兼容编码为例，字符 <code>H</code> 的数值是十进制 72，对应二进制 <code>01001000</code>。处理器并不知道这是“问候”，它只解释约定格式下的位模式。</p>
+  <div class="figure-card">
+    <figure>
+      <svg viewBox="0 0 820 185" role="img" aria-labelledby="bits-svg-title bits-svg-desc" xmlns="http://www.w3.org/2000/svg">
+        <title id="bits-svg-title">字符 H 如何映射到 8 位</title>
+        <desc id="bits-svg-desc">左侧为字符 H，中间为十进制 72，右侧为 01001000，三者是同一字节的不同解释。</desc>
+        <rect x="15" y="28" width="133" height="106" rx="15" fill="#e5f2ea" stroke="#81b9a7"/>
+        <text x="81" y="94" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="47" fill="#176e70">H</text>
+        <text x="178" y="83" font-family="sans-serif" font-size="22" fill="#52706f">→</text>
+        <rect x="220" y="28" width="144" height="106" rx="15" fill="#f6eee7" stroke="#d9b79e"/>
+        <text x="292" y="93" text-anchor="middle" font-family="sans-serif" font-weight="750" font-size="38" fill="#aa613f">72</text>
+        <text x="393" y="83" font-family="sans-serif" font-size="22" fill="#52706f">→</text>
+        <g font-family="monospace" font-size="26" font-weight="700" text-anchor="middle">
+          <rect x="427" y="44" width="46" height="65" rx="5" fill="#dcece7"/><text x="450" y="84" fill="#1b5451">0</text>
+          <rect x="475" y="44" width="46" height="65" rx="5" fill="#c9e5d9"/><text x="498" y="84" fill="#16655b">1</text>
+          <rect x="523" y="44" width="46" height="65" rx="5" fill="#dcece7"/><text x="546" y="84" fill="#1b5451">0</text>
+          <rect x="571" y="44" width="46" height="65" rx="5" fill="#dcece7"/><text x="594" y="84" fill="#1b5451">0</text>
+          <rect x="619" y="44" width="46" height="65" rx="5" fill="#c9e5d9"/><text x="642" y="84" fill="#16655b">1</text>
+          <rect x="667" y="44" width="46" height="65" rx="5" fill="#dcece7"/><text x="690" y="84" fill="#1b5451">0</text>
+          <rect x="715" y="44" width="46" height="65" rx="5" fill="#dcece7"/><text x="738" y="84" fill="#1b5451">0</text>
+          <rect x="763" y="44" width="43" height="65" rx="5" fill="#dcece7"/><text x="784" y="84" fill="#1b5451">0</text>
+        </g>
+        <g fill="#627977" font-size="14" font-family="sans-serif" text-anchor="middle"><text x="81" y="160">字符</text><text x="292" y="160">十进制</text><text x="616" y="160">二进制（8 bit）</text></g>
+      </svg>
+      <figcaption>图 1 · “字符”“数字”和“二进制”不是三份数据，而是同一位模式的三种表述。本例仅使用 ASCII 字符；中文字符在 UTF-8 中通常需要多个字节。</figcaption>
+    </figure>
+  </div>
+  <p>这解释了为什么“信息的表示”会成为下一章的主题：整数、浮点数、文本和指令，最终都要落到有限位宽的编码规则上。<strong>位本身没有意义，解释位的规则才赋予它意义。</strong></p>
+</section>
 
-        <pre><code>$ gcc -o hello hello.c</code></pre>
-
-        <p>但这背后，编译器替你执行了四个阶段的工作。让我带你逐个步骤拆解。</p>
-
-        <p><strong>第一阶段：预处理（Preprocessing）—— hello.c → hello.i</strong></p>
-        <p>预处理器根据 <code>#</code> 开头的指令处理源代码。<code>#include &lt;stdio.h&gt;</code> 会被替换为标准库头文件的全部内容——你可以想象，仅仅这行代码就会插入几百行声明。此外，宏定义被展开，条件编译被处理。你可以用 <code>gcc -E hello.c -o hello.i</code> 来单独查看预处理后的结果。</p>
-
-        <p><strong>第二阶段：编译（Compilation）—— hello.i → hello.s</strong></p>
-        <p>编译器将预处理后的文本翻译成<strong>汇编语言</strong>。这是整个流程中最复杂的阶段：词法分析、语法分析、语义分析、中间代码生成、优化、最终生成汇编代码。编译器的优化能力直接决定了你程序的性能——一个开了 <code>-O3</code> 的 GCC 和没开优化的，跑出来的可能是完全不同的代码。执行 <code>gcc -S hello.i -o hello.s</code> 可以查看生成的汇编文件。</p>
-
-        <p><strong>第三阶段：汇编（Assembly）—— hello.s → hello.o</strong></p>
-        <p>汇编器将汇编代码翻译成<strong>机器指令</strong>，生成<strong>可重定位目标文件</strong>（relocatable object file）。这个文件已经是二进制格式了，包含机器码、数据段和符号表，但还不能直接运行——<code>printf</code> 的实现在哪里还不知道呢。</p>
-
-        <p><strong>第四阶段：链接（Linking）—— hello.o → hello</strong></p>
-        <p>链接器将 <code>hello.o</code> 和 <code>printf</code> 所在的标准库目标文件合并，把符号引用解析为符号定义，最终生成一个<strong>可执行目标文件</strong>。执行 <code>gcc -v hello.c -o hello</code> 可以看到 GCC 背后调用了 <code>collect2</code>（一个链接器的包装）等组件的工作细节。</p>
-
-        <div class="highlight">
-            <p><strong>核心洞察</strong>：从 <code>.c</code> 到可执行文件，经历了四次翻译变换。每一层都在做同一件事——把高层的抽象表达，逐步降级为低层的具体实现。这个"层层抽象"的思想，贯穿了整个计算机系统的设计。</p>
-        </div>
-
-        <div class="tip">
-            <p><strong>小技巧</strong>：想要看到 GCC 每一步干了什么？试试 <code>gcc -v --save-temps hello.c</code>。它会保留所有中间文件（<code>.i</code>、<code>.s</code>、<code>.o</code>），还告诉你每一步调用的是什么程序。这对于理解编译流程非常有帮助。</p>
-        </div>
-
-        <h3>1.2 系统的硬件组成</h3>
-
-        <p>当你在终端运行 <code>./hello</code> 并按下回车时，操作系统的加载器（loader）会将可执行文件从磁盘复制到内存中，然后跳转到 <code>main</code> 函数的入口。在这个过程中，计算机的四大核心硬件组件全部参与其中：</p>
-
-        <ul>
-            <li><strong>中央处理器（CPU）</strong>：从内存中取出指令并执行。CPU 内部有<strong>程序计数器（PC）</strong>指向当前指令地址、<strong>寄存器文件（Register File）</strong>存储少量临时数据、<strong>算术逻辑单元（ALU）</strong>执行运算。现代 CPU 每秒可以执行数十亿条指令。</li>
-            <li><strong>主存（Main Memory）</strong>：通常是 DRAM（动态随机存取存储器），存放程序和数据。CPU 和主存之间通过总线通信。</li>
-            <li><strong>总线（Bus）</strong>：CPU、内存、I/O 设备之间传输数据的通道。通常包含地址总线、数据总线和控制总线。</li>
-            <li><strong>I/O 设备</strong>：键盘、鼠标、显示器、磁盘等。程序的输入输出最终都需要通过 I/O 设备完成。</li>
-        </ul>
-
-        <p>这里最关键的认知是：<strong>不同存储层次的速度差异</strong>比大多数程序员想象的要大得多。看下面的对比：</p>
-
-        <table>
-            <tr>
-                <th>存储技术</th>
-                <th>访问时间</th>
-                <th>典型容量</th>
-                <th>成本/GB（约）</th>
-            </tr>
-            <tr>
-                <td>SRAM（CPU 缓存）</td>
-                <td>~1 ns（0.5-2 ns）</td>
-                <td>数 MB</td>
-                <td>$500-1000</td>
-            </tr>
-            <tr>
-                <td>DRAM（主存）</td>
-                <td>~10-100 ns</td>
-                <td>8-64 GB</td>
-                <td>$10-20</td>
-            </tr>
-            <tr>
-                <td>SSD（固态硬盘）</td>
-                <td>~10-100 μs</td>
-                <td>256 GB-4 TB</td>
-                <td>$0.10-0.30</td>
-            </tr>
-            <tr>
-                <td>HDD（机械硬盘）</td>
-                <td>~5-10 ms</td>
-                <td>1-20 TB</td>
-                <td>$0.02-0.05</td>
-            </tr>
-        </table>
-
-        <p>这些数字单独看可能不太直观。让我用一个<strong>时间缩放</strong>的例子来帮你建立感觉：</p>
-
-        <p>假设 CPU 执行一条指令需要 <strong>1 秒</strong>：</p>
-        <ul>
-            <li>从 SRAM（L1 Cache）中读数据——大约 <strong>1-2 秒</strong>，相当于喝口水</li>
-            <li>从 DRAM（主存）中读数据——大约 <strong>10-100 秒</strong>，相当于去楼下买杯咖啡</li>
-            <li>从 SSD 中读数据——大约 <strong>10-100 小时</strong>，相当于一个长周末</li>
-            <li>从 HDD 中读数据——大约 <strong>10 天</strong>，相当于一个假期</li>
-        </ul>
-
-        <p>看到了吗？一条 CPU 指令的时间和一次磁盘访问之间差了 <strong>7 个数量级</strong>！这就是为什么设计良好的程序会把热点数据尽量放在缓存和内存中，减少磁盘访问。这也是为什么 <strong>Cache 命中率</strong>会成为系统性能的核心瓶颈。</p>
-
-        <div class="warning">
-            <p><strong>真实踩坑故事</strong>：我曾经接手过一个后端服务，处理一批数据要 40 分钟。代码逻辑看起来没太大问题，但用 <code>perf</code> 一分析，发现 95% 的时间浪费在一个 for 循环内部——每次迭代都从数据库（其实就在本地 HDD 上）查询一个小配置。加上一个简单的缓存层后，40 分钟缩短到了 2 分钟。这就是不理解存储层次差异的代价。你以为你在做计算，实际上你在等磁盘转。</p>
-        </div>
-
-        <h3>1.3 操作系统的层叠抽象</h3>
-
-        <p>你可能会想："如果磁盘这么慢，那我写程序时为什么感觉不到？" 答案在于操作系统提供的<strong>抽象</strong>。操作系统是硬件和应用之间的中间层，它把各种复杂硬件封装成简洁的抽象接口。理解这三个核心抽象，你就掌握了操作系统的半边天。</p>
-
-        <table>
-            <tr>
-                <th>抽象</th>
-                <th>抽象了什么</th>
-                <th>提供给谁</th>
-                <th>核心目的</th>
-            </tr>
-            <tr>
-                <td><strong>进程（Process）</strong></td>
-                <td>CPU、内存、I/O 的独占使用权</td>
-                <td>应用程序</td>
-                <td>让每个程序感觉自己在独占整台机器</td>
-            </tr>
-            <tr>
-                <td><strong>虚拟内存（Virtual Memory）</strong></td>
-                <td>物理内存和磁盘 I/O</td>
-                <td>进程</td>
-                <td>提供连续、私有的地址空间，隔离进程</td>
-            </tr>
-            <tr>
-                <td><strong>文件（File）</strong></td>
-                <td>所有 I/O 设备</td>
-                <td>进程</td>
-                <td>统一接口读写磁盘、终端、网络等</td>
-            </tr>
-        </table>
-
-        <p><strong>进程</strong>是操作系统最重要的抽象之一。当你同时开着浏览器、IDE 和终端时，操作系统通过<strong>上下文切换（context switch）</strong>来让这些进程分享 CPU。它把 CPU 的执行时间分成时间片，快速轮转——每次切换时保存当前进程的状态（寄存器、PC、内存映射等），恢复下一个进程的状态。因为切换速度极快（毫秒级），你感觉它们在"同时运行"。然而，进程的创建和切换是有代价的——每次上下文切换都要耗费几十到几百微秒。如果你的服务器上进程数量过多，大量时间会花在切换上而不是真正的计算上。</p>
-
-        <p><strong>虚拟内存</strong>是进程抽象的自然延伸。每个进程看到的是一个从 0 到某个最大地址的连续地址空间（例如 64 位系统上的 2^48），但实际上物理内存可能只有 8 GB。操作系统和 MMU（内存管理单元）共同维护一个<strong>页表（page table）</strong>，将虚拟地址翻译成物理地址。一个进程访问了不属于自己的页？操作系统会立即抛出一个<strong>段错误（segmentation fault）</strong>——这就是 C/C++ 程序中最常见的崩溃原因。</p>
-
-        <p><strong>文件</strong>是 I/O 的统一抽象。在 Unix/Linux 的世界里，"一切皆文件"——你可以用 <code>read()</code>/<code>write()</code> 这套接口操作磁盘文件、管道、终端甚至网络套接字。这种统一性大大简化了编程模型，也是 Unix 设计哲学的核心之一。</p>
-
-        <div class="highlight">
-            <p><strong>核心要点</strong>：操作系统的三层抽象（进程、虚拟内存、文件）是所有应用程序的基础。无论你写的是 Web 服务器还是嵌入式固件，最终都跑在这三层抽象之上。不理解它们，你就无法理解程序为什么会崩溃、为什么会慢、为什么会不安全。</p>
-        </div>
-
-        <h3>1.4 Amdahl定律与系统性能思维</h3>
-
-        <p>做了这么多铺垫，终于要聊到一个所有系统工程师都必须掌握的核心定律——<strong>Amdahl定律</strong>（阿姆达尔定律）。这个定律回答了计算机系统中最关键的一个问题：<strong>当我优化了系统的某个部分，整体性能能提升多少？</strong></p>
-
-        <p>公式很简单：</p>
-
-        <pre><code>S = 1 / ((1 - α) + α / k)</code></pre>
-
-        <p>其中：</p>
-        <ul>
-            <li><strong>S</strong> 是整体加速比</li>
-            <li><strong>α</strong> 是被优化部分占总执行时间的比例</li>
-            <li><strong>k</strong> 是该部分的加速倍数</li>
-        </ul>
-
-        <p>我们来算一个具体例子。假设你的程序中有 60% 的代码可以并行化，你在一个 10 核的 CPU 上运行，那么：</p>
-
-        <pre><code>S = 1 / ((1 - 0.6) + 0.6 / 10)
-  = 1 / (0.4 + 0.06)
-  = 1 / 0.46
-  ≈ 2.17</code></pre>
-
-        <p>花了 10 倍的硬件资源，整体只快了 2.17 倍？这听起来有点令人失望，但这就是 Amdahl 定律告诉我们的硬道理：<strong>程序的性能受限于它不可并行化的那部分</strong>。</p>
-
-        <p>更极端一点——如果 60% 的代码可以用无限多个核来加速呢？极限加速比是 1 / 0.4 = 2.5。也就是说，不管投多少硬件资源，这 40% 的串行部分永远是天花板。</p>
-
-        <div class="highlight">
-            <p><strong>Amdahl定律的核心教训</strong>：不值得为某个部分做大幅优化，除非它占据了系统的主要时间。这个道理说起来简单，但在实际工作中太容易被忽视了。我见过太多工程师花几周去优化一个只占 1% 执行时间的函数——优化的成果斐然，把那个函数加速了 100 倍，可惜整体性能只提升了不到 1%。而旁边那个占了 40% 执行时间的大函数，没人去动。</p>
-        </div>
-
-        <p>正确的性能优化思路应该是：</p>
-        <ol>
-            <li><strong>先测量，再优化</strong>——使用 profiler（如 gprof、perf、Valgrind）找出真正的热点</li>
-            <li><strong>关注大头</strong>——优先优化占总时间比例最大的部分</li>
-            <li><strong>关注系统瓶颈</strong>——有时瓶颈不在 CPU，而在内存带宽、磁盘 I/O 或网络延迟</li>
-        </ol>
-
-        <div class="warning">
-            <p><strong>⚠️ 性能优化误区</strong>：Amdahl定律还有另一个不容易注意到的推论——如果你优化了一个原本只占很小比例的部分，即使加速效果惊人，整体收益也微乎其微。我曾经看到一位工程师花了整整一周，用 SIMD 指令重写了一个字符串哈希函数，将其加速了 8 倍。但 profiler 数据显示，这个函数在整个服务中仅占 0.5% 的 CPU 时间。最终的加速效果：从 100 秒降到 99.6 秒。用户根本感觉不到变化。一周的投入换来了 0.4% 的提升——这不是技术问题，是思维问题。</p>
-        </div>
-
-        <h3>1.5 全书的学习路线图</h3>
-
-        <p>到这里，我们已经完成了对计算机系统的一次"直升机巡游"。你看到了从源代码到可执行文件的翻译流程、硬件组件的速度鸿沟、操作系统的三层抽象，以及 Amdahl 定律这个性能思维的基石。</p>
-
-        <p>接下来的 27 章，将分为六个部分，带你从直升机降到地面，一步步深入系统的每一个层次：</p>
-
-        <table>
-            <tr>
-                <th>部分</th>
-                <th>章节</th>
-                <th>核心内容</th>
-                <th>对应经典 Lab</th>
-            </tr>
-            <tr>
-                <td><strong>Part 1</strong></td>
-                <td>第 1-3 章</td>
-                <td>计算机系统漫游、整数与浮点数的表示和处理</td>
-                <td>Data Lab</td>
-            </tr>
-            <tr>
-                <td><strong>Part 2</strong></td>
-                <td>第 4-7 章</td>
-                <td>程序的机器级表示：基础指令、控制流、过程调用、数据与进阶</td>
-                <td>Bomb Lab + Attack Lab</td>
-            </tr>
-            <tr>
-                <td><strong>Part 3</strong></td>
-                <td>第 8-9 章</td>
-                <td>处理器体系结构：ISA 设计与流水线实现</td>
-                <td>Architecture Lab (Y86-64)</td>
-            </tr>
-            <tr>
-                <td><strong>Part 4</strong></td>
-                <td>第 10-14 章</td>
-                <td>性能优化、存储器层次结构（Cache）、链接（静态+动态）</td>
-                <td>Cache Lab + Shell Lab</td>
-            </tr>
-            <tr>
-                <td><strong>Part 5</strong></td>
-                <td>第 15-21 章</td>
-                <td>异常控制流、虚拟内存、系统级 I/O、网络编程</td>
-                <td>Malloc Lab + Proxy Lab</td>
-            </tr>
-            <tr>
-                <td><strong>Part 6</strong></td>
-                <td>第 22-28 章</td>
-                <td>并发编程、经典 Lab 实战合集、现代系统新趋势、综合实战项目</td>
-                <td>综合项目：手写高性能 Web 服务器</td>
-            </tr>
-        </table>
-
-        <p>每一章都配有真实的代码示例和实验。如果你能坚持完成所有章节和配套的 Lab，那我敢打包票——你写代码的方式会发生质的改变。你会发现：</p>
-        <ul>
-            <li>写多线程程序时自然想到 Cache 伪共享的问题</li>
-            <li>遇到内存错误时能迅速定位是堆溢出还是栈溢出</li>
-            <li>做性能优化时先去跑 profiler 而不是凭感觉</li>
-            <li>阅读汇编代码不再害怕，甚至能从中读出编译器做了什么优化</li>
-        </ul>
-
-        <p>这些能力，不是靠背 API 和记框架能获得的。它们来自对<strong>计算机系统底层运作机制</strong>的深刻理解。</p>
-
-        <p>下一章，我们将深入计算机系统最底层的基础——信息是如何在计算机中表示的。从整数到浮点数，这些看似简单的概念背后，隐藏着许多让程序员踩坑的细节。</p>
-
-        <div class="footer-nav">
-            <span aria-current="page">课程开始</span>
-            <a href="index.html">📖 返回目录</a>
-            <a href="02.html">下一章 →</a>
-        </div>
+<section id="compile" aria-labelledby="compile-title">
+  <span class="section-no">02 / TRANSLATION</span>
+  <h2 id="compile-title">一条 gcc 命令，其实有四站</h2>
+  <p>命令 <code>gcc -o hello hello.c</code> 看起来一步到位。实际上 GCC 驱动会协调多个工具：预处理、编译、汇编、链接。它们的输入输出不同，出错方式也不同。<a href="https://gcc.gnu.org/onlinedocs/gcc/Overall-Options.html">GCC 官方手册</a>解释了如何在各阶段停止。</p>
+  <div class="figure-card" id="pipeline" data-step-active="0">
+    <figure>
+      <svg viewBox="0 0 960 222" role="img" aria-labelledby="pipeline-title pipeline-desc" xmlns="http://www.w3.org/2000/svg">
+        <title id="pipeline-title">hello 程序构建链路</title>
+        <desc id="pipeline-desc">从 hello.c，依次经过预处理形成 hello.i、编译形成 hello.s、汇编形成 hello.o、链接形成 hello 可执行文件。</desc>
+        <defs><marker id="pipeline-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#597b77"/></marker></defs>
+        <g font-family="sans-serif" text-anchor="middle">
+          <rect x="10" y="54" width="164" height="94" rx="14" fill="#e2f0ea" stroke="#6eaa9e"/>
+          <text x="92" y="93" fill="#145f64" font-size="26" font-weight="750">hello.c</text><text x="92" y="122" fill="#45736d" font-size="15">源文件</text>
+          <g class="diagram-step" data-step-node="0"><rect x="208" y="54" width="164" height="94" rx="14" fill="#e2f0ea" stroke="#6eaa9e"/><text x="290" y="93" fill="#145f64" font-size="25" font-weight="750">hello.i</text><text x="290" y="122" fill="#45736d" font-size="15">预处理文本</text></g>
+          <g class="diagram-step" data-step-node="1"><rect x="406" y="54" width="164" height="94" rx="14" fill="#fff0e5" stroke="#d7aa8b"/><text x="488" y="93" fill="#ae5d38" font-size="25" font-weight="750">hello.s</text><text x="488" y="122" fill="#946149" font-size="15">汇编文本</text></g>
+          <g class="diagram-step" data-step-node="2"><rect x="604" y="54" width="164" height="94" rx="14" fill="#eeeaf7" stroke="#b3a7d4"/><text x="686" y="93" fill="#6556a2" font-size="25" font-weight="750">hello.o</text><text x="686" y="122" fill="#74689d" font-size="15">可重定位目标文件</text></g>
+          <g class="diagram-step" data-step-node="3"><rect x="802" y="54" width="148" height="94" rx="14" fill="#e2f0ea" stroke="#6eaa9e"/><text x="876" y="93" fill="#145f64" font-size="26" font-weight="750">hello</text><text x="876" y="122" fill="#45736d" font-size="15">可执行文件</text></g>
+          <g stroke="#597b77" stroke-width="2.8" marker-end="url(#pipeline-arrow)"><path d="M176 102 H200"/><path d="M374 102 H398"/><path d="M572 102 H596"/><path d="M770 102 H794"/></g>
+          <g fill="#5e7471" font-size="15"><text x="190" y="34">①</text><text x="388" y="34">②</text><text x="586" y="34">③</text><text x="784" y="34">④</text></g>
+        </g>
+        <text x="14" y="190" font-family="sans-serif" fill="#657b76" font-size="15">顺序示意：中间文件可用 gcc 的 -E / -S / -c 选项分别观察。</text>
+      </svg>
+      <figcaption>图 2 · 每一站都会生成一种更接近机器可执行形式的表示。最后的“链接”可能配置为动态链接，不等于把整个 C 标准库复制进文件。</figcaption>
+    </figure>
+    <div class="trace-grid" role="group" aria-label="选择构建阶段">
+      <button class="step-button" type="button" data-step="0" aria-pressed="true"><span>STEP 1</span>预处理</button>
+      <button class="step-button" type="button" data-step="1" aria-pressed="false"><span>STEP 2</span>编译</button>
+      <button class="step-button" type="button" data-step="2" aria-pressed="false"><span>STEP 3</span>汇编</button>
+      <button class="step-button" type="button" data-step="3" aria-pressed="false"><span>STEP 4</span>链接</button>
     </div>
-</div>
-</div>
-</body>
-</html>
+    <div class="step-detail" aria-live="polite" aria-atomic="true"><strong id="step-heading">① 预处理 · hello.c → hello.i</strong><p id="step-explanation">展开头文件引用与宏、处理条件编译；结果仍是 C 语言文本。运行 gcc -E hello.c -o hello.i 即可查看。</p></div>
+  </div>
+  <p>不要把“编译器”笼统等同于“生成机器码”的单一步骤。<code>hello.o</code> 已包含机器指令，却通常仍有待链接器处理的符号引用和重定位信息；运行时也可能需要动态链接器和共享库协助。</p>
+  <div class="callout"><p><strong>抓住一个分界：</strong>构建时把源代码转成可装载的可执行文件；运行时由操作系统与运行时组件把它变成正在执行的进程。两件事不是同一阶段。</p></div>
+</section>
+
+<section id="run" aria-labelledby="run-title">
+  <span class="section-no">03 / EXECUTION</span>
+  <h2 id="run-title">敲下 ./hello 后，究竟谁开始工作？</h2>
+  <p>在典型的 Linux ELF 环境里，shell 创建子进程并调用 <code>execve</code> 来执行文件。内核建立新的进程映像，必要时安排动态链接器加载共享库。<strong>入口不是直接跳到 C 语言的 <code>main</code></strong>：启动代码先完成运行时初始化，再调用 <code>main</code>。具体细节依赖平台、链接方式与 C 运行时。</p>
+  <div class="figure-card">
+    <figure>
+      <svg viewBox="0 0 850 340" role="img" aria-labelledby="exec-title exec-desc" xmlns="http://www.w3.org/2000/svg">
+        <title id="exec-title">Hello 的控制流与数据流</title>
+        <desc id="exec-desc">上半部是从 shell 到内核加载、运行时入口和 main 的控制流；下半部是从 printf 到 C 库、write 系统调用和终端设备的输出路径。</desc>
+        <defs><marker id="exec-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7 Z" fill="#477773"/></marker></defs>
+        <text x="20" y="26" font-size="15" font-weight="700" font-family="sans-serif" fill="#4c7770">控制流 / 谁启动程序</text>
+        <g font-family="sans-serif" text-anchor="middle">
+          <rect x="20" y="48" width="170" height="72" rx="12" fill="#e7f2ec" stroke="#83b2a5"/><text x="105" y="80" font-size="20" fill="#215e60" font-weight="700">shell</text><text x="105" y="101" font-size="13" fill="#4a7571">发起执行</text>
+          <rect x="238" y="48" width="170" height="72" rx="12" fill="#e9edf7" stroke="#b2b8d5"/><text x="323" y="80" font-size="19" fill="#6259a0" font-weight="700">内核 / 加载机制</text><text x="323" y="101" font-size="13" fill="#6f6f98">execve、进程映像</text>
+          <rect x="456" y="48" width="170" height="72" rx="12" fill="#fff0e7" stroke="#deb494"/><text x="541" y="80" font-size="19" fill="#a65a3d" font-weight="700">启动代码</text><text x="541" y="101" font-size="13" fill="#996b52">运行时初始化</text>
+          <rect x="674" y="48" width="156" height="72" rx="12" fill="#e7f2ec" stroke="#83b2a5"/><text x="752" y="88" font-size="22" fill="#215e60" font-weight="700">main()</text>
+        </g>
+        <g stroke="#477773" stroke-width="2.6" fill="none" marker-end="url(#exec-arrow)"><path d="M191 84 H231"/><path d="M409 84 H449"/><path d="M627 84 H667"/></g>
+        <text x="20" y="167" font-size="15" font-weight="700" font-family="sans-serif" fill="#4c7770">数据流 / 谁让文本出现在终端</text>
+        <g font-family="sans-serif" text-anchor="middle">
+          <rect x="20" y="192" width="170" height="72" rx="12" fill="#e7f2ec" stroke="#83b2a5"/><text x="105" y="235" font-size="21" fill="#215e60" font-weight="700">printf</text>
+          <rect x="238" y="192" width="170" height="72" rx="12" fill="#fff0e7" stroke="#deb494"/><text x="323" y="235" font-size="19" fill="#a65a3d" font-weight="700">C 库缓冲区</text>
+          <rect x="456" y="192" width="170" height="72" rx="12" fill="#e9edf7" stroke="#b2b8d5"/><text x="541" y="228" font-size="21" fill="#6259a0" font-weight="700">write</text><text x="541" y="249" font-size="13" fill="#6f6f98">系统调用</text>
+          <rect x="674" y="192" width="156" height="72" rx="12" fill="#e7f2ec" stroke="#83b2a5"/><text x="752" y="235" font-size="20" fill="#215e60" font-weight="700">终端</text>
+        </g>
+        <g stroke="#477773" stroke-width="2.6" fill="none" marker-end="url(#exec-arrow)"><path d="M191 228 H231"/><path d="M409 228 H449"/><path d="M627 228 H667"/></g>
+        <text x="20" y="310" font-family="sans-serif" font-size="14" fill="#607975">简化模型：库实现与缓冲策略可能不同；具体系统调用可用 strace 实测。</text>
+      </svg>
+      <figcaption>图 3 · 上方是启动过程，下方是常见的输出路径；两条路径不能混为一谈。<code>printf</code> 的缓冲行为受目标流和运行时实现影响。</figcaption>
+    </figure>
+  </div>
+  <p>这时 CPU 从内存中取指令、译码、执行，并用寄存器保存工作数据与控制状态；但它执行的既有应用代码，也有库代码，以及系统调用触发的内核代码。“CPU 正在跑我的程序”只是这段协作的缩写。</p>
+</section>
+
+<section id="memory" aria-labelledby="memory-title">
+  <span class="section-no">04 / LOCALITY</span>
+  <h2 id="memory-title">为什么 CPU 很快，程序仍然会等？</h2>
+  <p>CPU 运算和数据到达 CPU 是两件事。寄存器、缓存、主存和持久存储提供了不同的容量、延迟与成本折中。程序反复访问附近的数据时，缓存与局部性通常能避免更慢的访问。</p>
+  <div class="figure-card">
+    <span class="pill">概念示意 · 宽度不表示实测速度</span>
+    <div class="memory-bars" role="img" aria-label="存储层次概念图：从 CPU 缓存、主存到固态或机械硬盘，容量通常增大，访问代价通常也增大">
+      <div class="memory-row"><b>缓存</b><div class="memory-track"><div class="memory-fill level1">更近</div></div></div>
+      <div class="memory-row"><b>主存</b><div class="memory-track"><div class="memory-fill level2">DRAM</div></div></div>
+      <div class="memory-row"><b>SSD</b><div class="memory-track"><div class="memory-fill level3">持久存储</div></div></div>
+      <div class="memory-row"><b>HDD</b><div class="memory-track"><div class="memory-fill level4">机械寻道</div></div></div>
+    </div>
+    <p class="small-note">这里不列未经机器与工作负载限定的“纳秒数”或价格：缓存命中、随机与顺序访问、队列深度、设备型号都会改变实测结果。</p>
+  </div>
+  <p>想象遍历数组。按连续地址读取，往往可以让已取入缓存行的数据被接着使用；频繁随机跳转则更容易错过这份局部性。真实性能仍需测量，缓存不是“所有程序天然更快”的魔法。</p>
+  <div class="callout caution"><p><strong>工程边界：</strong>不要把一次 <code>malloc</code> 理解为立即申请了同样多的物理内存，也不要把一次文件读取等同于必定发生磁盘 I/O；操作系统页缓存和按需分配会影响实际路径。</p></div>
+</section>
+
+<section id="os" aria-labelledby="os-title">
+  <span class="section-no">05 / ABSTRACTION</span>
+  <h2 id="os-title">操作系统用三种抽象，藏起复杂性</h2>
+  <p>用户程序不需要直接给磁盘发设备命令，也不需要手工决定下一条指令在哪颗 CPU 上执行。操作系统通过一组互相配合的抽象，提供可编程的接口。</p>
+  <div class="triad">
+    <div><h3>进程</h3><p>为运行中的程序提供执行上下文和资源视图。调度使多个进程共享处理器；多核还可能真正并行。</p></div>
+    <div><h3>虚拟内存</h3><p>每个进程使用自己的虚拟地址空间；页表与硬件翻译将部分虚拟页映射到物理内存或触发异常。</p></div>
+    <div><h3>文件 / 描述符</h3><p>磁盘文件、管道、终端和套接字可通过一组相关的 I/O 接口访问，但各类对象的语义并不完全相同。</p></div>
+  </div>
+  <p>这三者也分别解释了常见的问题：程序为何能与别的进程隔离？同一个指针地址在不同进程中为何不指向同一处物理位置？为什么 <code>printf</code> 最后能写到终端？它们不是三个孤立的术语，而是同一次执行过程的不同观察角度。</p>
+</section>
+
+<section id="amdahl" aria-labelledby="amdahl-title">
+  <span class="section-no">06 / PERFORMANCE</span>
+  <h2 id="amdahl-title">优化一部分，为什么整体并没有那么快？</h2>
+  <p>假设一次任务原本耗时为 1，其中比例为 α 的部分可加速 k 倍，其余部分保持不变、且忽略额外开销。那么新时间等于未优化部分加上被加速部分的新时间。</p>
+  <div class="math-panel">
+    <div class="math-scroll" role="region" aria-label="Amdahl 定律公式，可横向滚动" tabindex="0">
+      <math display="block" aria-label="整体加速比 S 等于 1 除以括号 1 减 alpha 加 alpha 除以 k">
+        <mrow><mi>S</mi><mo>=</mo><mfrac><mn>1</mn><mrow><mo>(</mo><mn>1</mn><mo>−</mo><mi>α</mi><mo>)</mo><mo>+</mo><mfrac><mi>α</mi><mi>k</mi></mfrac></mrow></mfrac></mrow>
+      </math>
+    </div>
+    <div class="math-label">式 1 · 固定工作量下的 Amdahl 定律</div>
+  </div>
+  <p>例如 α = 0.60、k = 10，得到 <strong>S ≈ 2.17</strong>，并不是 10 倍。即使可优化部分的速度趋于无限大，加速比上限仍是 <strong>1 / (1 − 0.60) = 2.5</strong>。</p>
+  <div class="widget" aria-labelledby="amdahl-widget-title">
+    <h3 id="amdahl-widget-title">亲自改动两个条件</h3>
+    <p class="small-note">下面是无额外开销的数学模型，不是任何 CPU 上的性能承诺。</p>
+    <div class="controls">
+      <div><label for="fraction">可优化部分 α：<output id="fraction-value" for="fraction">60%</output></label><input id="fraction" type="range" min="0" max="95" step="5" value="60"></div>
+      <div><label for="factor">该部分加速 k：<output id="factor-value" for="factor">10 倍</output></label><input id="factor" type="range" min="1" max="20" step="1" value="10"></div>
+    </div>
+    <div class="widget-output"><div><b>整体加速比</b><p>原本 100 秒的任务，新耗时 <output id="elapsed" aria-live="polite">46.0 秒</output></p><p>理论极限：<output id="limit">2.50 倍</output></p></div><output id="speedup" aria-label="整体加速比" aria-live="polite">2.17×</output></div>
+  </div>
+  <p>这就是性能分析里“先找大头”的数学原因：若某个函数只占总耗时的 1%，即使把它优化到不需要时间，整体速度也最多提高约 1.01 倍。讨论并行化时，线程创建、同步与内存带宽等实际开销还会让结果偏离理想模型。</p>
+</section>
+
+<section id="lab" aria-labelledby="lab-title">
+  <span class="section-no">07 / REPRODUCE</span>
+  <h2 id="lab-title">用七条命令，把这次漫游复现出来</h2>
+  <p>以下命令适用于具备 GCC、binutils 的 Linux 环境。先把本文开头的代码保存为 <code>hello.c</code>，再依次运行：</p>
+  <pre><code>gcc -E hello.c -o hello.i       # 预处理结果：文本
+gcc -S hello.c -o hello.s       # 编译生成汇编
+gcc -c hello.c -o hello.o       # 生成可重定位目标文件
+gcc -o hello hello.o           # 链接
+file hello                       # 查看文件格式
+readelf -h hello                 # 查看 ELF 文件头
+./hello                          # 运行</code></pre>
+  <p>想更深入，还可以运行 <code>objdump -d hello.o</code> 阅读目标文件的反汇编，或在装有 <code>strace</code> 的 Linux 上运行 <code>strace -e write ./hello</code> 观察输出相关的系统调用。不同工具链、优化选项和运行时会产生不同结果；<strong>实验输出不应被当作跨平台固定值</strong>。</p>
+  <div class="check-list">
+    <div><b>观察 1 · 表示</b>用 <code>xxd hello.c</code> 查看源码字节，找出字符 H 对应的字节值；这个命令需要本地安装 xxd。</div>
+    <div><b>观察 2 · 翻译</b>比较 <code>hello.s</code> 和 <code>hello.o</code>：为什么一个可读、另一个不能直接用文本编辑器理解？</div>
+    <div><b>观察 3 · 抽象</b>比较 <code>./hello</code> 的输出与 <code>strace</code> 记录：哪个是用户可见结果，哪个展示了程序与内核的交互？</div>
+  </div>
+  <div class="callout"><p><strong>本章的收获：</strong>把“写代码 → 得到输出”分解成<strong>表示、翻译、执行、存储、抽象、测量</strong>六个可验证的问题。后续章节会逐层拆开这里暂时黑箱化的机制。</p></div>
+</section>
+
+<section id="references" aria-labelledby="references-title" class="references">
+  <span class="section-no">REFERENCE / FURTHER READING</span>
+  <h2 id="references-title">查证与继续阅读</h2>
+  <ol>
+    <li>Randal E. Bryant、David R. O'Hallaron，<a href="https://csapp.cs.cmu.edu/3e/">Computer Systems: A Programmer's Perspective, 3rd Edition</a>，第 1 章 A Tour of Computer Systems。本文是独立中文教学解读，不复用原书图文。</li>
+    <li>GNU Project，<a href="https://gcc.gnu.org/onlinedocs/gcc/Overall-Options.html">Using the GNU Compiler Collection — Overall Options</a>（<code>-E</code>、<code>-S</code>、<code>-c</code>）。</li>
+    <li>Linux man-pages，<a href="https://man7.org/linux/man-pages/man2/execve.2.html">execve(2)</a>，程序映像替换与解释器行为。</li>
+    <li>Gene M. Amdahl，<a href="https://doi.org/10.1145/1465482.1465560">Validity of the Single Processor Approach to Achieving Large Scale Computing Capabilities</a>，AFIPS 1967；本文公式为固定工作量加速模型。</li>
+  </ol>
+  <p class="small-note">图 1–3 为针对本章叙述绘制的原创教学示意，省略了平台相关细节；请结合文中限制条件阅读。</p>
+</section>
+<nav class="footer-nav" aria-label="章节导航"><a href="index.html">← 课程目录</a><a href="02.html">下一章：整数表示 →</a></nav>
+</article></main></div>
+<script>
+(function(){
+  "use strict";
+  var steps=[
+    ["① 预处理 · hello.c → hello.i","展开头文件引用与宏、处理条件编译；结果仍是 C 语言文本。运行 gcc -E hello.c -o hello.i 即可查看。"],
+    ["② 编译 · hello.i → hello.s","编译器进行语言分析、转换并生成目标架构的汇编文本。运行 gcc -S hello.c -o hello.s。具体汇编依目标架构与编译选项而变。"],
+    ["③ 汇编 · hello.s → hello.o","汇编器把汇编翻译成机器指令，产生可重定位的目标文件。运行 gcc -c hello.c -o hello.o。"],
+    ["④ 链接 · hello.o → hello","链接器处理符号引用、重定位与所需库的链接信息，得到可执行文件。动态链接时，部分共享库在运行时才装入。"]
+  ];
+  var pipeline=document.getElementById("pipeline");
+  var buttons=Array.from(document.querySelectorAll("button[data-step]"));
+  buttons.forEach(function(b){b.addEventListener("click",function(){
+    var n=Number(b.getAttribute("data-step"));
+    if(!Number.isInteger(n)||n<0||n>=steps.length)return;
+    pipeline.setAttribute("data-step-active",String(n));
+    buttons.forEach(function(item){item.setAttribute("aria-pressed",String(item===b));});
+    document.getElementById("step-heading").textContent=steps[n][0];
+    document.getElementById("step-explanation").textContent=steps[n][1];
+  });});
+  var fraction=document.getElementById("fraction"),factor=document.getElementById("factor");
+  function compute(){
+    var a=Number(fraction.value)/100,k=Number(factor.value);
+    var s=1/((1-a)+a/k),limit=1/(1-a);
+    document.getElementById("fraction-value").textContent=Math.round(a*100)+"%";
+    document.getElementById("factor-value").textContent=k+" 倍";
+    document.getElementById("speedup").textContent=s.toFixed(2)+"×";
+    document.getElementById("elapsed").textContent=(100/s).toFixed(1)+" 秒";
+    document.getElementById("limit").textContent=limit.toFixed(2)+" 倍";
+  }
+  fraction.addEventListener("input",compute);factor.addEventListener("input",compute);compute();
+})();
+</script>
+</body></html>
