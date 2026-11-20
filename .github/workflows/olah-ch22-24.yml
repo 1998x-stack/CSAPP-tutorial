@@ -1,0 +1,61 @@
+name: Olah chapters 22-24 quality gates
+on:
+  pull_request:
+    paths:
+      - '22.html'
+      - '23.html'
+      - '24.html'
+      - 'chapter-assets/22-*'
+      - 'chapter-assets/23-*'
+      - 'chapter-assets/24-*'
+      - 'docs/chapters/22-*'
+      - 'docs/chapters/23-*'
+      - 'docs/chapters/24-*'
+      - 'examples/olah-ch22-*'
+      - 'examples/olah-ch23-*'
+      - 'examples/olah-ch24-*'
+      - 'scripts/verify-ch22-24.py'
+      - 'scripts/browser-qa-ch22-24.py'
+      - 'scripts/build-static.mjs'
+      - '.github/workflows/olah-ch22-24.yml'
+  push:
+    branches: [main]
+    paths:
+      - '22.html'
+      - '23.html'
+      - '24.html'
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile C and verify evidence, SVGs, HTML and JS
+        run: python3 scripts/verify-ch22-24.py
+      - name: Check published bundle includes illustrated assets
+        run: |
+          npm run build
+          test -f dist/olah-chapters.css
+          test -f dist/chapter-assets/22-thread-memory.svg
+          test -f dist/chapter-assets/23-thread-pool.svg
+          test -f dist/chapter-assets/24-lab-map.svg
+      - name: Install browser tooling
+        run: |
+          python -m pip install playwright==1.65.2
+          python -m playwright install --with-deps chromium
+      - name: Browser QA at desktop and mobile widths
+        run: python3 scripts/browser-qa-ch22-24.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: olah-22-24-browser-report
+          path: reports/olah-22-24
+          if-no-files-found: ignore
