@@ -1,22 +1,17 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>第5章 程序的机器级表示——控制流 — 深入理解计算机系统（CSAPP）</title>
-    <link rel="stylesheet" href="theme.css">
-</head>
-<body>
-<div class="double-border">
-<div class="container">
-    <div class="sidebar">
-        <h3>💻 课程目录</h3>
-        <ul class="chapter-list">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="用条件码、分支图、循环回边和真实编译实验理解 x86-64 控制流。">
+<title>第 5 章：程序的机器级表示——控制流 · CSAPP 中文教程</title>
+<link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="olah-ch05-07.css"></head>
+<body class="olah-body"><a class="skip-link" href="#main">跳转至正文</a>
+<div class="double-border olah-shell"><div class="container olah-grid">
+<aside class="sidebar olah-sidebar"><a class="site-title" href="index.html">CSAPP 中文教程<small>COMPUTER SYSTEMS · 28 讲</small></a><p class="nav-hint">课程目录</p><nav aria-label="全部章节"><ul class="chapter-list">
             <li><a href="01.html">第1章 计算机系统漫游</a></li>
             <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
             <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
             <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
-            <li><a href="05.html" class="active">第5章 程序的机器级表示——控制流</a></li>
+            <li><a href="05.html" class="active" aria-current="page">第5章 程序的机器级表示——控制流</a></li>
             <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
             <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
             <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
@@ -40,292 +35,165 @@
             <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
             <li><a href="27.html">第27章 现代系统新趋势</a></li>
             <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
-        </ul>
-    </div>
-    <div class="main-content">
-        <h2>第五章：程序的机器级表示——控制流</h2>
-
-        <p>大家好，我是你们的讲师。上一章我们学了 x86-64 的基本指令——mov、add、lea 这些指令一条接一条地顺序执行，就像按菜谱一步一步操作。但现实中的程序不是这样线性执行的——它有 <code>if</code> 条件判断、<code>while</code> 循环、<code>switch</code> 多路分支。CPU 是如何实现"根据条件选择不同的执行路径"的？</p>
-
-        <p>答案藏在两类关键机制里：<strong>条件码寄存器</strong>和<strong>跳转指令</strong>。条件码记录上一条运算的"副作用"（结果是否为 0、是否溢出等），跳转指令根据条件码决定是否跳转到某个地址。</p>
-
-        <p>说到条件跳转，就不得不提<strong>分支预测</strong>。现代 CPU 是流水线执行的——它会提前把后续指令取到流水线里。遇到条件跳转时，CPU 必须猜测会走哪条路。猜对了，流水线填满，效率很高；猜错了，需要清空流水线重新取指令——这一下浪费大约 10-20 个时钟周期。一个需要高性能的工程师，写代码时会考虑分支预测的影响。我见过一个对性能极度敏感的场景：在某实时音频处理引擎中，工程师竟然用算术运算代替了一个 if-else 分支，只为了减少分支预测错误带来的延迟抖动。</p>
-
-        <h3>5.1 条件码寄存器</h3>
-
-        <p>x86-64 的 CPU 内部维护了一组<strong>条件码寄存器</strong>，每个条件码是 1 位（一个标志位）。最常用的四个是：</p>
-
-        <table>
-            <tr>
-                <th>条件码</th>
-                <th>名称</th>
-                <th>何时被置 1</th>
-                <th>简单理解</th>
-            </tr>
-            <tr>
-                <td><strong>CF</strong></td>
-                <td>进位标志（Carry Flag）</td>
-                <td>无符号运算结果超出范围（产生进位/借位）</td>
-                <td>无符号溢出</td>
-            </tr>
-            <tr>
-                <td><strong>ZF</strong></td>
-                <td>零标志（Zero Flag）</td>
-                <td>运算结果为 0</td>
-                <td>结果为 0</td>
-            </tr>
-            <tr>
-                <td><strong>SF</strong></td>
-                <td>符号标志（Sign Flag）</td>
-                <td>运算结果为负数（最高位为 1）</td>
-                <td>结果为负</td>
-            </tr>
-            <tr>
-                <td><strong>OF</strong></td>
-                <td>溢出标志（Overflow Flag）</td>
-                <td>有符号运算结果超出范围（补码溢出的两种情况）</td>
-                <td>有符号溢出</td>
-            </tr>
-        </table>
-
-        <p>条件码由<strong>算术和逻辑指令</strong>自动设置。例如执行 <code>addq %rax, %rbx</code> 后，CPU 会根据运算结果更新 ZF/SF/CF/OF。除此之外，还有两条"专用"的、只修改条件码不修改目标寄存器的指令：</p>
-
-        <ul>
-            <li><code>cmpq src2, src1</code> —— 计算 <code>src1 - src2</code>，只改条件码，不存结果。等价于 <code>subq</code> 但是丢弃结果。用于比较大小。</li>
-            <li><code>testq src2, src1</code> —— 计算 <code>src1 &amp; src2</code>，只改条件码（ZF 和 SF），不存结果。通常用于检查某一位或判断是否为 0，如 <code>testq %rax, %rax</code> 判断 %rax 是否为零。</li>
-        </ul>
-
-        <div class="highlight">
-            <p><strong>关键思考</strong>：CPU 设计者为什么要把"修改条件码"和"修改寄存器"分成不同的指令？这是 RISC 思想的体现——一条指令只做一件事。如果每次算术运算都无副作用地修改条件码，流水线实现会更复杂。现代 x86 虽然不完全符合 RISC 哲学，但在这里体现了精细的设计决策。</p>
-        </div>
-
-        <h3>5.2 条件跳转</h3>
-
-        <p>有了条件码，我们就可以根据它们来做<strong>条件跳转</strong>了。跳转指令的核心是 <code>j</code> 系列：</p>
-
-        <table>
-            <tr>
-                <th>指令</th>
-                <th>跳转条件</th>
-                <th>含义（C 语义）</th>
-            </tr>
-            <tr>
-                <td><code>jmp Label</code></td>
-                <td>无条件</td>
-                <td><code>goto Label;</code></td>
-            </tr>
-            <tr>
-                <td><code>je Label</code></td>
-                <td>ZF = 1</td>
-                <td><code>if (==) goto Label;</code></td>
-            </tr>
-            <tr>
-                <td><code>jne Label</code></td>
-                <td>ZF = 0</td>
-                <td><code>if (!=) goto Label;</code></td>
-            </tr>
-            <tr>
-                <td><code>jg Label</code></td>
-                <td>SF = OF 且 ZF = 0</td>
-                <td><code>if (&gt;) goto Label;</code>（有符号）</td>
-            </tr>
-            <tr>
-                <td><code>jge Label</code></td>
-                <td>SF = OF</td>
-                <td><code>if (&gt;=) goto Label;</code>（有符号）</td>
-            </tr>
-            <tr>
-                <td><code>jl Label</code></td>
-                <td>SF != OF</td>
-                <td><code>if (&lt;) goto Label;</code>（有符号）</td>
-            </tr>
-            <tr>
-                <td><code>jle Label</code></td>
-                <td>SF != OF 或 ZF = 1</td>
-                <td><code>if (&lt;=) goto Label;</code>（有符号）</td>
-            </tr>
-            <tr>
-                <td><code>ja Label</code></td>
-                <td>CF = 0 且 ZF = 0</td>
-                <td><code>if (&gt;) goto Label;</code>（无符号）</td>
-            </tr>
-            <tr>
-                <td><code>jb Label</code></td>
-                <td>CF = 1</td>
-                <td><code>if (&lt;) goto Label;</code>（无符号）</td>
-            </tr>
-        </table>
-
-        <p>一个典型的 <code>cmp + je</code> 模式：</p>
-        <pre><code># C 代码：if (a == 10) goto done;
-cmpq $10, %rdi      # 比较 a 和 10
-je    .L_done       # 如果相等，跳转到 done
-# ... 其他代码 ...
-.L_done:
-    ret</code></pre>
-
-        <div class="tip">
-            <p><strong>关于分支预测</strong>：现代 CPU 有分支预测单元（Branch Prediction Unit），会学习跳转行为的模式。对于绝大多数有规律的分支（如循环的末尾跳转），预测准确率超过 95%。但那些<strong>完全随机</strong>的分支（如二分查找、随机数据排序的比较）预测准确率接近 50%，这时候分支错误带来的性能损失是真实存在的。在性能敏感的代码中，可以尝试用 <code>_builtin_expect</code>（C）或 <code>[[likely]]/[[unlikely]]</code>（C++20）给编译器提示。</p>
-        </div>
-
-        <h3>5.3 if-else 与 switch-case</h3>
-
-        <p><strong>if-else 的汇编实现</strong>——本质上就是一组条件跳转：</p>
-
-        <pre><code>// C 代码
-long absdiff(long a, long b)
-{
-    if (a &gt; b)
-        return a - b;
-    else
-        return b - a;
+        </ul></nav></aside>
+<details class="mobile-chapters"><summary>课程目录 · 展开全部 28 讲</summary><nav aria-label="移动端课程目录"><ul class="chapter-list">
+            <li><a href="01.html">第1章 计算机系统漫游</a></li>
+            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
+            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
+            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
+            <li><a href="05.html" class="active" aria-current="page">第5章 程序的机器级表示——控制流</a></li>
+            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
+            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
+            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
+            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
+            <li><a href="10.html">第10章 优化程序性能</a></li>
+            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
+            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
+            <li><a href="13.html">第13章 链接——静态链接</a></li>
+            <li><a href="14.html">第14章 链接——动态链接</a></li>
+            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
+            <li><a href="16.html">第16章 异常控制流——信号</a></li>
+            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
+            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
+            <li><a href="19.html">第19章 系统级I/O</a></li>
+            <li><a href="20.html">第20章 网络编程——基础</a></li>
+            <li><a href="21.html">第21章 网络编程——进阶</a></li>
+            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
+            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
+            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
+            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
+            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
+            <li><a href="27.html">第27章 现代系统新趋势</a></li>
+            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
+        </ul></nav></details>
+<main class="main-content olah-main" id="main"><article class="olah-lesson">
+<header class="essay-head">
+<p class="eyebrow">CSAPP · 05 / MACHINE-LEVEL PROGRAMMING</p>
+<h1>一条 if，究竟让 CPU 改变了什么？</h1>
+<p class="dek">从 <code>cmp</code> 设置条件码，到 <code>jcc</code> 选择下一条指令，再到循环的回边和 <code>switch</code> 的分派。本章要学的不是“背汇编”，而是把高级语言的判断还原成可追踪的控制流图。</p>
+<nav class="reading-map" aria-label="本章阅读路径"><strong>阅读路线</strong><a href="#flags">条件码</a><a href="#branches">分支</a><a href="#loops">循环</a><a href="#switch">switch</a><a href="#experiment">动手验证</a></nav>
+</header>
+<section class="chapter-section" id="flags">
+<h2>01 · 比较并不产生布尔值，它先留下“痕迹”</h2>
+<p>假设有 <code>if (a &lt; b)</code>。在 x86-64 中，一个常见实现不是先把真假写进变量，而是用 <code>cmp</code> 做一次不保存结果的减法：让 CPU 更新条件码，再由下一条指令解释这些位。</p>
+<pre><code>/* C：两个参数均为 long，假设 System V x86-64 ABI */
+long minimum(long a, long b) {
+    if (a &lt; b) return a;
+    return b;
 }
 
-// GCC -O1 汇编
-absdiff:
-    cmpq    %rsi, %rdi     # 比较 a 和 b
-    jle     .L_else        # 如果 a &lt;= b，跳到 else
-    movq    %rdi, %rax     # rax = a
-    subq    %rsi, %rax     # rax = a - b
-    ret
-.L_else:
-    movq    %rsi, %rax     # rax = b
-    subq    %rdi, %rax     # rax = b - a
-    ret</code></pre>
-
-        <p>可以看到，编译器把 if-else 翻译成了 <code>cmp + jle</code> + 两条分支代码。注意：编译器喜欢把<strong>更常见的路径</strong>放在紧跟着跳转指令的位置（fall-through），而不常见的路径放在跳转目标处。</p>
-
-        <p><strong>switch-case 的汇编实现</strong>——这才是真正有意思的部分。当 case 值连续且数量较多时，编译器会生成一个<strong>跳转表（Jump Table）</strong>：</p>
-
-        <pre><code>// C 代码
-void switch_demo(int op)
-{
-    switch (op) {
-        case 0: do_a(); break;
-        case 1: do_b(); break;
-        case 2: do_c(); break;
-        case 3: do_d(); break;
-        default: do_default(); break;
+/* AT&amp;T 语法的教学示意：真实编译器可能选 cmov */
+cmpq %rsi, %rdi       # 比较 a - b，不改动 a 或 b
+jge  .Lge             # signed a >= b 时跳转
+movq %rdi, %rax       # a &lt; b
+ret
+.Lge:
+movq %rsi, %rax       # a >= b
+ret</code></pre>
+<p>条件码不是普通的全局“真假开关”，而是 EFLAGS/RFLAGS 中由特定指令定义的状态位。本例关心四个：</p>
+<div class="table-scroll"><table><thead><tr><th scope="col">条件码</th><th scope="col">含义</th><th scope="col">读它时要留意</th></tr></thead><tbody>
+<tr><td><code>ZF</code></td><td>结果为零</td><td><code>je</code> / <code>jne</code> 常检查它</td></tr>
+<tr><td><code>SF</code></td><td>结果的符号位</td><td>不能单凭它推断有符号大小</td></tr>
+<tr><td><code>OF</code></td><td>有符号溢出</td><td>有符号分支须与 <code>SF</code> 配合</td></tr>
+<tr><td><code>CF</code></td><td>无符号减法借位</td><td><code>jb</code> / <code>jae</code> 用于无符号比较</td></tr>
+</tbody></table></div>
+<p>因此在同一对位模式上，<strong>有符号</strong>与<strong>无符号</strong>分支可能得到相反答案。例如 8 位位模式 <code>1111 1111</code> 可以解释为 <code>-1</code>，也可以解释为 <code>255</code>。</p>
+<div class="lab-widget" id="signed-widget" aria-labelledby="signed-title">
+<h3 id="signed-title">交互：同一组位，为什么比较结果不同？</h3>
+<label for="signed-x">修改 4 位补码示例中的 x（y 固定为 1）：<output id="signed-x-label" for="signed-x">-1</output></label>
+<input type="range" id="signed-x" min="-8" max="7" value="-1" step="1">
+<div class="widget-result" id="signed-output" role="status" aria-live="polite">有符号 -1 &lt; 1：true；无符号 15 &lt; 1：false。</div>
+<p class="mini-note">这是 4 位玩具模型，只用来观察位模式的两种解释；机器指令中的实际操作数宽度由指令决定。</p>
+</div>
+<div class="insight"><p><strong>检查方法：</strong><code>jl</code> 在 <code>SF ≠ OF</code> 时跳转；<code>jb</code> 在 <code>CF = 1</code> 时跳转。两者的英文缩写都像“less”，但类型语义不同。</p></div>
+</section>
+<section class="chapter-section" id="branches">
+<h2>02 · 一次分支，就是对下一条指令地址作选择</h2>
+<p>控制流图把顺序执行的指令聚合成“基本块”；一个基本块内部没有中途进入或离开的普通分支，末尾才决定走向哪个后继块。图中用 <code>jge</code> 绘出 <code>a &lt; b</code> 的双路选择：</p>
+<figure class="diagram"><img src="assets/chapters/05-branch.svg" width="760" height="300" alt="cmp 设置条件码，jge 按 SF 与 OF 的关系在有符号大于等于与小于之间选择分支"><figcaption>图 5-1 · <code>cmp</code> 只更新条件码，<code>jge</code> 才改变控制流。箭头表示逻辑后继，不代表两条 <code>ret</code> 必须如此布局。</figcaption></figure>
+<p>一个 <code>if-else</code> 可以用条件跳转加无条件跳转构成；简单表达式也可能被编译为 <code>setcc</code>（生成 0/1）或 <code>cmovcc</code>（条件传送），减少分支。不能由 C 语法机械断言会出现哪条机器指令。</p>
+<div class="caution"><p><strong>不要强行把所有分支改成 <code>cmov</code>：</strong>条件传送只适用于可安全提前计算的候选值；若分支有 I/O、副作用或可能触发非法内存访问，不能把“两个路径都执行”当成等价变换。性能也需实测。</p></div>
+<h3>读懂有符号与无符号跳转</h3>
+<div class="table-scroll"><table><thead><tr><th>条件（比较 a 与 b）</th><th>有符号</th><th>无符号</th></tr></thead><tbody>
+<tr><td><code>a == b</code></td><td colspan="2"><code>je</code>（ZF = 1）</td></tr>
+<tr><td><code>a &lt; b</code></td><td><code>jl</code></td><td><code>jb</code></td></tr>
+<tr><td><code>a &lt;= b</code></td><td><code>jle</code></td><td><code>jbe</code></td></tr>
+<tr><td><code>a &gt;= b</code></td><td><code>jge</code></td><td><code>jae</code></td></tr>
+</tbody></table></div>
+<p class="mini-note">表格针对 <code>cmp b, a</code> 之后的条件解读。AT&amp;T 汇编的两个操作数顺序是“源，目的”，等价比较 <code>a - b</code>；Intel 语法的显示顺序不同。</p>
+</section>
+<section class="chapter-section" id="loops">
+<h2>03 · 循环不是特殊魔法，而是一条回边</h2>
+<p>把 <code>for (初始化; 条件; 更新)</code> 拆开，你会看到一种非常普通的控制结构：初始化一次，判断条件；为真执行主体和更新，再跳回判断；为假退出。</p>
+<figure class="diagram"><img src="assets/chapters/05-loop.svg" width="760" height="300" alt="循环初始化 i=0，检查 i<n，运行循环体并 i++，回到检查点，条件不成立退出"><figcaption>图 5-2 · 回边构成循环；循环条件的检查位置决定是否至少执行一次。<code>do-while</code> 则先执行主体再判断。</figcaption></figure>
+<pre><code>#include &lt;stddef.h&gt;
+long sum_positive(const int *a, size_t n) {
+    long sum = 0;
+    for (size_t i = 0; i &lt; n; ++i) {
+        if (a[i] &gt; 0) sum += a[i];
+    }
+    return sum;
+}</code></pre>
+<p>理解循环汇编的最快办法是先找 <strong>退出条件</strong>、再找 <strong>回跳边</strong>、最后检查 <strong>索引更新</strong>。编译器可能将 <code>for</code> 规范化成 <code>while</code> 形状，也可能循环展开或向量化；图是源语言语义的控制流，不是固定的优化输出。</p>
+<div class="insight"><p><strong>边界推理：</strong><code>i &lt; n</code> 的最后一次合法迭代是 <code>i = n - 1</code>（前提为 n &gt; 0）。当 <code>n = 0</code>，循环体一次也不执行；不要通过访问 <code>a[n]</code> 来“验证”循环结果。</p></div>
+</section>
+<section class="chapter-section" id="switch">
+<h2>04 · switch 可能是多次比较，也可能是一次索引跳转</h2>
+<p><code>switch</code> 本质是从一个输入值选择某个分支。若 case 值密集，编译器<strong>可能</strong>先检查索引范围，再用跳转表查找目标地址；若很稀疏、分支很少或可用算术化简，也可能生成比较链、二分跳转或完全不同的代码。</p>
+<pre><code>int classify(int x) {
+    switch (x) {
+        case 0: return 4;
+        case 1: return 7;
+        case 2: return 9;
+        default: return -1;
     }
 }
 
-// GCC -O1 汇编（简化）
-switch_demo:
-    cmpq    $3, %rdi         # 检查 op 是否超过范围
-    ja      .L_default       # 如果 &gt; 3，跳到 default
-    jmp     *.L_jump_table(, %rdi, 8)  # 从跳转表取目标地址
-
-.L_jump_table:
-    .quad .L_case0
-    .quad .L_case1
-    .quad .L_case2
-    .quad .L_case3</code></pre>
-
-        <p>跳转表的本质是一个<strong>函数指针数组</strong>——CPU 直接根据输入的索引 <code>op</code> 在数组中查到目标地址，然后一条 <code>jmp</code> 指令跳过去。整个过程只需要<strong>1 次内存访问 + 1 次间接跳转</strong>，无论有多少个 case，耗时都是常数。</p>
-
-        <p>相比之下，if-else if 链需要一条一条比较，耗时随着分支数量线性增长。这就是<strong>为什么</strong>编译器在 case 值连续、case 数量较多时（通常 > 4）总是倾向于生成跳转表而不是比较链。</p>
-
-        <div class="highlight">
-            <p><strong>性能对比</strong>：假设有 10 个 case，用 if-else if 链平均需要比较 5 次才能找到匹配分支，最坏情况 10 次。而跳转表永远是 1 次间接跳转。代价是跳转表本身占用的少量额外内存（每个条目 8 字节）。这是一种典型的"用空间换时间"的优化策略。</p>
-        </div>
-
-        <h3>5.4 循环的三种汇编模式</h3>
-
-        <p>C 语言有三种循环语法：<code>do-while</code>、<code>while</code>、<code>for</code>。有趣的是，它们在汇编层面实际只对应<strong>两种</strong>基本模式——因为 for 循环本质上是 while 循环的语法糖。理解循环的汇编实现有一个绝佳的方法：把它翻译成<strong>goto-C</strong>。</p>
-
-        <p><strong>模式一：do-while（条件在后）</strong></p>
-        <p>这是最直接、最"诚实"的模式——先执行循环体，再检查条件。至少执行一次。</p>
-
-        <pre><code>// C 源码
-long fact_do(long n)
-{
-    long result = 1;
-    do {
-        result *= n;
-        n--;
-    } while (n &gt; 1);
-    return result;
-}
-
-// 等价的 goto-C
-long fact_do_goto(long n)
-{
-    long result = 1;
-.loop:
-    result *= n;
-    n--;
-    if (n &gt; 1)
-        goto .loop;
-    return result;
-}
-
-// 对应的汇编（简写）
-fact_do:
-    movq    $1, %rax       # result = 1
-.loop:
-    imulq   %rdi, %rax     # result *= n
-    decq    %rdi           # n--
-    cmpq    $1, %rdi       # 比较 n 和 1
-    jg      .loop          # 如果 n > 1，继续循环
-    ret</code></pre>
-
-        <p><strong>模式二：while 与 for（条件在前）</strong></p>
-        <p>while 和 for 的区别只在于语法层面，汇编代码完全一样。核心策略是：先无条件跳转到条件检查处（跳至底部），检查不满足就直接跳过循环。</p>
-
-        <pre><code>// C 源码
-long fact_while(long n)
-{
-    long result = 1;
-    while (n &gt; 1) {
-        result *= n;
-        n--;
-    }
-    return result;
-}
-
-// 等价的 goto-C（"跳至中间"模式）
-long fact_while_goto(long n)
-{
-    long result = 1;
-    goto .test;
-.loop:
-    result *= n;
-    n--;
-.test:
-    if (n &gt; 1)
-        goto .loop;
-    return result;
-}
-
-// 对应的汇编（简写）
-fact_while:
-    movq    $1, %rax       # result = 1
-    jmp     .test          # 先跳到条件检查
-.loop:
-    imulq   %rdi, %rax     # result *= n
-    decq    %rdi           # n--
-.test:
-    cmpq    $1, %rdi       # 比较 n 和 1
-    jg      .loop          # 如果 n > 1，继续循环
-    ret</code></pre>
-
-        <p>为什么编译器要把 while 翻译成"先跳到底部再检查"的模式？这个设计很妙：把条件检查放在循环体的末尾，这样只需要<strong>一个条件跳转</strong>（在末尾控制回跳），而不是在循环入口处也要跳转。你可以想象一下，如果 while 翻译成"检查→不满足就跳过→执行体→无条件跳回检查"——那就是 <strong>两个跳转</strong>（一个条件跳转 + 一个无条件跳转）每个循环迭代都要执行，效率更低。</p>
-
-        <div class="warning">
-            <p><strong>⚠️ 循环优化陷阱</strong>：编译器在优化循环时（特别是 <code>-O2</code> 以上），会做大量的变换——循环展开、向量化、循环不变量外提等。你看到生成的汇编可能和 C 源码的结构完全不对应，但计算结果是等价的。<strong>不要</strong>试图从优化后的汇编反推 C 逻辑——它可能已经被彻底重组了。</p>
-        </div>
-
-        <p>这一章我们学习了程序控制流在机器层面的实现方式。条件码记录运算结果的特征，跳转指令实现路径选择，if-else 翻译成条件跳转，switch 翻译成跳转表（当条件允许时），三种循环本质上都归结为"条件跳转 + 回跳"的模式。</p>
-
-        <p>下一章，我们将迈入汇编学习中最精彩的部分——<strong>过程（函数）调用</strong>。call 指令如何跳转、ret 指令如何返回、参数和局部变量在栈上怎么摆放、递归函数在底层是什么样的——这些问题将逐一得到解答。</p>
-
-        <div class="footer-nav">
-            <a href="04.html">← 上一章</a>
-            <a href="index.html">📖 返回目录</a>
-            <a href="06.html">下一章 →</a>
-        </div>
-    </div>
-</div>
-</div>
-</body>
-</html>
+/* 可能的逻辑流程，不是承诺的编译结果：
+   检查 0 &lt;= x &lt;= 2 → 选择 case 目标；否则走 default。
+   表项是代码地址（或相对位移），不是 case 返回值。 */</code></pre>
+<p>读 <code>switch</code> 汇编时先辨认索引的边界检查，再区分查到的是“值”还是“跳转目标”。<code>break</code> 会防止普通 fall-through；有意贯穿多个 case 的代码要明确标注，避免漏写导致错误。</p>
+</section>
+<section class="chapter-section" id="experiment">
+<h2>05 · 让编译器展示证据，而不是猜结果</h2>
+<p>把前面的 C 示例保存为 <code>flow.c</code>，在 x86-64 Linux + GCC/Clang 上比较不同优化等级输出：</p>
+<pre><code>cc -O0 -S -fno-omit-frame-pointer flow.c -o flow-O0.s
+cc -O2 -S flow.c -o flow-O2.s
+cc -O2 -c flow.c -o flow.o
+objdump -dr flow.o</code></pre>
+<ol>
+<li>找到比较指令。它操作的位宽是多少？实际相减顺序是 <code>a - b</code> 还是 <code>b - a</code>？</li>
+<li>找到跳转目标和基本块入口。哪条边是跳转，哪条边是顺序落下？</li>
+<li>比较 <code>-O0</code> 与 <code>-O2</code>：是否出现条件传送、循环展开或不同的 case 分派？这些属于编译选择，而非 C 语言保证。</li>
+</ol>
+<p class="mini-note">实验依赖本机工具链和目标架构。汇编清单、指令选择和栈布局随编译器、版本、目标和标志改变；本章代码块中的汇编仅为可推导的教学示意。</p>
+</section>
+<section class="chapter-section" id="references">
+<h2>查证与下一步</h2>
+<p>把握三个问题：<strong>哪条指令写标志？哪条指令读取标志？哪里存在回边或多路分派？</strong>下一章将让这些控制流跨过函数边界，观察 <code>call</code>、返回地址与调用栈。</p>
+<ul class="source-links">
+<li><a href="https://csapp.cs.cmu.edu/3e/">CS:APP 第三版官方资源</a>：机器级程序表示的系统化背景。本教程第 5 讲是站内拆分编号，不对应教科书第 5 章。</li>
+<li><a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel® 64 and IA-32 Software Developer’s Manuals</a>：<code>CMP</code>、条件码及 <code>Jcc</code> 指令语义。</li>
+<li><a href="https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html">GCC Optimize Options</a>：不同优化等级的行为背景。</li>
+</ul>
+<div class="footer-nav"><a href="04.html">← 第 4 章</a><a href="index.html">返回课程目录</a><a href="06.html">第 6 章 →</a></div>
+</section></article></main>
+</div></div><script>
+(() => {
+  const slider = document.querySelector('#signed-x');
+  const label = document.querySelector('#signed-x-label');
+  const output = document.querySelector('#signed-output');
+  if (!slider || !label || !output) return;
+  function render() {
+    const signed = Number(slider.value);
+    const bits = signed & 15;
+    label.textContent = String(signed);
+    output.textContent = '位模式 ' + bits.toString(2).padStart(4,'0') +
+      '：有符号 ' + signed + ' < 1 = ' + (signed < 1) +
+      '；无符号 ' + bits + ' < 1 = ' + (bits < 1) + '。';
+  }
+  slider.addEventListener('input', render);
+  render();
+})();
+</script>
+</body></html>

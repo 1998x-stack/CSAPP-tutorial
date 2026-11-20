@@ -1,0 +1,53 @@
+{
+  "chapter": "07",
+  "topic": "arrays, structure layout and bounded input",
+  "scope": "C11 examples; 4-byte int and S1/S2 sizes explicitly scoped to a common x86-64 layout.",
+  "assumptions": [
+    "Matrix demo is int[3][4] with sizeof(int)=4",
+    "Figures are layouts of pedagogical examples, not portable guarantees",
+    "Safe copy requires the caller to supply the destination's actual capacity"
+  ],
+  "claims": [
+    {
+      "claim": "Row-major multi-dimensional arrays use contiguous nested array objects",
+      "sources": [
+        {
+          "url": "https://en.cppreference.com/w/c/language/array",
+          "locator": "Array declaration / multidimensional arrays"
+        }
+      ]
+    },
+    {
+      "claim": "Array function parameters adjust to pointer parameters",
+      "sources": [
+        {
+          "url": "https://en.cppreference.com/w/c/language/function_declaration",
+          "locator": "Parameter adjustment"
+        }
+      ]
+    },
+    {
+      "claim": "Strings require space for a terminating null character, with truncation carefully handled",
+      "sources": [
+        {
+          "url": "https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/characters-and-strings-str/str31-c/",
+          "locator": "Rule STR31-C"
+        }
+      ]
+    },
+    {
+      "claim": "Stack protector and sanitizers require supported compilation options",
+      "sources": [
+        {
+          "url": "https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html",
+          "locator": "Instrumentation Options"
+        }
+      ]
+    }
+  ],
+  "figures": [
+    "assets/chapters/07-matrix.svg",
+    "assets/chapters/07-layout.svg"
+  ],
+  "interaction": "matrix address offset (i*4+j)*4, constrained valid indices"
+}
