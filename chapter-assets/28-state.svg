@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 288" role="img" aria-labelledby="title28 desc28">
+<title id="title28">HTTP/1.1 长连接的非阻塞处理状态机</title><desc id="desc28">连接从等待可读进入读取状态，报文完整则进入处理状态，随后进入写状态；响应写完可保持连接复用，或者在出错或超时时关闭。</desc>
+<defs><marker id="arrow28" markerWidth="9" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#5e7778"/></marker></defs>
+<rect width="900" height="288" rx="17" fill="#f9faf6"/>
+<text x="27" y="40" font-family="sans-serif" font-size="20" fill="#273f42" font-weight="700">一个 fd，不同的处理状态</text>
+<g font-family="sans-serif" font-size="17" text-anchor="middle" font-weight="700">
+<rect x="27" y="94" width="179" height="76" rx="10" fill="#e0f2eb" stroke="#82b29e"/><text x="116" y="125" fill="#256450">READING</text><text x="116" y="147" font-size="14" fill="#376f60">直到 EAGAIN / 完整</text>
+<rect x="247" y="94" width="180" height="76" rx="10" fill="#e8e8f6" stroke="#aba8cc"/><text x="337" y="125" fill="#625b89">PROCESSING</text><text x="337" y="147" font-size="14" fill="#625b89">有界任务 + 所有权</text>
+<rect x="469" y="94" width="178" height="76" rx="10" fill="#f7ebdc" stroke="#cba777"/><text x="558" y="125" fill="#8c5d34">WRITING</text><text x="558" y="147" font-size="14" fill="#8c5d34">处理部分写</text>
+<rect x="692" y="94" width="179" height="76" rx="10" fill="#edf1f3" stroke="#b1bec5"/><text x="781" y="125" fill="#4d6670">IDLE / CLOSED</text><text x="781" y="147" font-size="14" fill="#4d6670">复用或结束</text>
+</g>
+<g fill="none" stroke="#5e7778" stroke-width="2.6" marker-end="url(#arrow28)">
+<path d="M206 132 H244"/><path d="M427 132 H466"/><path d="M647 132 H688"/>
+<path d="M779 173 V233 H115 V173"/>
+</g>
+<g font-family="sans-serif" font-size="14" fill="#52716d">
+<text x="215" y="85">完整</text><text x="424" y="85">准备好</text><text x="652" y="85">已排空</text>
+<text x="448" y="225">仅当 Keep-Alive 且定界正确，才回到 READING</text>
+<text x="29" y="272">边缘触发：读写到 EAGAIN；ONESHOT：处理完显式 rearm；关闭：先校验 fd 所有权</text>
+</g>
+</svg>
