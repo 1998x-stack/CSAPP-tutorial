@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 242" role="img" aria-labelledby="seq-svg-title seq-svg-desc">
+<title id="seq-svg-title">SEQ 的六段组合逻辑和一个时钟边界</title>
+<desc id="seq-svg-desc">指令在单个较长的时钟周期里，沿取指、译码、执行、访存、写回、PC 选择的组合路径传递，在时钟边沿提交状态。</desc>
+<g font-family="system-ui,sans-serif" text-anchor="middle">
+<rect x="12" y="54" width="126" height="70" rx="12" fill="#e4f1ed" stroke="#83b4a7"/><text x="75" y="94" font-size="18" font-weight="700" fill="#25494c">取指 F</text><rect x="160" y="54" width="126" height="70" rx="12" fill="#fff0e5" stroke="#d7aa8b"/><text x="223" y="94" font-size="18" font-weight="700" fill="#25494c">译码 D</text><rect x="308" y="54" width="126" height="70" rx="12" fill="#e4f1ed" stroke="#83b4a7"/><text x="371" y="94" font-size="18" font-weight="700" fill="#25494c">执行 E</text><rect x="456" y="54" width="126" height="70" rx="12" fill="#fff0e5" stroke="#d7aa8b"/><text x="519" y="94" font-size="18" font-weight="700" fill="#25494c">访存 M</text><rect x="604" y="54" width="126" height="70" rx="12" fill="#e4f1ed" stroke="#83b4a7"/><text x="667" y="94" font-size="18" font-weight="700" fill="#25494c">写回 W</text><rect x="752" y="54" width="126" height="70" rx="12" fill="#fff0e5" stroke="#d7aa8b"/><text x="815" y="94" font-size="18" font-weight="700" fill="#25494c">更新 PC</text>
+<path d="M138 89 H158" stroke="#467c79" stroke-width="3"/><path d="M156 84 l7 5 -7 5" fill="none" stroke="#467c79" stroke-width="2"/><path d="M286 89 H306" stroke="#467c79" stroke-width="3"/><path d="M304 84 l7 5 -7 5" fill="none" stroke="#467c79" stroke-width="2"/><path d="M434 89 H454" stroke="#467c79" stroke-width="3"/><path d="M452 84 l7 5 -7 5" fill="none" stroke="#467c79" stroke-width="2"/><path d="M582 89 H602" stroke="#467c79" stroke-width="3"/><path d="M600 84 l7 5 -7 5" fill="none" stroke="#467c79" stroke-width="2"/><path d="M730 89 H750" stroke="#467c79" stroke-width="3"/><path d="M748 84 l7 5 -7 5" fill="none" stroke="#467c79" stroke-width="2"/>
+<path d="M20 166 H882" stroke="#7364ac" stroke-width="3" stroke-dasharray="9 7"/>
+<text x="450" y="191" font-size="16" fill="#65558a">同一时钟周期内传播组合逻辑；沿关键路径决定最小时钟周期</text>
+<rect x="295" y="205" width="310" height="29" rx="8" fill="#e6eee8"/><text x="450" y="225" font-size="15" fill="#236a63">时钟边沿 → PC / 寄存器 / 状态更新</text>
+</g>
+</svg>
