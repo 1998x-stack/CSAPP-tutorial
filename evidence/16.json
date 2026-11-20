@@ -1,0 +1,42 @@
+{
+  "chapter": 16,
+  "scope": "POSIX single-threaded signal delivery",
+  "claims": [
+    {
+      "id": "signal-path",
+      "claim": "Standard (non-real-time) signals may coalesce; blocked signals remain pending until delivery or other disposition",
+      "kind": "standard",
+      "source_url": "https://man7.org/linux/man-pages/man7/signal.7.html",
+      "locator": "Signal mask and pending signals",
+      "status": "verified",
+      "notes": "Process versus thread directed distinction"
+    },
+    {
+      "id": "handler-safety",
+      "claim": "Only async-signal-safe operations should be invoked from signal handlers; sig_atomic_t is a simple communication flag",
+      "kind": "standard",
+      "source_url": "https://man7.org/linux/man-pages/man7/signal-safety.7.html",
+      "locator": "Async-signal-safe functions",
+      "status": "verified",
+      "notes": "No arbitrary inter-thread synchronization implied"
+    },
+    {
+      "id": "sigsuspend",
+      "claim": "sigsuspend atomically changes mask and waits, avoiding check-before-pause race",
+      "kind": "standard",
+      "source_url": "https://man7.org/linux/man-pages/man2/sigsuspend.2.html",
+      "locator": "DESCRIPTION and NOTES",
+      "status": "verified",
+      "notes": "Complete POSIX example compiled in CI"
+    },
+    {
+      "id": "nonlocal-jump",
+      "claim": "longjmp from signal handler after interrupting unsafe function may trigger undefined behavior on later unsafe calls",
+      "kind": "standard",
+      "source_url": "https://man7.org/linux/man-pages/man3/longjmp.3.html",
+      "locator": "CAVEATS",
+      "status": "verified",
+      "notes": "Do not claim universal timeout mechanism"
+    }
+  ]
+}

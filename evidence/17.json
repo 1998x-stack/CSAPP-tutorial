@@ -1,0 +1,42 @@
+{
+  "chapter": 17,
+  "scope": "x86-64 four-level paging with 4KiB base pages",
+  "claims": [
+    {
+      "id": "address-space",
+      "claim": "Per-process page tables translate virtual to physical addresses and support access control",
+      "kind": "kernel",
+      "source_url": "https://www.kernel.org/doc/html/latest/mm/page_tables.html",
+      "locator": "Overview",
+      "status": "verified",
+      "notes": "Toy page numbers are illustrative"
+    },
+    {
+      "id": "paging-levels",
+      "claim": "Linux defines five software paging levels, folds unused levels; x86-64 may run 4- or 5-level translation",
+      "kind": "kernel",
+      "source_url": "https://www.kernel.org/doc/html/latest/mm/page_tables.html",
+      "locator": "Table hierarchy",
+      "status": "verified",
+      "notes": "48-bit, four-level 4-KiB case is explicitly scoped"
+    },
+    {
+      "id": "tlb",
+      "claim": "TLB hit/miss is translation caching, while page fault requires page table/permissions handling",
+      "kind": "kernel",
+      "source_url": "https://www.kernel.org/doc/html/latest/mm/page_tables.html",
+      "locator": "TLB and faults",
+      "status": "verified",
+      "notes": "Diagram is algorithmic, not timing benchmark"
+    },
+    {
+      "id": "fault-types",
+      "claim": "Anonymous pages can be demand-zeroed; file-backed or swap faults may need I/O",
+      "kind": "kernel",
+      "source_url": "https://www.kernel.org/doc/html/latest/mm/page_tables.html",
+      "locator": "Handling page faults",
+      "status": "verified",
+      "notes": "No invented fault counts or latencies"
+    }
+  ]
+}

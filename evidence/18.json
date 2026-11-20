@@ -1,0 +1,42 @@
+{
+  "chapter": 18,
+  "scope": "Linux/POSIX mmap and C11 malloc; toy fixed pool",
+  "claims": [
+    {
+      "id": "mmap",
+      "claim": "mmap creates mappings, anonymous mapping is zero-initialized; MAP_SHARED and MAP_PRIVATE differ",
+      "kind": "standard",
+      "source_url": "https://man7.org/linux/man-pages/man2/mmap.2.html",
+      "locator": "DESCRIPTION and MAP_*",
+      "status": "verified",
+      "notes": "Physical page allocation is often lazy, may vary"
+    },
+    {
+      "id": "malloc",
+      "claim": "malloc manages allocator memory; brk/mmap policy and thresholds are implementation-dependent",
+      "kind": "standard",
+      "source_url": "https://man7.org/linux/man-pages/man3/malloc.3.html",
+      "locator": "NOTES",
+      "status": "verified",
+      "notes": "Avoid fixed 128 KiB threshold claims"
+    },
+    {
+      "id": "fragmentation",
+      "claim": "Free blocks in fixed toy pool may sum to more than a request while no block is large enough",
+      "kind": "derived",
+      "source_url": "https://csapp.cs.cmu.edu/3e/students.html",
+      "locator": "Dynamic memory allocation topics",
+      "status": "illustrative",
+      "notes": "64 + 32 + 64 = 160, max 64; not real malloc failure"
+    },
+    {
+      "id": "gc",
+      "claim": "Mark-sweep reclaims unreachable objects, unlike pure reference counting which cannot collect cycles alone",
+      "kind": "pedagogy",
+      "source_url": "https://csapp.cs.cmu.edu/3e/students.html",
+      "locator": "Garbage collection topics",
+      "status": "verified",
+      "notes": "Simplified algorithmic description"
+    }
+  ]
+}

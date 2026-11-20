@@ -20,6 +20,9 @@ SOURCES = {
     "examples/olah-ch02-integers.c": "integer-examples=ok",
     "examples/olah-ch03-floats.c": "floating-examples=ok",
     "examples/olah-ch04-machine.c": "machine-examples=ok",
+    "examples/olah-ch16-signals.c": "signal-delivered=1",
+    "examples/olah-ch17-vm.c": "vm-decomposition=ok",
+    "examples/olah-ch18-allocator.c": "mapping-released=1",
 }
 
 
@@ -63,7 +66,7 @@ def check_html() -> None:
 
 def check_illustrated_chapters() -> None:
     """Inspect SVGs and ensure chapter inline scripts are syntactically valid."""
-    for chapter in (2, 3, 4):
+    for chapter in (2, 3, 4, 16, 17, 18):
         html = (ROOT / f"{chapter:02}.html").read_text(encoding="utf-8")
         if "<main id=\"chapter-main\"" not in html or "<article>" not in html:
             raise AssertionError(f"chapter {chapter}: semantic article missing")
@@ -105,5 +108,5 @@ if __name__ == "__main__":
     check_html()
     check_illustrated_chapters()
     check_c()
-    print("Snippet checks passed: 28 chapter code sections, 9 SVGs and 5 compiled C examples")
+    print("Snippet checks passed: 28 chapter code sections, 18 SVGs and 8 compiled C examples")
 
