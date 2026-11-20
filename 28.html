@@ -132,6 +132,8 @@ wrk -t2 -c100 -d30s --latency http://127.0.0.1:8080/health
   ];
   const out = document.getElementById('connection-state-output');
   const buttons = [...document.querySelectorAll('[data-conn-step]')];
+  if (!out) return;
+  out.textContent = stages[0];
   for (const button of buttons) button.addEventListener('click', () => {
     const index = Number(button.dataset.connStep);
     out.textContent = stages[index];
