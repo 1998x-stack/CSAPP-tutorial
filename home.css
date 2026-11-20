@@ -98,6 +98,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid #157b
 .chapter-card .chapter-cta{margin-top:auto;padding-top:8px;color:var(--teal);font-size:.8rem;font-weight:750;text-align:right}
 .chapter-card[hidden],#empty-state[hidden],.catalog-tools[hidden],.filters[hidden]{display:none!important}
 .empty-state{padding:45px 20px;text-align:center;color:#667971;border:1px dashed #b7cfbf;border-radius:12px;background:#fbfcf8}
+.catalog noscript .catalog-count{white-space:normal;line-height:1.75}
 .site-footer{background:#153f3b;color:#e6f3ea;padding:32px 0}
 .footer-inner{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap}
 .site-footer strong{font-family:var(--serif);font-size:1.1rem}
