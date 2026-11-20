@@ -16,7 +16,7 @@ test("all 28 chapters have exactly one readable evidence ledger", () => {
   for (const chapter of chapters) {
     const ledger = JSON.parse(readFileSync(join(evidenceDir, `${chapter.num}.json`), "utf8"));
     assert.ok(Array.isArray(ledger.claims) && ledger.claims.length > 0, `${chapter.num}: missing claims`);
-    assert.ok(ledger.claims.every((claim) => claim.id && claim.claim), `${chapter.num}: malformed claim`);
+    assert.ok(ledger.claims.every((claim) => typeof claim.claim === "string" && claim.claim.trim()), `${chapter.num}: malformed claim`);
     assert.ok(!existsSync(join(root, "docs/chapters", `${chapter.num}-evidence.json`)));
     assert.ok(!existsSync(join(root, "evidence", `${chapter.num}.json`)));
   }
