@@ -1,0 +1,88 @@
+{
+  "article": "23.html",
+  "scope": "课程第23章：POSIX 读写锁、教学线程池、关闭协议、死锁和检测工具。",
+  "learning_design": "从读锁兼容性到受限任务队列的状态机，区分可证明正确性与未测量性能。",
+  "claims": [
+    {
+      "id": "23-rw-read",
+      "claim": "多个线程可同时持有读锁，而写锁独占",
+      "kind": "posix",
+      "source_url": "https://man7.org/linux/man-pages/man3/pthread_rwlock_rdlock.3p.html",
+      "locator": "DESCRIPTION",
+      "status": "verified",
+      "notes": "无固定线程数或吞吐量保证。"
+    },
+    {
+      "id": "23-rw-fairness",
+      "claim": "在写者等待时，读者是否获得锁与调度选项及实现有关",
+      "kind": "posix",
+      "source_url": "https://man7.org/linux/man-pages/man3/pthread_rwlock_rdlock.3p.html",
+      "locator": "DESCRIPTION",
+      "status": "verified",
+      "notes": "不要宣称所有平台默认写者或读者优先。"
+    },
+    {
+      "id": "23-rw-upgrade",
+      "claim": "已持有读锁直接升级写锁不能被当作安全的 POSIX 通用协议",
+      "kind": "posix",
+      "source_url": "https://man7.org/linux/man-pages/man3/pthread_rwlock_wrlock.3p.html",
+      "locator": "DESCRIPTION / deadlock conditions",
+      "status": "derived",
+      "notes": "应释放、重获并重新验证假设。"
+    },
+    {
+      "id": "23-pool-queue",
+      "claim": "工作线程应在锁内领取队列任务，并在锁外运行回调",
+      "kind": "design",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 12, Prethreaded Server",
+      "status": "derived",
+      "notes": "这是设计建议；图示为教学模型。"
+    },
+    {
+      "id": "23-bounded",
+      "claim": "有界队列可限制积压，并需要拒绝或等待的背压策略",
+      "kind": "design",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 12, producer-consumer",
+      "status": "derived",
+      "notes": "不声称固定吞吐量优势。"
+    },
+    {
+      "id": "23-wakeup",
+      "claim": "关闭队列时广播可让等待线程重新检查关闭谓词",
+      "kind": "posix",
+      "source_url": "https://man7.org/linux/man-pages/man3/pthread_cond_wait.3.html",
+      "locator": "DESCRIPTION",
+      "status": "derived",
+      "notes": "保持被保护状态与通知的一致协议。"
+    },
+    {
+      "id": "23-deadlock",
+      "claim": "循环等待是经典资源死锁必要条件之一，固定锁获取顺序可防止这种循环",
+      "kind": "concept",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 12, deadlock",
+      "status": "derived",
+      "notes": "适用于遵守同一全局顺序的参与者。"
+    },
+    {
+      "id": "23-tsan",
+      "claim": "ThreadSanitizer 可在受支持的平台检测部分数据竞争",
+      "kind": "tool",
+      "source_url": "https://clang.llvm.org/docs/ThreadSanitizer.html",
+      "locator": "Introduction / Usage",
+      "status": "verified",
+      "notes": "运行成本与覆盖率依赖工作负载；没有声称通过过实际 TSan 运行。"
+    },
+    {
+      "id": "23-example",
+      "claim": "两个写线程在读写锁下累加、读线程观察非递减快照",
+      "kind": "code-invariant",
+      "source_url": "https://man7.org/linux/man-pages/man3/pthread_rwlock_rdlock.3p.html",
+      "locator": "DESCRIPTION + derived invariant",
+      "status": "derived",
+      "notes": "examples/olah-ch23-rwlock.c 应输出 rwlock-ok。"
+    }
+  ]
+}
