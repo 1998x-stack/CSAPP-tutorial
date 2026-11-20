@@ -1,194 +1,283 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>第9章 处理器体系结构——流水线 — 深入理解计算机系统（CSAPP）</title>
-    <link rel="stylesheet" href="theme.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="从一段 hello.c 出发，理解字节、编译与链接、CPU、存储层次、操作系统抽象和 Amdahl 定律。">
+<title>第 9 章 · 让五条指令同时向前走 | CSAPP</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+:root{--paper:#fffdf9;--ink:#203035;--muted:#56686e;--accent:#147f80;--transform:#bf6343;--structure:#6b5da5;--edge:#d9e1dd;--wash:#f1f6f3}
+html{scroll-behavior:smooth;scroll-padding-top:1rem}
+body{padding:0;margin:0;background:#edf2ef;color:var(--ink);font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:17px;line-height:1.85}
+a{color:#096c70;text-underline-offset:.18em}a:hover{color:#a75337}
+a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.skip-link{position:absolute;top:-100px;left:12px;z-index:99;background:white;padding:8px 14px}.skip-link:focus{top:12px}
+.book-layout{display:grid;grid-template-columns:minmax(210px,254px) minmax(0,1fr);max-width:1420px;margin:auto;min-height:100vh;background:var(--paper);box-shadow:0 12px 70px #20303512}
+.book-sidebar{border-right:1px solid var(--edge);background:#f6f8f5;padding:24px 16px;position:relative}
+.sticky{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto}
+.brand{display:block;font-size:1.07rem;font-weight:800;color:var(--ink);text-decoration:none;padding:0 10px 12px;letter-spacing:-.02em}
+.brand small{display:block;font-size:.72rem;font-weight:550;color:var(--muted);letter-spacing:.1em}
+.chapter-nav{font-size:.8rem;line-height:1.5}
+.chapter-nav h2{font-size:.73rem;letter-spacing:.16em;color:var(--muted);border:0;padding:0;margin:8px 10px 12px}
+.chapter-nav ul{list-style:none;padding:0;margin:0}.chapter-nav li{margin:0}
+.chapter-nav a{display:flex;gap:9px;align-items:baseline;padding:8px 10px;color:#465960;border-radius:8px;text-decoration:none;font-weight:450}
+.chapter-nav a:hover{background:#e8f0ed;transform:none}
+.chapter-nav a span{font-size:.69rem;color:#7e928e;font-variant-numeric:tabular-nums}
+.chapter-nav a[aria-current]{background:#deece6;color:#085c5e;font-weight:750}
+.mobile-chapters{display:none}
+.essay{width:100%;min-width:0;padding:70px clamp(20px,6vw,96px) 80px}
+.article-body{max-width:850px;margin:0 auto}
+.eyebrow{color:var(--accent);font-size:.77rem;letter-spacing:.15em;text-transform:uppercase;font-weight:800}
+.essay h1{font-size:clamp(2.25rem,5vw,4.25rem);font-weight:800;letter-spacing:-.055em;line-height:1.2;margin:16px 0 23px;color:#182d30}
+.essay .dek{font-size:clamp(1.1rem,2vw,1.38rem);line-height:1.8;color:#435d60;max-width:40em}
+.essay p{margin:17px 0;color:var(--ink);line-height:1.9}
+.essay h2{font-size:clamp(1.55rem,3vw,2.12rem);margin:0 0 22px;padding:0;border:0;color:#1a3537;letter-spacing:-.035em;line-height:1.35}
+.essay h3{font-size:1.17rem;margin:29px 0 13px;color:#27454a}
+.essay section{margin-top:84px;scroll-margin-top:22px}
+.essay strong{color:#123c3f}
+.essay ul,.essay ol{padding-left:1.2rem;margin:18px 0}
+.essay li{padding-left:4px;margin:7px 0}
+.essay pre{border-radius:12px;background:#172a2e;color:#edf9f5;line-height:1.65;padding:20px;overflow-x:auto;font-size:.87rem;margin:22px 0;white-space:pre}
+.essay pre code{color:inherit;background:none;padding:0;font-size:inherit}
+.essay code{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-size:.84em;background:#eaf1ec;border-radius:4px;padding:2px 5px;overflow-wrap:anywhere}
+.essay figure{margin:30px 0 12px}
+.essay figcaption{font-size:.86rem;line-height:1.7;color:var(--muted);margin-top:10px}
+.essay svg{display:block;width:100%;height:auto}
+.section-no{display:block;font-size:.73rem;font-weight:800;letter-spacing:.17em;color:var(--accent);margin-bottom:11px}
+.lede-line{height:3px;width:66px;background:var(--accent);margin:28px 0}
+.inline-toc{display:flex;gap:8px;flex-wrap:wrap;margin:30px 0 0}
+.inline-toc a{font-size:.8rem;background:#eaf3ee;border:1px solid #cee3d8;border-radius:999px;padding:4px 11px;text-decoration:none;color:#21585a}
+.quote{border-left:3px solid var(--accent);padding:8px 0 8px 22px;font-size:1.09rem;color:#33595c;line-height:1.8;margin:30px 0}
+.figure-card{border:1px solid var(--edge);border-radius:18px;background:#fbfdfb;padding:clamp(12px,2.5vw,24px);box-shadow:0 12px 25px #102b2410}
+.pill{display:inline-block;font-size:.72rem;letter-spacing:.06em;font-weight:750;border-radius:5px;padding:2px 8px;background:#e9f3ec;color:#176f68}
+.trace-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:22px 0 12px}
+.step-button{cursor:pointer;border:1px solid #c7d8d0;border-radius:10px;padding:13px 8px;background:white;color:#31545a;text-align:center;font-weight:700;font:inherit;font-size:.85rem;line-height:1.4}
+.step-button[aria-pressed=true]{background:#176f70;color:white;border-color:#176f70}
+.step-button span{display:block;font-size:.68rem;opacity:.75;margin-bottom:2px}
+.step-detail{border-left:4px solid var(--accent);background:#eef5ef;padding:16px 20px;border-radius:0 10px 10px 0;min-height:104px}
+.step-detail p{margin:7px 0;font-size:.96rem}
+.diagram-step{transition:opacity .2s,filter .2s}
+[data-step-active="0"] .diagram-step:not([data-step-node="0"]),[data-step-active="1"] .diagram-step:not([data-step-node="1"]),[data-step-active="2"] .diagram-step:not([data-step-node="2"]),[data-step-active="3"] .diagram-step:not([data-step-node="3"]){opacity:.55}
+.callout{background:#f0f5f1;border-left:4px solid var(--accent);padding:15px 20px;border-radius:0 12px 12px 0;margin:25px 0}
+.callout p{margin:4px 0}
+.caution{background:#fff6ea;border-left-color:#ba7b32}
+.check-list{display:grid;gap:10px;margin:22px 0}
+.check-list div{border-top:1px solid var(--edge);padding:12px 0}
+.check-list b{display:block;color:var(--accent);font-size:.76rem;letter-spacing:.08em}
+.memory-bars{display:grid;gap:8px;margin:24px 0}
+.memory-row{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:center}
+.memory-row b{font-size:.88rem}
+.memory-track{height:40px;display:flex;align-items:center;border-radius:8px;background:#e8efeb;overflow:hidden}
+.memory-fill{height:100%;display:flex;align-items:center;padding-left:12px;color:white;font-size:.79rem;font-weight:750;min-width:104px}
+.memory-fill.level1{width:28%;background:#147f80}.memory-fill.level2{width:46%;background:#427eaa}.memory-fill.level3{width:72%;background:#7767a9}.memory-fill.level4{width:100%;background:#b46c4d}
+.small-note{font-size:.83rem!important;color:var(--muted)!important}
+.triad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:24px 0}
+.triad>div{border:1px solid var(--edge);border-radius:12px;padding:18px 16px;background:#fafbf8}
+.triad h3{margin:0 0 6px;color:#215c5e;font-size:1.08rem}
+.triad p{font-size:.9rem;margin:0;line-height:1.7}
+.math-panel{border-radius:14px;border:1px solid #d8e4dc;background:#f5f8f4;padding:16px 20px;margin:23px 0}
+.math-scroll{overflow-x:auto;max-width:100%;min-width:0;padding:8px 0}
+.math-scroll math[display=block]{width:max-content;min-width:100%;font-size:1.35rem;color:#1b4140}
+.math-label{font-size:.79rem;color:var(--muted);text-align:right}
+.widget{border:1px solid #cee0d9;border-radius:16px;padding:24px;margin:25px 0;background:#f5faf6}
+.widget h3{margin:0 0 8px}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:20px 0}
+.controls label{display:block;font-size:.91rem;font-weight:700}
+.controls input{width:100%;accent-color:var(--accent);margin:12px 0 0;cursor:pointer}
+.widget-output{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;border-top:1px solid #d2e3d9;padding-top:16px}
+.widget-output output{font-size:2.3rem;line-height:1.2;font-weight:800;color:#0d6c70;font-variant-numeric:tabular-nums}
+.widget-output p{margin:2px 0;font-size:.86rem}
+.table-wrap{max-width:100%;overflow-x:auto}
+.essay table{min-width:570px;font-size:.9rem;margin:16px 0;border-collapse:collapse}
+.essay th,.essay td{padding:10px 12px;border:1px solid #d6e1da;vertical-align:top}
+.essay th{background:#e8f1eb;color:#285354}
+.references{font-size:.88rem}
+.references li{overflow-wrap:anywhere}
+.footer-nav{margin-top:65px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--edge);padding:22px 0}
+.footer-nav a{background:#eaf2ee;padding:8px 16px;border-radius:999px;text-decoration:none}
+@media(max-width:900px){.book-layout{display:block}.book-sidebar{padding:9px 18px;border:0;border-bottom:1px solid var(--edge)}.sticky{position:static;max-height:none;overflow:visible}.brand{padding:5px 2px;font-size:.92rem}.brand small{display:inline;margin-left:8px}.chapter-nav{display:none}.mobile-chapters{display:block;font-size:.86rem;padding:6px 2px}.mobile-chapters summary{cursor:pointer;color:#315d5d;font-weight:700}.mobile-chapters ul{max-height:185px;overflow-y:auto;list-style:none;padding:0;margin:8px 0}.mobile-chapters li{margin:0}.mobile-chapters a{display:block;padding:5px}.essay{padding:42px 22px 60px}}
+@media(max-width:580px){.figure-card figure{max-width:100%;overflow-x:auto}.essay .figure-card svg{min-width:660px}.essay{padding:36px 16px 60px}.essay section{margin-top:62px}.trace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.controls,.triad{grid-template-columns:1fr}.memory-row{grid-template-columns:72px minmax(0,1fr);gap:7px}.memory-row b{font-size:.76rem}.figure-card{padding:10px}.essay pre{font-size:.75rem;padding:14px}.essay h1{letter-spacing:-.035em}.essay svg{min-width:0}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important}}
+@media print{body{background:white;font-size:11pt}.book-layout{display:block;box-shadow:none}.book-sidebar,.inline-toc,.trace-grid,.controls,.skip-link{display:none!important}.essay{padding:0}.article-body{max-width:none}.essay section{margin-top:24pt;break-inside:auto}.figure-card,.math-panel,.widget{break-inside:avoid;box-shadow:none}.math-scroll{overflow:visible}.math-scroll math[display=block]{font-size:1.15rem}.references a::after{content:" (" attr(href) ")";font-size:.75em}}
+.essay .figure-card svg{max-width:100%;height:auto}.essay .step-button:focus-visible{outline:3px solid #147f80;outline-offset:3px}.essay .step-button{min-height:45px}.essay .figure-card{overflow-x:auto}@media(max-width:580px){.essay .figure-card figure{min-width:640px}.essay .figure-card svg{min-width:0}}@media print{.essay .widget .trace-grid{display:none}}</style>
 </head>
 <body>
-<div class="double-border">
-<div class="container">
-    <div class="sidebar">
-        <h3>💻 课程目录</h3>
-        <ul class="chapter-list">
-            <li><a href="01.html">第1章 计算机系统漫游</a></li>
-            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
-            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
-            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
-            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
-            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
-            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
-            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
-            <li><a href="09.html" class="active">第9章 处理器体系结构——流水线</a></li>
-            <li><a href="10.html">第10章 优化程序性能</a></li>
-            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
-            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
-            <li><a href="13.html">第13章 链接——静态链接</a></li>
-            <li><a href="14.html">第14章 链接——动态链接</a></li>
-            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
-            <li><a href="16.html">第16章 异常控制流——信号</a></li>
-            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
-            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
-            <li><a href="19.html">第19章 系统级I/O</a></li>
-            <li><a href="20.html">第20章 网络编程——基础</a></li>
-            <li><a href="21.html">第21章 网络编程——进阶</a></li>
-            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
-            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
-            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
-            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
-            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
-            <li><a href="27.html">第27章 现代系统新趋势</a></li>
-            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
-        </ul>
-    </div>
-    <div class="main-content">
-        <h2>第九章：处理器体系结构——流水线</h2>
+<a class="skip-link" href="#content">跳转到正文</a>
+<div class="book-layout">
+<aside class="book-sidebar">
+  <div class="sticky">
+    <a class="brand" href="index.html">CSAPP · 系统漫游<small>COMPUTER SYSTEMS</small></a>
+    <nav class="chapter-nav" aria-label="课程章节目录">
+      <h2>课程 · 28 讲</h2><ul><li><a href="01.html"><span>01</span>计算机系统漫游</a></li>
+<li><a href="02.html"><span>02</span>信息的表示与处理——整数</a></li>
+<li><a href="03.html"><span>03</span>信息的表示与处理——浮点数</a></li>
+<li><a href="04.html"><span>04</span>程序的机器级表示——基础</a></li>
+<li><a href="05.html"><span>05</span>程序的机器级表示——控制流</a></li>
+<li><a href="06.html"><span>06</span>程序的机器级表示——过程与栈</a></li>
+<li><a href="07.html"><span>07</span>程序的机器级表示——数据与进阶</a></li>
+<li><a href="08.html"><span>08</span>处理器体系结构——ISA设计</a></li>
+<li><a aria-current="page" href="09.html"><span>09</span>处理器体系结构——流水线</a></li>
+<li><a href="10.html"><span>10</span>优化程序性能</a></li>
+<li><a href="11.html"><span>11</span>存储器层次结构——技术</a></li>
+<li><a href="12.html"><span>12</span>存储器层次结构——Cache</a></li>
+<li><a href="13.html"><span>13</span>链接——静态链接</a></li>
+<li><a href="14.html"><span>14</span>链接——动态链接</a></li>
+<li><a href="15.html"><span>15</span>异常控制流——异常与进程</a></li>
+<li><a href="16.html"><span>16</span>异常控制流——信号</a></li>
+<li><a href="17.html"><span>17</span>虚拟内存——地址翻译</a></li>
+<li><a href="18.html"><span>18</span>虚拟内存——内存分配</a></li>
+<li><a href="19.html"><span>19</span>系统级I/O</a></li>
+<li><a href="20.html"><span>20</span>网络编程——基础</a></li>
+<li><a href="21.html"><span>21</span>网络编程——进阶</a></li>
+<li><a href="22.html"><span>22</span>并发编程——线程基础</a></li>
+<li><a href="23.html"><span>23</span>并发编程——高阶模式</a></li>
+<li><a href="24.html"><span>24</span>经典Lab实战(I)</a></li>
+<li><a href="25.html"><span>25</span>经典Lab实战(II)</a></li>
+<li><a href="26.html"><span>26</span>经典Lab实战(III)——Proxy Lab</a></li>
+<li><a href="27.html"><span>27</span>现代系统新趋势</a></li>
+<li><a href="28.html"><span>28</span>综合项目：手写高性能Web服务器</a></li></ul>
+    </nav>
+    <details class="mobile-chapters"><summary>浏览全部 28 章</summary><ul><li><a href="01.html"><span>01</span>计算机系统漫游</a></li>
+<li><a href="02.html"><span>02</span>信息的表示与处理——整数</a></li>
+<li><a href="03.html"><span>03</span>信息的表示与处理——浮点数</a></li>
+<li><a href="04.html"><span>04</span>程序的机器级表示——基础</a></li>
+<li><a href="05.html"><span>05</span>程序的机器级表示——控制流</a></li>
+<li><a href="06.html"><span>06</span>程序的机器级表示——过程与栈</a></li>
+<li><a href="07.html"><span>07</span>程序的机器级表示——数据与进阶</a></li>
+<li><a href="08.html"><span>08</span>处理器体系结构——ISA设计</a></li>
+<li><a aria-current="page" href="09.html"><span>09</span>处理器体系结构——流水线</a></li>
+<li><a href="10.html"><span>10</span>优化程序性能</a></li>
+<li><a href="11.html"><span>11</span>存储器层次结构——技术</a></li>
+<li><a href="12.html"><span>12</span>存储器层次结构——Cache</a></li>
+<li><a href="13.html"><span>13</span>链接——静态链接</a></li>
+<li><a href="14.html"><span>14</span>链接——动态链接</a></li>
+<li><a href="15.html"><span>15</span>异常控制流——异常与进程</a></li>
+<li><a href="16.html"><span>16</span>异常控制流——信号</a></li>
+<li><a href="17.html"><span>17</span>虚拟内存——地址翻译</a></li>
+<li><a href="18.html"><span>18</span>虚拟内存——内存分配</a></li>
+<li><a href="19.html"><span>19</span>系统级I/O</a></li>
+<li><a href="20.html"><span>20</span>网络编程——基础</a></li>
+<li><a href="21.html"><span>21</span>网络编程——进阶</a></li>
+<li><a href="22.html"><span>22</span>并发编程——线程基础</a></li>
+<li><a href="23.html"><span>23</span>并发编程——高阶模式</a></li>
+<li><a href="24.html"><span>24</span>经典Lab实战(I)</a></li>
+<li><a href="25.html"><span>25</span>经典Lab实战(II)</a></li>
+<li><a href="26.html"><span>26</span>经典Lab实战(III)——Proxy Lab</a></li>
+<li><a href="27.html"><span>27</span>现代系统新趋势</a></li>
+<li><a href="28.html"><span>28</span>综合项目：手写高性能Web服务器</a></li></ul></details>
+  </div>
+</aside>
+<main class="essay" id="content"><article class="article-body">
 
-        <p>上一章我们设计了 Y86-64 的 SEQ 处理器——每条指令依次经过 Fetch、Decode、Execute、Memory、Write Back、PC Update 六个阶段。它功能正确，但有一个致命问题：在任何时刻，6 个阶段中只有 1 个在做有用的事，其他 5 个都在睡觉。这好比一条只有一个人工作的流水线——其他工位空着，一个人在整条线上来回跑。有没有办法让所有阶段同时工作？有，这就是流水线（Pipelining）。</p>
+<header><div class="eyebrow">Chapter 09 · Pipelining</div><h1>让五条指令<br>同时向前走</h1>
+<p class="dek">流水线不让一条指令的工作消失，而是让多个指令的不同步骤重叠。理解它，要同时看清时间、依赖与恢复。</p>
+<div class="lede-line" aria-hidden="true"></div>
+<p>第 8 章的 SEQ 在一个较长的周期中完成一条指令。若把这条长组合路径分成五段，中间放入流水线寄存器，我们就能让第二条指令在第一条离开取指后立刻开始。<strong>吞吐率与延迟是不同的问题。</strong></p>
+<nav class="inline-toc" aria-label="本章阅读路径"><a href="#time">时间轴</a><a href="#model">性能模型</a><a href="#hazard">数据依赖</a><a href="#branch">分支恢复</a><a href="#precise">精确状态</a><a href="#practice">动手推演</a></nav>
+</header>
+<section id="time" aria-labelledby="time-title"><span class="section-no">01 / TIME</span><h2 id="time-title">为什么五个工位能接连完成任务？</h2>
+<p>CS:APP 的 Y86-64 PIPE 分成五个阶段：<strong>取指 F、译码 D、执行 E、访存 M、写回 W</strong>。同名的 F/D/E/M/W 流水线寄存器保存对应阶段所需的状态；这里没有独立的第六个“PC 更新流水级”。</p>
+<div class="figure-card"><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 263" role="img" aria-labelledby="pipe-timeline-title pipe-timeline-desc">
+<title id="pipe-timeline-title">四条指令的五级流水线时空图</title>
+<desc id="pipe-timeline-desc">I1 在周期 1 到 5 依次进入 F D E M W，I2 从周期 2 开始，I3 从周期 3 开始，I4 从周期 4 开始；理想无停顿时每周期启动一条新指令。</desc><g font-family="system-ui,sans-serif"><text x="162" y="27" font-size="15" text-anchor="middle" fill="#496866">周期 1</text><text x="244" y="27" font-size="15" text-anchor="middle" fill="#496866">周期 2</text><text x="326" y="27" font-size="15" text-anchor="middle" fill="#496866">周期 3</text><text x="408" y="27" font-size="15" text-anchor="middle" fill="#496866">周期 4</text><text x="490" y="27" font-size="15" text-anchor="middle" fill="#496866">周期 5</text><text x="572" y="27" font-size="15" text-anchor="middle" fill="#496866">周期 6</text><text x="654" y="27" font-size="15" text-anchor="middle" fill="#496866">周期 7</text><text x="736" y="27" font-size="15" text-anchor="middle" fill="#496866">周期 8</text><text x="16" y="79" font-size="17" fill="#305b5a">指令 I1</text><rect x="121" y="45" width="77" height="37" rx="7" fill="#dff0e9" stroke="#22655e"/><text x="159" y="70" text-anchor="middle" font-size="17" font-weight="700" fill="#22655e">F</text><rect x="203" y="45" width="77" height="37" rx="7" fill="#f7eadf" stroke="#a55f42"/><text x="241" y="70" text-anchor="middle" font-size="17" font-weight="700" fill="#a55f42">D</text><rect x="285" y="45" width="77" height="37" rx="7" fill="#ece8f6" stroke="#65539b"/><text x="323" y="70" text-anchor="middle" font-size="17" font-weight="700" fill="#65539b">E</text><rect x="367" y="45" width="77" height="37" rx="7" fill="#e7eef4" stroke="#356c88"/><text x="405" y="70" text-anchor="middle" font-size="17" font-weight="700" fill="#356c88">M</text><rect x="449" y="45" width="77" height="37" rx="7" fill="#e8f2e8" stroke="#3c7058"/><text x="487" y="70" text-anchor="middle" font-size="17" font-weight="700" fill="#3c7058">W</text><text x="16" y="125" font-size="17" fill="#305b5a">指令 I2</text><rect x="203" y="91" width="77" height="37" rx="7" fill="#dff0e9" stroke="#22655e"/><text x="241" y="116" text-anchor="middle" font-size="17" font-weight="700" fill="#22655e">F</text><rect x="285" y="91" width="77" height="37" rx="7" fill="#f7eadf" stroke="#a55f42"/><text x="323" y="116" text-anchor="middle" font-size="17" font-weight="700" fill="#a55f42">D</text><rect x="367" y="91" width="77" height="37" rx="7" fill="#ece8f6" stroke="#65539b"/><text x="405" y="116" text-anchor="middle" font-size="17" font-weight="700" fill="#65539b">E</text><rect x="449" y="91" width="77" height="37" rx="7" fill="#e7eef4" stroke="#356c88"/><text x="487" y="116" text-anchor="middle" font-size="17" font-weight="700" fill="#356c88">M</text><rect x="531" y="91" width="77" height="37" rx="7" fill="#e8f2e8" stroke="#3c7058"/><text x="569" y="116" text-anchor="middle" font-size="17" font-weight="700" fill="#3c7058">W</text><text x="16" y="171" font-size="17" fill="#305b5a">指令 I3</text><rect x="285" y="137" width="77" height="37" rx="7" fill="#dff0e9" stroke="#22655e"/><text x="323" y="162" text-anchor="middle" font-size="17" font-weight="700" fill="#22655e">F</text><rect x="367" y="137" width="77" height="37" rx="7" fill="#f7eadf" stroke="#a55f42"/><text x="405" y="162" text-anchor="middle" font-size="17" font-weight="700" fill="#a55f42">D</text><rect x="449" y="137" width="77" height="37" rx="7" fill="#ece8f6" stroke="#65539b"/><text x="487" y="162" text-anchor="middle" font-size="17" font-weight="700" fill="#65539b">E</text><rect x="531" y="137" width="77" height="37" rx="7" fill="#e7eef4" stroke="#356c88"/><text x="569" y="162" text-anchor="middle" font-size="17" font-weight="700" fill="#356c88">M</text><rect x="613" y="137" width="77" height="37" rx="7" fill="#e8f2e8" stroke="#3c7058"/><text x="651" y="162" text-anchor="middle" font-size="17" font-weight="700" fill="#3c7058">W</text><text x="16" y="217" font-size="17" fill="#305b5a">指令 I4</text><rect x="367" y="183" width="77" height="37" rx="7" fill="#dff0e9" stroke="#22655e"/><text x="405" y="208" text-anchor="middle" font-size="17" font-weight="700" fill="#22655e">F</text><rect x="449" y="183" width="77" height="37" rx="7" fill="#f7eadf" stroke="#a55f42"/><text x="487" y="208" text-anchor="middle" font-size="17" font-weight="700" fill="#a55f42">D</text><rect x="531" y="183" width="77" height="37" rx="7" fill="#ece8f6" stroke="#65539b"/><text x="569" y="208" text-anchor="middle" font-size="17" font-weight="700" fill="#65539b">E</text><rect x="613" y="183" width="77" height="37" rx="7" fill="#e7eef4" stroke="#356c88"/><text x="651" y="208" text-anchor="middle" font-size="17" font-weight="700" fill="#356c88">M</text><rect x="695" y="183" width="77" height="37" rx="7" fill="#e8f2e8" stroke="#3c7058"/><text x="733" y="208" text-anchor="middle" font-size="17" font-weight="700" fill="#3c7058">W</text><text x="15" y="242" font-size="16" fill="#54706e">每行一条指令；同一列可有多条指令处于不同阶段</text></g>
+</svg><figcaption>图 1 · 四条互不依赖的理想指令在五级流水线上的进度；第 5 个周期后开始每周期完成一条指令。这只是无停顿时序，不是实际程序的性能实测。</figcaption></figure></div>
+<p>注意第一条指令直到第 5 个周期才能结束，而第 2、3、4 条指令已经在运行。<strong>稳态吞吐率可接近每周期一条，单条指令仍需通过五级。</strong> 若阶段不平衡，最慢阶段和流水线寄存器开销决定周期长度。</p>
+</section>
+<section id="model" aria-labelledby="model-title"><span class="section-no">02 / MODEL</span><h2 id="model-title">写下模型，再谈“加速几倍”</h2>
+<p>假设五个阶段分别耗时 <code>t₁…t₅</code>，每个流水级额外付出开销 <code>δ</code>。没有停顿、分支失败或内存等待时，处理 <code>n</code> 条指令：</p>
+<div class="math-panel"><div class="math-scroll" tabindex="0" role="region" aria-label="顺序和流水线的简化时延公式">
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+<mrow><msub><mi>T</mi><mtext>SEQ</mtext></msub><mo>≈</mo><mi>n</mi><mo>×</mo><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mn>5</mn></munderover><msub><mi>t</mi><mi>i</mi></msub></mrow>
+</math><math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+<mrow><msub><mi>T</mi><mtext>PIPE</mtext></msub><mo>≈</mo><mo>(</mo><mi>n</mi><mo>+</mo><mn>4</mn><mo>)</mo><mo>×</mo><mo>(</mo><munder><mo>max</mo><mi>i</mi></munder><msub><mi>t</mi><mi>i</mi></msub><mo>+</mo><mi>δ</mi><mo>)</mo></mrow>
+</math></div><p class="math-label">五级流水线的填充与排空成本为 4 个周期；此式忽略冒险与其他开销。</p></div>
+<p>例如每级 200 ps、寄存器额外开销 20 ps、共 8 条指令：SEQ 约 <code>8 × 1000 = 8000 ps</code>，PIPE 约 <code>(8 + 4) × 220 = 2640 ps</code>，理论加速约 <code>3.03×</code>，不是直接声称“5×”。真实值要看冒险、缓存与时钟频率。</p>
+<div class="widget" aria-labelledby="pipe-widget-title"><h3 id="pipe-widget-title">交互 · 改变指令条数，观察填充开销</h3>
+<p>该模型固定五个各 200 ps 的阶段与 20 ps 寄存器开销；不模拟依赖、缓存和分支。</p>
+<div class="controls"><label for="pipeline-n">指令数量 <strong id="pipeline-n-text">8</strong><input id="pipeline-n" type="range" min="1" max="64" step="1" value="8"></label>
+<div><p>SEQ / PIPE 理想加速比</p><output id="pipeline-speedup" aria-live="polite">3.03×</output></div></div>
+<div class="widget-output"><p>SEQ: <strong id="pipeline-seq">8000 ps</strong></p><p>PIPE: <strong id="pipeline-pipe">2640 ps</strong></p></div></div>
+</section>
+<section id="hazard" aria-labelledby="hazard-title"><span class="section-no">03 / DEPENDENCY</span><h2 id="hazard-title">下一条要读的值，上一条还没交出来</h2>
+<p>考虑两条相邻指令。若前者写 <code>%rax</code>、后者马上读 <code>%rax</code>，这叫 RAW（Read After Write）数据依赖。经典有序 PIPE 可将较早指令刚算出的值<strong>转发到 Decode 的输入选择逻辑</strong>，无需等到常规寄存器写回。来源包括 Execute 结果、Memory 结果及 Write Back 所携带的值；越新的匹配结果优先。</p>
+<pre><code>addq   %rbx, %rax       # ALU 产生新的 %rax
+subq   %rax, %rcx       # 紧随其后，可以使用转发结果
 
-        <p>流水线是处理器设计中最伟大的思想之一。它的本质就一句话：<strong>把一条指令的执行过程切分成若干阶段，让不同指令的不同阶段在时间上重叠执行</strong>。听起来简单，但实际实现时要面对数据冒险、控制冒险、异常处理等一系列棘手的问题。这一章我们不仅要学流水线的原理，还要理解这些冒险是如何被克服的。这不仅仅是体系结构的知识，它直接影响到你写程序时如何布局代码、如何分支、如何组织循环——因为当你知道了 CPU 内部在做什么，你写的每一行代码都会更有"针对性"。</p>
-
-        <h3>9.1 流水线通用原理</h3>
-
-        <p>理解流水线最好的方式，是类比生活中的场景——洗衣房。</p>
-
-        <p>想象你有一个洗衣房，需要完成 4 个人的洗衣任务，每个任务分三个步骤：<strong>洗衣 → 烘干 → 折叠</strong>。每步需要 30 分钟。如果没有流水线，你需要依次完成每个人的三个步骤：第一个人的洗衣→烘干→折叠（90 分钟），再开始第二个人的（又一个 90 分钟）……4 个人总共需要 360 分钟。</p>
-
-        <p>但如果用流水线方式：当第一个人的衣服进入烘干时，你立即开始洗第二个人的衣服；当第一个人的衣服折叠时，第二个人进入烘干，第三个人开始洗衣……这样，从第三个人开始，每 30 分钟就能完成一个人的任务。虽然第一个人的衣服要 90 分钟才能拿到（<strong>延迟</strong>不变），但完成 4 个人的衣服只需要 180 分钟——<strong>吞吐量</strong>翻了一倍。</p>
-
-        <p>处理器流水线的逻辑完全一样：</p>
-
-        <table>
-            <tr>
-                <th>指标</th>
-                <th>非流水线（SEQ）</th>
-                <th>流水线（PIPE）</th>
-            </tr>
-            <tr>
-                <td>每指令周期数（CPI）</td>
-                <td>6（理想情况）</td>
-                <td>1（理想情况）</td>
-            </tr>
-            <tr>
-                <td>单条指令延迟</td>
-                <td>6 个周期</td>
-                <td>6 个周期（不变）</td>
-            </tr>
-            <tr>
-                <td>吞吐量（指令/周期）</td>
-                <td>1/6 ≈ 0.167</td>
-                <td>1（理想情况）</td>
-            </tr>
-            <tr>
-                <td>加速比（理想）</td>
-                <td>1×</td>
-                <td>6×</td>
-            </tr>
-        </table>
-
-        <p>流水线通过插入<strong>流水线寄存器（Pipeline Registers）</strong>来分隔各个阶段。在 Y86-64 的流水线实现 PIPE 中，我们有 F、D、E、M、W 五组流水线寄存器——分别对应 Fetch→Decode、Decode→Execute、Execute→Memory、Memory→Write Back 的边界。每个周期结束后，当前阶段的结果被锁存到流水线寄存器中，下个周期开始时，下一阶段从这些寄存器读取数据。</p>
-
-        <div class="tip">
-            <p><strong>关键认识</strong>：流水线并不减少单条指令的执行时间（延迟反而可能略增，因为加入了流水线寄存器的开销），它<strong>提高了吞吐量</strong>。这是处理器设计中最重要的认知之一——在绝大多数场景下，吞吐量比单次延迟更影响系统性能。这就是为什么现代 CPU 的流水线深度达到 14-20 级（如 Intel Core 系列），而不会因为"单条指令变慢"而放弃流水线。</p>
-        </div>
-
-        <h3>9.2 数据冒险与转发</h3>
-
-        <p>流水线面临的最大敌人是<strong>冒险（Hazard）</strong>——下一条指令依赖上一条指令的结果，而上一条指令的结果还没写回寄存器。来看一个具体的例子：</p>
-
-        <pre><code># Y86-64 流水线中的数据冒险
-irmovq $100, %rbx       # I1: 把 100 加载到 %rbx
-addq %rbx, %rcx         # I2: 需要 %rbx 的值！但 I1 还没写回！
-rmmovq %rcx, 0(%rbx)    # I3: 又需要 %rbx 和 %rcx!</code></pre>
-
-        <p>三种冒险类型：</p>
-        <ul>
-            <li><strong>RAW（Read After Write）</strong>：最普通的冒险，写后才读。上面的例子就是 RAW。</li>
-            <li><strong>WAR（Write After Read）</strong>：读后才写。在经典 5 级流水线中通常不会发生（所有读操作在 Decode 阶段完成，写操作在 Write Back 阶段）。</li>
-            <li><strong>WAW（Write After Write）</strong>：两次写入同一寄存器。在 Y86-64 中也不会发生（只有一个写端口）。</li>
-        </ul>
-
-        <p>解决 RAW 冒险有两种方法：</p>
-
-        <p><strong>方法一：插入气泡（Stalling / Bubble）</strong></p>
-        <p>让流水线暂停（stall），直到需要的值被写回。最笨但也最简单的办法。在 I1 的 Write Back 之前，I2 的 Decode 阶段被阻塞。代价是每解决一次冒险就损失几个周期。</p>
-
-        <p><strong>方法二：转发（Forwarding / Bypassing）</strong></p>
-        <p>更聪明的办法——结果还没写回寄存器？没关系，直接从流水线寄存器中"偷"出来。在 SEQ 的流水线版本 PIPE 中，设置了多条转发路径：</p>
-
-        <ul>
-            <li><strong>e → E</strong>：从 Execute 阶段的输出转发到 Execute 阶段的输入（自己算出的结果马上给自己用）</li>
-            <li><strong>M → e</strong>：从 Memory 阶段的输出转发到 Execute 阶段的 ALU 输入</li>
-            <li><strong>W → m</strong>：从 Write Back 阶段的输出转发到 Memory 阶段的数据写回路径</li>
-            <li><strong>W → E</strong>：从 Write Back 阶段转发到 Execute 阶段</li>
-        </ul>
-
-        <div class="highlight">
-            <p><strong>转发的工作原理</strong>：想象一下，I2 的 Execute 阶段需要 %rbx 的值，而此时 I1 的结果刚刚在 Execute 阶段算出来（放在流水线寄存器 E 中）。转发逻辑发现："I2 需要的寄存器正是 I1 要写入的寄存器"，于是直接让 I2 的 ALU 输入来自 I1 的输出，而不是从寄存器文件读取。这样一来，I2 不需要等待任何周期就能拿到正确的值。在实际的 PIPE 设计中，绝大多数 RAW 冒险都能通过转发解决——只有 load-use 冒险（从内存读取的值紧接着被下一条指令使用）还需要插入一个气泡。</p>
-        </div>
-
-        <h3>9.3 控制冒险与分支预测</h3>
-
-        <p>比数据冒险更棘手的是控制冒险——当遇到分支指令（条件跳转）时，流水线不知道该取哪条指令。在 SEQ 中这不是问题：Execute 阶段已经算出了条件码，确定了是否跳转。但在流水线中，Fetch 阶段取指时，分支结果还没算出来！</p>
-
-        <p>简单的做法：让流水线暂停，等分支结果出来再继续。但这会损失好几个周期。对于频繁出现分支的程序来说，这个代价太大了。</p>
-
-        <p>更好的做法是<strong>分支预测（Branch Prediction）</strong>——猜测分支结果，然后投机执行。猜对了，运行如飞；猜错了，要冲刷（flush）流水线，恢复正确状态。现代 CPU 的分支预测器准确率可达 95% 以上。</p>
-
-        <p>Y86-64 的 PIPE 实现中，采用了最简单的分支预测策略：</p>
-        <ul>
-            <li><strong>条件跳转</strong>：预测为"跳转"（预测跳转）——装配了 BTB（Branch Target Buffer）来缓存跳转目标地址</li>
-            <li><strong>无条件跳转和 call</strong>：必然跳转，无需预测</li>
-            <li><strong>ret</strong>：最让流水线头疼的指令，因为返回地址在栈里，要到 Memory 阶段才能读出来。PIPE 采用"等待直到 ret 到达 Execute 阶段"的策略</li>
-        </ul>
-
-        <p>更先进的预测器（真实 CPU 中的）：</p>
-        <ul>
-            <li><strong>静态预测</strong>：向后跳转预测为"跳转"（适合循环），向前跳转预测为"不跳转"</li>
-            <li><strong>动态预测</strong>：基于历史记录（2-bit 饱和计数器、两级自适应预测器等）</li>
-        </ul>
-
-        <div class="tip">
-            <p><strong>Spectre 漏洞的体系结构根源</strong>：2018 年曝光的 Spectre 漏洞震惊了业界，它的根源正是分支预测和投机执行。攻击者先让分支预测器"训练"到总是走某条路径，然后诱导 CPU 在错误的路径上投机执行——访问本不该访问的内存。投机执行的结果虽然最终被回滚（因为预测错误），但 CPU 的缓存状态已经被改变。通过测量缓存访问时间，攻击者就能推断出被访问的数据内容。这个漏洞告诉我们：体系结构的每一个"聪明设计"，都可能在安全层面留下意想不到的后门。在之后的章节中我们还会详细讨论这个安全问题。</p>
-        </div>
-
-        <h3>9.4 流水线中的异常处理</h3>
-
-        <p>异常是流水线设计中最容易被忽视的难点。考虑这样一个场景：一条指令发生了除法错误，而此时它后面的 3 条指令已经进入了流水线的不同阶段。我们怎么处理？</p>
-
-        <p>基本原则是<strong>"最老指令优先"</strong>——如果多条指令同时产生异常，只处理最早进入流水线的那条。因为后面指令的执行都是在前面指令的"投机"下进行的，前面的指令错了，后面的指令也就没有意义了。</p>
-
-        <p>在 Y86-64 的 PIPE 中，异常在以下阶段检测：</p>
-        <ul>
-            <li><strong>Fetch 阶段</strong>：检测到非法指令码或指令地址越界 → 用这个错误填充流水线</li>
-            <li><strong>Execute 阶段</strong>：halt 指令在这里引发异常</li>
-            <li><strong>Memory 阶段</strong>：内存访问越界</li>
-            <li><strong>Write Back 阶段</strong>：不会产生新异常，只传递前面阶段的异常状态</li>
-        </ul>
-
-        <p>每个流水线寄存器都有一个额外的字段来携带异常状态。当异常发生时，流水线会：</p>
-        <ol>
-            <li>禁止修改寄存器文件和内存（防止"脏数据"）</li>
-            <li>在异常指令之后的阶段插入气泡（冲刷后续指令）</li>
-            <li>在异常指令到达 Write Back 阶段时，将异常信息和 PC 保存下来，交给操作系统处理</li>
-        </ol>
-
-        <p>一个有趣的细节：如果异常指令在执行时，前面的指令也改写了条件码——这会不会有问题？不会，因为在 SEQ/PIPE 设计中，条件码在 Execute 阶段被修改，而异常指令的"异常状态"也在流水线寄存器中传递。如果最终异常被触发，已经在 Execute 阶段被修改的条件码会被丢弃（因为处理器的状态不会更新到寄存器文件和内存，但条件码在某些实现中可能已被修改——这是 Y86-64 PIPE 设计中的一个实际挑战）。</p>
-
-        <div class="highlight">
-            <p><strong>设计启示</strong>：流水线异常处理告诉我们一个深刻的道理——<strong>错误必须在正确的上下文中被处理</strong>。在流水线中，一条指令的错误不能污染其他指令的执行结果，而异常信息必须跟着指令走完整个流水线，直到它成为"最老"的那条指令才能被处理。这种设计思路对于你写多阶段数据处理过程也有启发——永远不要在中间阶段就丢弃上下文信息，因为你不知道后续阶段是否还需要它来做决策。</p>
-        </div>
-
-        <p>这一章从流水线的洗衣房类比开始，我们深入了解了数据冒险的三种类型及其对策（转发和气泡）、控制冒险的分支预测策略（从简单的总是跳转到复杂的动态预测器），以及异常处理的最老指令优先原则。流水线是计算机体系结构从"功能正确"走向"高性能"的必经之路。理解了流水线，你就理解了你写的程序在 CPU 中实际运行的节拍。下一章，我们将从处理器设计转向一个更贴近日常的话题——如何优化你的程序性能。</p>
-
-        <div class="footer-nav">
-            <a href="08.html">← 上一章</a>
-            <a href="index.html">📖 返回目录</a>
-            <a href="10.html">下一章 →</a>
-        </div>
-    </div>
-</div>
-</div>
-</body>
-</html>
+mrmovq 0(%rbx), %rax    # 必须到 M 阶段才得到内存数据
+addq   %rax, %rcx       # 紧随其后的 load-use：需 1 个气泡</code></pre>
+<div class="figure-card"><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 293" role="img" aria-labelledby="hazard-svg-title hazard-svg-desc">
+<title id="hazard-svg-title">相邻 load 与消费者之间插入一个气泡</title>
+<desc id="hazard-svg-desc">当 mrmovq 在 Execute 而紧接的 addq 在 Decode，加载值尚未就绪，暂停取指与译码，在 Execute 注入气泡；下一周期 load 进入 Memory，再转发加载值。</desc>
+<g font-family="system-ui,sans-serif" text-anchor="middle">
+<text x="20" y="29" text-anchor="start" font-size="18" font-weight="700" fill="#274d4f">检测到 load-use</text>
+<rect x="25" y="49" width="235" height="68" rx="12" fill="#ede9f7" stroke="#9480bf"/><text x="142" y="77" font-size="18" font-weight="700" fill="#594687">E: mrmovq（load）</text><text x="142" y="102" font-size="15" fill="#594687">valM 尚不可转发</text>
+<rect x="313" y="49" width="235" height="68" rx="12" fill="#fff0e4" stroke="#cfa38c"/><text x="430" y="77" font-size="18" font-weight="700" fill="#9d5537">D: addq（消费者）</text><text x="430" y="102" font-size="15" fill="#9d5537">需要 load 目标寄存器</text>
+<rect x="612" y="49" width="225" height="68" rx="12" fill="#e3f1eb" stroke="#83b3a6"/><text x="724" y="78" font-size="17" font-weight="700" fill="#236b66">F / D : stall</text><text x="724" y="102" font-size="15" fill="#236b66">E : bubble</text>
+<text x="430" y="155" font-size="18" fill="#48716f">↓ 下一个时钟周期 ↓</text>
+<rect x="25" y="177" width="235" height="69" rx="12" fill="#e1f1ea" stroke="#83b3a6"/><text x="142" y="204" font-size="18" font-weight="700" fill="#236b66">M: mrmovq</text><text x="142" y="229" font-size="15" fill="#236b66">从内存产生 valM</text>
+<path d="M260 210 H315" stroke="#3b8b82" stroke-width="3"/><path d="M312 204 l9 6 -9 6" fill="none" stroke="#3b8b82" stroke-width="3"/>
+<rect x="325" y="177" width="235" height="69" rx="12" fill="#e9eef9" stroke="#91a7cd"/><text x="442" y="205" font-size="17" font-weight="700" fill="#526d9d">转发加载结果</text><text x="442" y="229" font-size="15" fill="#526d9d">交给消费者的数据通路</text>
+<rect x="612" y="177" width="225" height="69" rx="12" fill="#fff0e4" stroke="#cfa38c"/><text x="724" y="206" font-size="17" font-weight="700" fill="#9d5537">E: bubble</text><text x="724" y="230" font-size="15" fill="#9d5537">依赖指令仍在 D</text>
+<text x="20" y="278" text-anchor="start" font-size="15" fill="#55716f">示意：寄存器控制信号与转发路径省略；具体时序以 PIPE 控制逻辑为准</text>
+</g></svg><figcaption>图 2 · load-use 停顿的关键是“加载值到得太晚”。识别到危险时 F/D 停顿、E 插入气泡，让加载指令向 M 前进；下一个周期消费者才可进入 E。</figcaption></figure></div>
+<p>RAW 是必需处理的真实依赖。WAR 与 WAW 在经典固定阶段、按序完成的五级模型中不会表现为同样的硬件冒险；乱序执行处理器则需要考虑寄存器重命名和提交顺序。</p>
+<div class="widget" aria-labelledby="hazard-widget-title"><h3 id="hazard-widget-title">交互 · 这两条指令需要停顿吗？</h3>
+<div class="trace-grid" id="hazard-cases"><button class="step-button" data-hazard="0" aria-pressed="true">独立运算</button><button class="step-button" data-hazard="1" aria-pressed="false">ALU → ALU</button><button class="step-button" data-hazard="2" aria-pressed="false">Load → ALU</button></div>
+<div class="step-detail" aria-live="polite"><strong id="hazard-result">无需停顿</strong><p id="hazard-reason">两条指令没有 RAW 依赖，正常进入下一流水级。</p></div>
+</div></section>
+<section id="branch" aria-labelledby="branch-title"><span class="section-no">04 / CONTROL</span><h2 id="branch-title">走错分支可以回头，但不能留下痕迹</h2>
+<p>条件跳转在 Execute 才确定方向；Fetch 却早已取到后续指令。教学版 PIPE 对条件跳转<strong>预测跳转（taken）</strong>，错误时把错误路径上的年轻指令变为气泡，从正确 PC 重新取指。目标可以从指令字节中得到；不能凭空断言教学 PIPE 一定具有 BTB。</p>
+<p><code>ret</code> 需要等返回地址从栈内存读出。简化 PIPE 的取指会在 <code>ret</code> 处于 D/E/M 时等待，直到返回地址可用于选择正确 PC。这不是让机器永远停住，而是用有限停顿换取正确控制流。</p>
+<div class="callout caution"><p><strong>安全边界：</strong><a href="https://spectreattack.com/">Spectre</a> 说明，错误路径上的瞬态执行可能通过缓存等微架构状态泄漏信息；<a href="https://meltdownattack.com/">Meltdown</a> 涉及不同的瞬态执行与权限检查问题。二者不能简单等同，也不能从教学版 Y86-64 模型直接推出某款真实 CPU 的漏洞。</p></div>
+</section>
+<section id="precise" aria-labelledby="precise-title"><span class="section-no">05 / CORRECTNESS</span><h2 id="precise-title">错误出现时，哪些状态可以真的写下去？</h2>
+<p><code>HLT</code>、非法指令（<code>INS</code>）、无效地址（<code>ADR</code>）等状态需要随着指令经过流水线。对于精确的程序状态，<strong>更年轻的指令不能在更老的异常指令之后留下架构可见副作用</strong>。教材 PIPE 通过控制访存、写回与条件码更新，直到异常状态到达 W 才停止处理器。</p>
+<p>这里的 Y86-64 教学模拟器不是完整的操作系统：<code>Stat</code> 变为异常状态不等于“自动保存上下文并切换到内核异常处理程序”。讨论真实 CPU 时还需考虑更复杂的提交机制。</p>
+</section>
+<section id="practice" aria-labelledby="practice-title"><span class="section-no">06 / EXERCISE</span><h2 id="practice-title">用纸笔或代码重画时空图</h2>
+<p>先对四条<strong>完全独立</strong>的指令列出每级的开始周期；再将第 2 条替换为紧邻的 load-use 消费者，问：哪个周期 F/D 需要停顿？E 何时插入气泡？下面的 Python 仅验证理想五级流水线的起始时序，不是周期精确的完整 Y86 模拟器。</p>
+<pre><code>stages = "FDEMW"
+schedule = {(inst, stages[stage]): inst + stage + 1
+            for inst in range(4) for stage in range(5)}
+assert schedule[(0, "F")] == 1
+assert schedule[(0, "W")] == 5
+assert schedule[(3, "W")] == 8
+assert len(set(schedule[(i, "W")] for i in range(4))) == 4
+print(schedule[(3, "W")])  # 8</code></pre>
+</section>
+<section id="references" class="references" aria-labelledby="references-title"><span class="section-no">REFERENCES</span><h2 id="references-title">参考与边界</h2>
+<ol><li>Bryant、O'Hallaron，《<a href="https://csapp.cs.cmu.edu/3e/">CS:APP 第三版</a>》第 4 章 §§4.4–4.5，PIPE 五级结构、转发与控制逻辑。</li>
+<li>CS:APP 官方<a href="https://csapp.cs.cmu.edu/3e/figures.html">图目录</a>，图 4.35 起的流水线时序与后续 PIPE 图。</li>
+<li><a href="https://spectreattack.com/">Spectre 项目说明</a>与<a href="https://meltdownattack.com/">Meltdown 项目说明</a>，用于辨析瞬态执行的不同安全风险。</li></ol>
+<p class="small-note">图中的数值与流水线时序均为明确假设下的教学模型，没有宣称测得真实芯片的时延、命中率或加速比。</p></section>
+<nav class="footer-nav" aria-label="章节导航"><a href="08.html">← 第 8 章</a><a href="index.html">课程目录</a><a href="10.html">第 10 章：程序优化 →</a></nav>
+</article></main></div>
+<script>
+(function(){
+"use strict";
+const n=document.getElementById("pipeline-n");
+function update(){
+const count=Number(n.value);
+const seq=count*1000,pipe=(count+4)*220;
+document.getElementById("pipeline-n-text").textContent=String(count);
+document.getElementById("pipeline-seq").textContent=seq+" ps";
+document.getElementById("pipeline-pipe").textContent=pipe+" ps";
+document.getElementById("pipeline-speedup").textContent=(seq/pipe).toFixed(2)+"×";
+}
+n.addEventListener("input",update);update();
+const states=[
+["无需停顿","两条指令没有 RAW 依赖，正常进入下一流水级。"],
+["转发即可","前一条 ALU 运算在 Execute 产生新值，后续指令可从旁路取得，不必等常规写回。"],
+["插入 1 个气泡","紧随的消费者在需要时无法拿到 load 的内存结果；让 F/D 停顿并在 E 注入气泡。"]
+];
+const buttons=Array.from(document.querySelectorAll("button[data-hazard]"));
+buttons.forEach(b=>b.addEventListener("click",()=>{
+const i=Number(b.getAttribute("data-hazard"));if(!states[i])return;
+buttons.forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+document.getElementById("hazard-result").textContent=states[i][0];
+document.getElementById("hazard-reason").textContent=states[i][1];
+}));
+})();
+</script>
+</body></html>
