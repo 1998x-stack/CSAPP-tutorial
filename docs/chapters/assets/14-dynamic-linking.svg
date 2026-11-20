@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c14-title c14-desc" viewBox="0 0 760 250">
+<title id="c14-title">调用共享库函数：PLT、GOT 与动态链接器</title>
+<desc id="c14-desc">主程序调用 puts，经由 PLT 跳转表和 GOT 槽。首次延迟绑定可能前往动态链接器解析；后续通过已解析 GOT 直接到共享库。立即绑定则在启动时解析。</desc>
+<rect x="14" y="41" width="135" height="148" rx="13" fill="#e8f3f0" stroke="#99c6bf"/>
+<text x="31" y="70" font-size="18" font-weight="700" fill="#1f6062">main</text>
+<text x="31" y="101" font-size="14" fill="#24444a">call puts</text>
+<path d="M153 118 H193" stroke="#147f80" stroke-width="3"/><path d="M186 111 l11 7 -11 7" stroke="#147f80" stroke-width="3" fill="none"/>
+<rect x="202" y="41" width="150" height="148" rx="13" fill="#e8f3f0" stroke="#99c6bf"/>
+<text x="218" y="70" font-size="18" font-weight="700" fill="#1f6062">puts@plt</text>
+<text x="218" y="100" font-size="14" fill="#24444a">跳到 GOT 槽</text>
+<text x="218" y="124" font-size="13" fill="#53676d">函数调用桩</text>
+<path d="M355 118 H397" stroke="#147f80" stroke-width="3"/><path d="M391 111 l11 7 -11 7" stroke="#147f80" stroke-width="3" fill="none"/>
+<rect x="405" y="41" width="146" height="148" rx="13" fill="#f0edfa" stroke="#b8acdf"/>
+<text x="421" y="70" font-size="18" font-weight="700" fill="#5b4d94">GOT 槽</text>
+<text x="420" y="103" font-size="14" fill="#34444a">保存函数地址</text>
+<g class="signal signal-a"><text x="420" y="129" font-size="13" fill="#955335">初次：解析入口</text></g>
+<g class="signal signal-b"><text x="420" y="148" font-size="13" fill="#147f80">后续：真实地址</text></g>
+<g class="signal signal-c"><text x="420" y="171" font-size="13" fill="#5b4d94">启动时已解析</text></g>
+<path d="M555 107 H606" stroke="#147f80" stroke-width="3"/><path d="M600 100 l11 7 -11 7" stroke="#147f80" stroke-width="3" fill="none"/>
+<rect x="614" y="64" width="130" height="102" rx="13" fill="#e8f3f0" stroke="#99c6bf"/>
+<text x="624" y="94" font-size="18" font-weight="700" fill="#1f6062">libc.so</text>
+<text x="624" y="124" font-size="14" fill="#24444a">puts 实现</text>
+<g class="signal signal-a"><path d="M474 191 V222 H662 V169" fill="none" stroke="#d06d4d" stroke-width="2.5" stroke-dasharray="5 5"/><text x="483" y="218" font-size="12" fill="#955335">第一次可能经过 resolver</text></g>
+<text x="15" y="236" font-size="13" fill="#53676d">示意：实际入口、段名与跳板指令随架构、链接选项和安全加固策略变化。</text>
+</svg>

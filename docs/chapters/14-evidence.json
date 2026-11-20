@@ -1,0 +1,60 @@
+{
+  "chapter": "14",
+  "scope": "GNU/Linux dynamic ELF loading; PLT/GOT paths depend on architecture and build configuration.",
+  "claims": [
+    {
+      "id": "14-ldso",
+      "claim": "Dynamic loader handles dependencies and dynamic symbol binding.",
+      "kind": "runtime",
+      "source_url": "https://man7.org/linux/man-pages/man8/ld.so.8.html",
+      "locator": "DESCRIPTION and LD_BIND_NOW",
+      "status": "verified",
+      "notes": "Scope restricted to GNU/Linux loader."
+    },
+    {
+      "id": "14-lazy",
+      "claim": "Some function calls can be lazily resolved; -z now requests earlier binding.",
+      "kind": "linker",
+      "source_url": "https://sourceware.org/binutils/docs/ld.html",
+      "locator": "-z now and lazy",
+      "status": "verified",
+      "notes": "Do not assume every binary uses traditional PLT."
+    },
+    {
+      "id": "14-preload",
+      "claim": "LD_PRELOAD affects symbol lookup; secure execution mode imposes restrictions.",
+      "kind": "runtime",
+      "source_url": "https://man7.org/linux/man-pages/man8/ld.so.8.html",
+      "locator": "LD_PRELOAD, secure-execution mode",
+      "status": "verified",
+      "notes": "Interposition is not a security boundary."
+    },
+    {
+      "id": "14-next",
+      "claim": "RTLD_NEXT allows resolving the next matching definition after current object.",
+      "kind": "runtime",
+      "source_url": "https://man7.org/linux/man-pages/man3/dlsym.3.html",
+      "locator": "RTLD_NEXT",
+      "status": "verified",
+      "notes": "Example uses puts instead of recursive malloc wrappers."
+    },
+    {
+      "id": "14-pic",
+      "claim": "PIC with x86-64 RIP-relative addressing avoids absolute code relocations where possible.",
+      "kind": "architecture",
+      "source_url": "https://refspecs.linuxfoundation.org/elf/x86_64-abi-0.99.pdf",
+      "locator": "Position-independent code",
+      "status": "derived",
+      "notes": "Instructions are illustrative; actual disassembly depends on flags."
+    },
+    {
+      "id": "14-example",
+      "claim": "Preloaded puts wrapper adds a prefix then calls the next puts.",
+      "kind": "toy experiment",
+      "source_url": "https://github.com/1998x-stack/CSAPP-tutorial/blob/main/labs/linking/trace_puts.c",
+      "locator": "puts interposer",
+      "status": "illustrative",
+      "notes": "No general purpose tracing/production-safety claim."
+    }
+  ]
+}
