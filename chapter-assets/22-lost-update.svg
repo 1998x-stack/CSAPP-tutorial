@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 320" role="img" aria-labelledby="t d">
+<title id="t">两条自增操作交错产生丢失更新</title><desc id="d">从计数值 7 开始，A 和 B 都先读到 7，各自在本地计算 8，随后各自写入 8，最终仍是 8 而不是 9。只是说明未同步读改写的直观模型，C 数据竞争的结果不受语言保证。</desc>
+<rect width="940" height="320" rx="16" fill="#f8f9f4"/><text x="32" y="37" font-size="21" fill="#244e4b" font-weight="700">一次可想象的交错：初值 counter = 7</text>
+<g font-size="16" text-anchor="middle"><rect x="30" y="58" width="425" height="46" rx="8" fill="#e4f3ee"/><text x="242" y="87" fill="#126e66" font-weight="700">线程 A</text><rect x="485" y="58" width="425" height="46" rx="8" fill="#ece9f8"/><text x="697" y="87" fill="#67549a" font-weight="700">线程 B</text></g>
+<g font-size="17" fill="#2c4c4a"><rect x="30" y="115" width="425" height="39" rx="5" fill="#fff" stroke="#d5e5df"/><text x="52" y="141">① 读 7，暂存在本地</text><rect x="485" y="158" width="425" height="39" rx="5" fill="#fff" stroke="#ded8ed"/><text x="507" y="184">② 读 7，暂存在本地</text><rect x="30" y="201" width="425" height="39" rx="5" fill="#fff" stroke="#d5e5df"/><text x="52" y="227">③ 算 8，再写回共享变量</text><rect x="485" y="244" width="425" height="39" rx="5" fill="#fff" stroke="#ded8ed"/><text x="507" y="270">④ 算 8，再次覆盖共享变量</text></g>
+<g stroke="#c76646" stroke-width="2.5" fill="none" stroke-dasharray="6 5"><path d="M455 135 H473 V177 H485"/><path d="M455 220 H473 V263 H485"/></g>
+<rect x="30" y="263" width="425" height="40" rx="7" fill="#fff2e9"/><text x="49" y="289" font-size="16" fill="#a35231" font-weight="700">最终写入 8（按顺序执行应得到 9）</text>
+</svg>

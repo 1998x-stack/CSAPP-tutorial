@@ -1,0 +1,88 @@
+{
+  "article": "22.html",
+  "scope": "课程第22章：POSIX线程、C11普通对象数据竞争与条件变量；不报告实际基准性能。",
+  "learning_design": "原创 SVG、交错状态机和确定性 POSIX 练习对应解释，不复制来源图文。",
+  "claims": [
+    {
+      "id": "22-thread-context",
+      "claim": "线程拥有各自的 PC、寄存器与栈，但共享进程地址空间中的堆和全局数据",
+      "kind": "concept",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 12, Concurrent Programming",
+      "status": "derived",
+      "notes": "插图为概念模型；线程之间仍可以通过指针访问其他栈。"
+    },
+    {
+      "id": "22-pthread-create",
+      "claim": "pthread_create 创建线程，返回不意味着线程已结束；pthread_join 回收可连接线程",
+      "kind": "posix",
+      "source_url": "https://man7.org/linux/man-pages/man3/pthread_create.3.html",
+      "locator": "DESCRIPTION / RETURN VALUE",
+      "status": "verified",
+      "notes": "POSIX 线程启动和完成顺序不等于 create 调用顺序。"
+    },
+    {
+      "id": "22-pthread-join",
+      "claim": "pthread_join 成功等待目标线程终止",
+      "kind": "posix",
+      "source_url": "https://man7.org/linux/man-pages/man3/pthread_join.3.html",
+      "locator": "DESCRIPTION",
+      "status": "verified",
+      "notes": "示例检查每一次返回值。"
+    },
+    {
+      "id": "22-data-race",
+      "claim": "两个线程无同步地冲突访问普通 C 对象并且至少一个写会形成未定义行为",
+      "kind": "language",
+      "source_url": "https://en.cppreference.com/w/c/language/memory_model",
+      "locator": "Threads and data races",
+      "status": "verified",
+      "notes": "失更新图仅为假设的读-改-写交错，而非真实 C 程序的结果保证。"
+    },
+    {
+      "id": "22-lost-update",
+      "claim": "从 7 开始的两个非原子读-改-写可以抽象地交错为 8",
+      "kind": "toy-model",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 12, synchronization",
+      "status": "illustrative",
+      "notes": "仅演示模型；不声称存在固定的三指令展开。"
+    },
+    {
+      "id": "22-mutex",
+      "claim": "在同一互斥锁保护下的临界区可序列化更新",
+      "kind": "posix",
+      "source_url": "https://man7.org/linux/man-pages/man3/pthread_mutex_lock.3p.html",
+      "locator": "DESCRIPTION",
+      "status": "verified",
+      "notes": "所有访问者都须遵守同一锁约定。"
+    },
+    {
+      "id": "22-condwait",
+      "claim": "pthread_cond_wait 原子释放互斥锁并等待，返回前重新获取互斥锁",
+      "kind": "posix",
+      "source_url": "https://man7.org/linux/man-pages/man3/pthread_cond_wait.3.html",
+      "locator": "DESCRIPTION",
+      "status": "verified",
+      "notes": "必须循环重新测试共享谓词，允许虚假唤醒。"
+    },
+    {
+      "id": "22-cond-signal",
+      "claim": "条件变量的通知不积累为后续等待者的计数令牌",
+      "kind": "posix",
+      "source_url": "https://man7.org/linux/man-pages/man3/pthread_cond_wait.3.html",
+      "locator": "DESCRIPTION / signal semantics",
+      "status": "derived",
+      "notes": "使用谓词与 mutex 组成完整的等待协议。"
+    },
+    {
+      "id": "22-example",
+      "claim": "两个计数线程与一个单槽生产者消费者实例具有确定断言",
+      "kind": "code-invariant",
+      "source_url": "https://en.cppreference.com/w/c/language/memory_model",
+      "locator": "Mutex synchronization / derived invariants",
+      "status": "derived",
+      "notes": "examples/olah-ch22-sync.c 本地应输出 sync-ok；CI 将验证。"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 318" role="img" aria-labelledby="t d">
+<title id="t">同一进程的两条线程，共享堆和全局数据</title><desc id="d">线程 A 和线程 B 各有自己的寄存器与栈，但都可以读写中间的共享数据区。虚线表示共享边界。</desc>
+<rect width="940" height="318" rx="16" fill="#f8f9f4"/><rect x="26" y="23" width="888" height="272" rx="14" fill="#fff" stroke="#dce8df" stroke-width="2"/>
+<text x="48" y="53" font-size="19" fill="#355653" font-weight="700">一个进程 / 同一虚拟地址空间</text>
+<rect x="49" y="79" width="246" height="125" rx="10" fill="#edf3fa" stroke="#9ab4d5"/><text x="73" y="110" font-size="21" fill="#345f8a" font-weight="700">线程 A</text><text x="73" y="142" font-size="16" fill="#3d5666">独立 PC · 寄存器</text><text x="73" y="173" font-size="16" fill="#3d5666">独立栈 A</text>
+<rect x="645" y="79" width="246" height="125" rx="10" fill="#f1ecfb" stroke="#b4a2d6"/><text x="668" y="110" font-size="21" fill="#66539a" font-weight="700">线程 B</text><text x="668" y="142" font-size="16" fill="#53486d">独立 PC · 寄存器</text><text x="668" y="173" font-size="16" fill="#53486d">独立栈 B</text>
+<rect x="345" y="79" width="250" height="125" rx="10" fill="#dff1e8" stroke="#70b59e" stroke-width="2"/><text x="375" y="110" font-size="21" fill="#126960" font-weight="700">共享状态</text><text x="375" y="142" font-size="16" fill="#265c55">堆 / 全局变量</text><text x="375" y="173" font-size="16" fill="#265c55">打开的文件描述符</text>
+<g fill="none" stroke="#c76646" stroke-width="3" stroke-linecap="round"><path d="M295 143 H340"/><path d="m330 136 10 7-10 7"/><path d="M645 143 H600"/><path d="m610 136-10 7 10 7"/></g>
+<text x="49" y="247" font-size="17" fill="#496561">共享带来低成本通信，也要求同步来约束冲突访问。</text><text x="49" y="275" font-size="14" fill="#6b7e79">图示为概念模型；线程栈也位于同一进程地址空间，并非硬件隔离区。</text>
+</svg>
