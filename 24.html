@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第24章 经典Lab实战(I)——Data/Bomb/Attack — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="olah-chapters.css">
 </head>
-<body>
+<body class="olah-lesson">
+<a href="#chapter-main" class="skip-link">跳转至正文</a>
 <div class="double-border">
 <div class="container">
     <div class="sidebar">
@@ -35,7 +37,7 @@
             <li><a href="21.html">第21章 网络编程——进阶</a></li>
             <li><a href="22.html">第22章 并发编程——线程基础</a></li>
             <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
-            <li><a href="24.html" class="active">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
+            <li><a href="24.html" class="active" aria-current="page">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
             <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
             <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
             <li><a href="27.html">第27章 现代系统新趋势</a></li>
@@ -43,125 +45,113 @@
         </ul>
     </div>
     <div class="main-content">
-        <h2>第二十四章：经典Lab实战(I)——Data/Bomb/Attack</h2>
 
-        <p>如果你去问任何一个 CSAPP 的过来人"这门课最难但也最值得做的是什么"，答案几乎一致：Lab。CSAPP 的七个 Lab 是卡内基梅隆大学计算机系几十年教学经验的结晶，每一个都经过精心设计——让你在"玩"的过程中把书本知识变成肌肉记忆。从这一章开始，我们用三章的篇幅逐一带你攻坚这七个 Lab。</p>
+<main id="chapter-main" class="reading-page">
+<article>
+<header class="chapter-hero">
+<p class="eyebrow">经典 Lab · Data / Bomb / Attack / 24</p>
+<h1>从比特到指令，再到程序的安全边界</h1>
+<p class="lede">会写 C 语言，不代表理解了每个运算符产生什么位、每条机器指令改变了什么状态，或一次不受限写入为什么有危险。三个经典 Lab 刚好把这三层连接起来：<strong>先证明表达式，再解释机器行为，最后识别越界与控制流风险。</strong></p>
+<p class="chapter-scope">本章课程编号 24 不等于原书章节号。实验以 CMU CS:APP 3e 官方 handout 为准；不同教学版本和个人实例的参数与题目可能不同。仅在获授权的教学环境内进行安全实验。</p>
+</header>
+<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c24-map">01 共同主线</a><a href="#c24-data">02 Data Lab</a><a href="#c24-bomb">03 Bomb Lab</a><a href="#c24-attack">04 Attack Lab</a><a href="#c24-defense">05 防御边界</a><a href="#c24-practice">06 练习</a></nav>
 
-        <p>本章聚焦前三个 Lab：Data Lab 让你用最基本的位运算实现所有整数运算；Bomb Lab 让你化身拆弹专家用 GDB 逆向你不知道的二进制程序；Attack Lab 让你站在黑客的角度理解缓冲区溢出的威力。这三个 Lab 覆盖了全书前七章的核心——数据表示、机器级代码、以及系统安全的脆弱面。</p>
+<section id="c24-map">
+<h2>24.1 三个实验，其实在追问同一件事</h2>
+<p>源码是人写的抽象，机器运行的是带有精确表示和副作用的状态变化。Data Lab 训练把布尔规则翻译成位表达式；Bomb Lab 训练从汇编推回控制流与数据关系；Attack Lab 则把“程序未验证写入的边界”与“控制流的完整性”联系起来。</p>
+<figure class="lesson-figure"><img src="chapter-assets/24-lab-map.svg" width="940" height="310" alt="Data Lab 练习布尔代数，Bomb Lab 练习从机器指令还原条件，Attack Lab 理解越界对控制流的影响。"><figcaption>图 24-1：每个 Lab 都需要“假设 → 可观察证据 → 验证”，而不是死记某道题的答案。</figcaption></figure>
+<p>官方课程把这些实验分别发布；实际题面、工具、提交方式要看课程发放的材料。<strong>不要把网上某个 bomb 的六个答案或某个 attack 实例中的地址当成普遍解。</strong></p>
+</section>
 
-        <h3>24.1 Data Lab——位运算极限挑战</h3>
-
-        <p>Data Lab 是所有 Lab 中最"纯粹"的一个：你不用写任何复杂逻辑，只用一组受限的位运算符（<code>~</code> <code>&amp;</code> <code>|</code> <code>^</code> <code>&lt;&lt;</code> <code>&gt;&gt;</code>）来实现各种整数和浮点数操作。规则极其严苛——比如实现 <code>!</code>（逻辑非）不能用条件分支，实现 <code>absVal</code>（绝对值）不能用乘法——目的就是逼你深刻理解补码的每一位。</p>
-
-        <p>来看几个典型 puzzles 的解法思路：</p>
-
-        <pre><code>// Puzzle 1: bitXor —— 只用 ~ 和 & 实现异或
-// 公式：x ^ y = (~x & y) | (x & ~y)
-//          = ~(~(~x & y) & ~(x & ~y))  用德摩根律消去 |
-int bitXor(int x, int y) {
-    return ~(~(~x & y) & ~(x & ~y));
-}
-
-// Puzzle 2: tmin —— 返回最小的补码整数
-// 对于 32 位系统，TMin = 0x80000000 = 1 << 31
-int tmin(void) {
-    return 1 << 31;
-}
-
-// Puzzle 3: isTmax —— 判断 x 是否为最大补码整数
-// TMax = 0x7FFFFFFF，加 1 得 0x80000000（TMin）
-// TMin + TMin = 0，而 TMax + 1 + TMax + 1 != 0
-// 巧妙的性质：TMax + 1 == ~TMax
-int isTmax(int x) {
-    int plus1 = x + 1;
-    return !(plus1 + plus1) &amp;&amp; !!plus1;
+<section id="c24-data">
+<h2>24.2 Data Lab：运算符少了，为什么理解反而更深？</h2>
+<p>Data Lab 的整数题常限制可用运算符与次数，并规定具体宽度、补码与移位语义。约束让你不能直接用高层运算符“绕过”问题，而必须从真值表推导。例如仅用按位非和按位与表达异或：</p>
+<div class="math-scroll" tabindex="0" role="group" aria-label="异或的布尔等价式">
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="x 异或 y 等于 非括号 非括号 x 与 非 y 括号 与 非括号 非 x 与 y 括号"><mrow><mi>x</mi><mo>⊕</mo><mi>y</mi><mo>=</mo><mo>¬</mo><mo>(</mo><mo>¬</mo><mo>(</mo><mi>x</mi><mo>∧</mo><mo>¬</mo><mi>y</mi><mo>)</mo><mo>∧</mo><mo>¬</mo><mo>(</mo><mo>¬</mo><mi>x</mi><mo>∧</mo><mi>y</mi><mo>)</mo><mo>)</mo></mrow></math>
+</div>
+<pre><code>/* 可独立编译的 C11 位表达式；unsigned 消除有符号溢出的干扰 */
+unsigned xor_with_and_not(unsigned x, unsigned y) {
+    return ~(~(x &amp; ~y) &amp; ~(~x &amp; y));
 }</code></pre>
+<p>这不是靠经验猜出来的“黑魔法”：<code>x &amp; ~y</code> 表示“x 有这一位、y 没有”，<code>~x &amp; y</code> 表示相反情况；德摩根律把两种情况的“或”改写成只含 <code>~</code> 和 <code>&amp;</code>。</p>
+<div class="micro-lab">
+<h3>逐位真值表：两次按键就能检查一条等价式</h3>
+<div class="seg-buttons" role="group" aria-label="切换两个输入位"><button type="button" id="bit-x" aria-pressed="false">切换 x：0</button><button type="button" id="bit-y" aria-pressed="false">切换 y：0</button></div>
+<output id="xor-result" aria-live="polite">x=0, y=0 → x ⊕ y = 0；仅用 ¬ 和 ∧ 也得 0</output>
+<p class="small-note">这里一次处理一个逻辑位；在 C 中同一恒等式对无符号整数的每个二进制位并行成立。</p>
+</div>
+<p><strong>标准 C 与 Lab 模型要分开：</strong>原题若假设 32 位补码及算术右移，<code>1 &lt;&lt; 31</code> 常被用作 TMin 的 Lab 式写法，但把正的有符号 1 左移进符号位在 ISO C 中不是可移植的构造。写通用 C 时，应使用 <code>INT_MIN</code>，或明确依赖无符号表示规则。类似地，<code>~x+1</code> 对 <code>INT_MIN</code> 的有符号求值可能越界。</p>
+<p>验证不应只测少量“看起来正确”的样本。整数题应覆盖零、全一、符号边界及随机位模式；浮点题要分别测零、非规格化数、正常数、无穷大和 NaN 等分类，并区分“位模式操作”和“浮点算术”。</p>
+</section>
 
-        <p>在 Data Lab 中你会频繁用到下面这些位运算技巧：</p>
+<section id="c24-bomb">
+<h2>24.3 Bomb Lab：从比较指令回到问题本身</h2>
+<p>Bomb Lab 给你的是可执行文件而非源代码。核心练习是形成一个可检验的推理闭环：找到当前阶段入口、标出分支条件、追踪数据来自哪里、用调试器验证假设。不同实例的常量和阶段结构可能不同，不能预设第几关一定是 Fibonacci 或特定跳转表。</p>
+<ol><li><strong>建立地图：</strong>在授权的课程二进制上用 <code>objdump -d</code> 或 <code>disassemble</code> 查看函数边界、调用关系及分支。</li><li><strong>锁定观察点：</strong>GDB 用 <code>break</code>、<code>run</code>、<code>info registers</code>、<code>x/</code> 等检查参数、局部数据与条件跳转；寄存器的意义取决于目标 ABI 和当前指令。</li><li><strong>写出可解释的约束：</strong>把循环、比较、递归和表索引转为纸面关系，预测什么输入会令某个分支成立。</li><li><strong>用实验驳斥假设：</strong>仅在许可的教学环境内运行自己的实例，记录输入、断点状态和实际分支，不要把一次成功当成通用结论。</li></ol>
+<p>以 x86-64 System V 为例，函数的前几个整数/指针参数通常由寄存器传递，但不能简单地把每次 <code>cmp</code> 旁边的 <code>%rsi</code> 当成“要比较的整数”：必须结合此前的数据流。调试器显示的是<strong>具体机器状态</strong>，不是省略上下文的解题答案。</p>
+<div class="exercise"><strong>小练习：</strong>若一段汇编先把输入乘 2，再与常量比较，如何区分“输入必须等于某个固定值”和“只比较最低几位”？先记录运算宽度与可能的截断，再整理比较分支，而不是仅凭常量猜测。</div>
+</section>
 
-        <table>
-            <tr>
-                <th>技巧</th>
-                <th>表达式</th>
-                <th>用途</th>
-            </tr>
-            <tr>
-                <td>取最低有效位</td>
-                <td><code>x &amp; 1</code></td>
-                <td>判断奇偶性</td>
-            </tr>
-            <tr>
-                <td>提取特定位</td>
-                <td><code>(x &gt;&gt; n) &amp; mask</code></td>
-                <td>取从第 n 位开始的若干位</td>
-            </tr>
-            <tr>
-                <td>取符号位</td>
-                <td><code>(x &gt;&gt; 31) &amp; 1</code> 或 <code>!!(x &gt;&gt; 31)</code></td>
-                <td>判断正负（补码最高位）</td>
-            </tr>
-            <tr>
-                <td>取反加一</td>
-                <td><code>~x + 1</code></td>
-                <td>取补码的相反数（-x）</td>
-            </tr>
-            <tr>
-                <td>掩码生成</td>
-                <td><code>(1 &lt;&lt; n) - 1</code></td>
-                <td>生成长度为 n 的全 1 掩码</td>
-            </tr>
-            <tr>
-                <td>符号扩展</td>
-                <td><code>(x &lt;&lt; shift) &gt;&gt; shift</code></td>
-                <td>将低 n 位的数按符号扩展到全宽</td>
-            </tr>
-        </table>
+<section id="c24-attack">
+<h2>24.4 Attack Lab：正确认识五个阶段，而不是三个</h2>
+<p>官方 CS:APP 3e Attack Lab 使用两个特制目标：<code>ctarget</code> 允许代码注入（Code Injection，CI）的教学条件，<code>rtarget</code> 则用于理解不可执行栈、地址随机化背景下的返回导向编程（ROP）。这是<strong>刻意弱化防护的课程环境</strong>，并非现实系统的默认配置。</p>
+<table><thead><tr><th>官方阶段</th><th>目标程序</th><th>学习要点</th></tr></thead><tbody>
+<tr><td>Phase 1</td><td><code>ctarget</code></td><td>控制流重定向到既有 <code>touch1</code>（CI 目标程序，但无需注入新代码）</td></tr>
+<tr><td>Phase 2</td><td><code>ctarget</code></td><td>参数传递与 <code>touch2</code>，代码注入</td></tr>
+<tr><td>Phase 3</td><td><code>ctarget</code></td><td>字符串参数及其生命周期，<code>touch3</code>，代码注入</td></tr>
+<tr><td>Phase 4</td><td><code>rtarget</code></td><td>复用已有指令片段，ROP 到 <code>touch2</code></td></tr>
+<tr><td>Phase 5</td><td><code>rtarget</code></td><td>更复杂的 ROP 数据流，目标 <code>touch3</code></td></tr>
+</tbody></table>
+<p>这张表按官方讲义的 Figure 1 归纳，不包含任何个人实例的地址或可直接移植的利用字节串。学习重点在<strong>漏洞前提</strong>和<strong>安全机制为何限制攻击面</strong>：无边界复制可能破坏相邻内存；不可执行内存不允许把数据直接当代码执行；地址空间随机化增加地址预测难度；控制流完整性防护还需要额外机制。</p>
+</section>
 
-        <p>浮点数部分更有意思——你需要在不使用浮点指令的前提下，手动实现浮点数的编码和解码，比如把 <code>unsigned</code> 解释成 <code>float</code> 的位模式。这迫使你理解 IEEE 754 的符号位、阶码（biased exponent）和尾数（fraction）三部分的真正含义。</p>
+<section id="c24-defense">
+<h2>24.5 同样一段输入，差别在于是否建立容量边界</h2>
+<figure class="lesson-figure"><img src="chapter-assets/24-bounds.svg" width="940" height="310" alt="安全有界读取使输入限制在缓冲区容量内；不检查容量的读取可能越界写入相邻内存。"><figcaption>图 24-2：图示突出漏洞根源——写入长度与目标对象容量脱节；没有描画特定栈布局或攻击载荷。</figcaption></figure>
+<p>安全代码必须能回答三个问题：目标缓冲区有多大？最多写入多少字节？字符串结尾是否还留有空间？比起“输入看起来短”，<strong>明确的容量契约</strong>才是可靠的防线。</p>
+<pre><code>/* C11 防御性例子：有大小上限的读取，检查是否被截断 */
+char buf[16];
+if (fgets(buf, sizeof buf, stdin) != NULL) {
+    size_t n = strlen(buf);
+    if (n &gt; 0 &amp;&amp; buf[n - 1] == '\n') {
+        buf[n - 1] = '\0';
+        /* 接下来才处理完整的一行 */
+    } else {
+        /* 行可能被截断；按协议清理余下输入或拒绝 */
+    }
+}</code></pre>
+<p>该代码片段假定已经包含 <code>&lt;stdio.h&gt;</code> 与 <code>&lt;string.h&gt;</code>，目的是说明容量检查，并非完整协议解析器；EOF 恰好结束于行末时，还应结合输入协议决定是否接受。栈保护、NX/DEP、ASLR 和 CET/CFI 可以纵深防御，但具体支持与启用状态依赖 CPU、操作系统和构建配置，不意味着某一类控制流攻击永远不可能。</p>
+</section>
 
-        <div class="highlight">
-            <p><strong>Data Lab 通关心法</strong>：不要急着写代码。先在纸上列出真值表，用布尔代数推导出最简表达式。位运算的终极法宝是德摩根律 <code>~(~A &amp; ~B) = A | B</code> 和分配律 <code>(A &amp; B) | (A &amp; C) = A &amp; (B | C)</code>。如果能用 5 个运算符搞定，就别用 6 个——这既是规则要求，也是对你逻辑压缩能力的考验。</p>
-        </div>
-
-        <h3>24.2 Bomb Lab——GDB 拆弹全流程</h3>
-
-        <p>Bomb Lab 的设定是：你面前有一个二进制炸弹文件，运行时它会提示你输入 6 个字符串（对应 6 个 phase）。输入对了就进入下一关，输入错了炸弹会"爆炸"并扣分。你的任务是用 GDB 逆向分析这个二进制文件，找出每个 phase 应该输入什么。</p>
-
-        <p>六个 phase 覆盖了不同的反汇编分析技巧：</p>
-        <ul>
-            <li><strong>Phase 1</strong>——字符串比较。反汇编后看到 <code>strings_not_equal</code> 调用，在 GDB 中用 <code>x/s &lt;地址&gt;</code> 查看目标字符串即可。</li>
-            <li><strong>Phase 2</strong>——数组循环。需要输入 6 个数字，反汇编后看到循环结构和 <code>read_six_numbers</code>，推导数列递推关系。</li>
-            <li><strong>Phase 3</strong>——switch 跳转表。输入两个整数，第一个作为 switch 的 index，第二个与跳转表中的目标值比较。</li>
-            <li><strong>Phase 4</strong>——递归函数。输入两个整数，反汇编递归调用，理解递归函数的语义（通常是 Fibonacci 类函数）。</li>
-            <li><strong>Phase 5</strong>——字符串变换。输入一个 6 字符的字符串，每个字符的低 4 位作为索引去查一个固定数组，变换后的结果必须等于目标字符串。</li>
-            <li><strong>Phase 6</strong>——链表排序。最复杂的一关，需要输入 6 个数字，对应链表节点的排序顺序，需要理解链表的遍历和比较逻辑。</li>
-        </ul>
-
-        <div class="highlight">
-            <p><strong>GDB 拆弹工作流</strong>：(1) 在 phase 入口设置断点 <code>b phase_4</code>；(2) 运行炸弹 <code>run</code>，输入一个测试字符串；(3) 用 <code>layout asm</code> 进入汇编视图；(4) 逐指令执行 <code>stepi</code>，观察寄存器变化 <code>info registers</code>；(5) 遇到 <code>cmp</code> 指令时查看比较值——<code>x/s $rdi</code> 看字符串、<code>x/d $rsi</code> 看整数；(6) 所有 phase 通过后，会看到"Congratulations!"的提示。熟练之后，一个下午拆完六个 phase 不是问题。</p>
-        </div>
-
-        <h3>24.3 Attack Lab——缓冲区攻击之旅</h3>
-
-        <p>Attack Lab 是 Bomb Lab 的精神续作。你面对一个存在缓冲区溢出漏洞的程序（<code>getbuf</code> 函数把输入读到一个很小的栈缓冲区中），目标是利用溢出控制程序执行流。Lab 分三个递进的 level：</p>
-
-        <ul>
-            <li><strong>Level 1: Code Injection（CI）</strong>——最简单的版本。溢出缓冲区，覆盖返回地址，让 <code>getbuf</code> 返回到 <code>touch1</code> 函数（而不是它原本应该返回的调用者）。你只需要用 <code>xxd</code> 或 <code>printf</code> 构造一个字节序列，把 <code>touch1</code> 的地址精确覆盖到返回地址的位置。</li>
-            <li><strong>Level 2: CI + 参数传递</strong>——在 Level 1 的基础上，你还需要将 <code>touch2</code> 要求的参数（如 <code>cookie</code>）传入 <code>%rdi</code> 寄存器。方法：在缓冲区中注入一段 shellcode，shellcode 设置 <code>%rdi</code> 后跳转到 <code>touch2</code>。</li>
-            <li><strong>Level 3: ROP（Return-Oriented Programming）</strong>——因为现代系统启用了 NX（No-Execute）保护，栈上的代码不能直接执行。你需要从已有的二进制代码中寻找以 <code>ret</code> 结尾的指令片段（gadget），把它们串联成一条"攻击链"。ROP 的终极形态是构建 Turing-complete 的计算能力——不需要注入一行新代码。</li>
-        </ul>
-
-        <pre><code>// Level 2 的典型 shellcode（AT&amp;T 语法）
-// 将 cookie 值（假设为 0x59b997fa）存入 %rdi，然后跳转 touch2
-mov $0x59b997fa, %rdi
-push $0x4017ec    // touch2 的地址
-ret</code></pre>
-
-        <div class="warning">
-            <p><strong>法律与道德提醒</strong>：Attack Lab 的目的不是教你做黑客，而是让你理解缓冲区溢出的底层原理，从而在写代码时有意识地避免这类漏洞。在真实的系统上测试攻击代码是<strong>非法</strong>的——即使你只是"好奇"。把学到的知识用在保护系统上，而不是攻破它们。值得一提的是，Intel 和 AMD 的现代 CPU 已经支持 <strong>Control-flow Enforcement Technology（CET）</strong>，硬件级别阻止 ROP 攻击，但这个 Lab 让你理解为什么需要这些保护机制。</p>
-        </div>
-
-        <p>Data Lab 锻炼了你的位运算功底，Bomb Lab 提升了你的逆向分析能力，Attack Lab 让你看清了栈的脆弱本质。这三个 Lab 完成以后，你已经具备了 C 语言底层编程的"铁人三项"基本功。下一章我们将进入系统编程的三座大山——Cache Lab 的缓存模拟器、Shell Lab 的进程管理、Malloc Lab 的内存分配器。</p>
+<section id="c24-practice">
+<h2>24.6 先做一个可复现、无漏洞利用的位运算练习</h2>
+<p>用仓库中的 <code>examples/olah-ch24-bitlogic.c</code> 验证上面的无符号异或恒等式：<code>cc -std=c11 -Wall -Wextra -Werror -pedantic examples/olah-ch24-bitlogic.c -o /tmp/ch24 &amp;&amp; /tmp/ch24</code>。程序检查边界输入和确定性的伪随机样本，通过时输出 <code>bitlogic-ok</code>。这是 Data Lab 思维练习，不是官方自动评分系统或完整 Lab 的替代。</p>
+<div class="insight"><strong>带走的模型：</strong>Data Lab 问“位规则能否推导”；Bomb Lab 问“机器状态能否解释”；Attack Lab 问“内存边界被破坏后什么假设失效”。三者把系统编程中的正确性与安全性连接为一条主线。</div>
+<h3>官方资源</h3>
+<p><a href="https://csapp.cs.cmu.edu/3e/labs.html">CMU CS:APP 3e Labs</a>、<a href="https://csapp.cs.cmu.edu/3e/attacklab.pdf">Attack Lab 官方讲义</a>（阶段定义见 Figure 1）、<a href="https://csapp.cs.cmu.edu/3e/students.html">CS:APP 学生资源</a>。应遵循课程许可、实验隔离与提交规定。</p>
+</section>
+</article>
+</main>
+<script>
+(() => {
+  const bx = document.getElementById('bit-x'), by = document.getElementById('bit-y');
+  const output = document.getElementById('xor-result');
+  if (!bx || !by || !output) return;
+  let x = 0, y = 0;
+  const render = () => {
+    const expected = x ^ y;
+    const derived = Number(!(!((x & !y)) && !((!x) & y)));
+    bx.textContent = '切换 x：' + x;
+    by.textContent = '切换 y：' + y;
+    bx.setAttribute('aria-pressed', String(Boolean(x)));
+    by.setAttribute('aria-pressed', String(Boolean(y)));
+    output.textContent = 'x=' + x + ', y=' + y + ' → x ⊕ y = ' + expected + '；仅用 ¬ 和 ∧ 也得 ' + derived;
+  };
+  bx.addEventListener('click', () => { x ^= 1; render(); });
+  by.addEventListener('click', () => { y ^= 1; render(); });
+  render();
+})();
+</script>
 
         <div class="footer-nav">
             <a href="23.html">← 上一章</a>
