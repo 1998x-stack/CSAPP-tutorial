@@ -66,7 +66,7 @@ def main():
     finally:
         server.shutdown()
         server.server_close()
-    (OUT / "report.json").write_text(json.dumps({"results":records},ensure_ascii=False,indent=2)+"\\n",encoding="utf-8")
+    (OUT / "report.json").write_text(json.dumps({"results":records},ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
 
 def run_browser(records):
     with sync_playwright() as p:
