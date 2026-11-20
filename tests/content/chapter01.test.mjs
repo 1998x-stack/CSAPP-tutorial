@@ -19,6 +19,21 @@ test("chapter 01 has semantic headings, navigation, source links and original di
   assert.match(html, /man7\.org\/linux\/man-pages/);
   assert.ok(!/<script[^>]+src=["']https?:/i.test(html), "no externally hosted JavaScript");
   assert.ok(!/<math\b[\s\S]*?<svg\b/i.test(html.split("<math")[1] || ""), "math markup independent of SVG");
+  const figurePaths = [
+    "../../docs/chapters/assets/01-bits.svg",
+    "../../docs/chapters/assets/01-compilation.svg",
+    "../../docs/chapters/assets/01-execution.svg"
+  ];
+  const inlineSvgs = [...html.matchAll(/<svg\b[\s\S]*?<\/svg>/g)].map(x => x[0]);
+  assert.equal(inlineSvgs.length, figurePaths.length);
+  figurePaths.forEach((path, index) => {
+    const asset = readFileSync(new URL(path, import.meta.url), "utf8");
+    assert.match(asset, /^<\?xml version="1\.0"/);
+    assert.equal(asset.replace(/^<\?xml[^>]*\?>\s*/, "").trim(), inlineSvgs[index].trim());
+    assert.match(asset, /xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
+    assert.match(asset, /<title\b/);
+    assert.match(asset, /<desc\b/);
+  });
   assert.ok(ledger.claims.length >= 6);
   assert.ok(ledger.claims.every(x => x.id && x.claim && x.kind && x.source_url && x.locator && x.status));
 });
