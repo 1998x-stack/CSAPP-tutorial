@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 const destination = resolve(root, 'dist');
 const manifest = JSON.parse(readFileSync(resolve(root, 'courses.json'), 'utf8'));
-const files = ['index.html', 'theme.css', 'courses.json', ...manifest.chapters.map((x) => x.file)];
+const files = ['index.html', 'theme.css', 'chapter-olah.css', 'courses.json', ...manifest.chapters.map((x) => x.file)];
 rmSync(destination, { recursive: true, force: true });
 mkdirSync(destination, { recursive: true });
 for (const file of files) {
