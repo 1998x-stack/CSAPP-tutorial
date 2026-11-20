@@ -1,0 +1,36 @@
+name: Olah chapters 08-10 browser QA
+
+on:
+  pull_request:
+    paths:
+      - '08.html'
+      - '09.html'
+      - '10.html'
+      - 'scripts/browser-qa-olah-08-10.py'
+      - '.github/workflows/olah-ch08-10-browser.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install reproducible Chromium tooling
+        run: |
+          python -m pip install playwright==1.65.2
+          python -m playwright install --with-deps chromium
+      - name: Inspect chapters 8, 9, 10 at desktop and phone widths
+        run: python scripts/browser-qa-olah-08-10.py --output reports/olah-08-10
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: olah-chapters-08-10-browser-qa
+          path: reports/olah-08-10
+          if-no-files-found: ignore
