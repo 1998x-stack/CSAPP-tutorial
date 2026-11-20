@@ -76,7 +76,7 @@ def check_illustrated_chapters() -> None:
             svg = ROOT / name
             tree = ET.parse(svg)
             root = tree.getroot()
-            if not root.get("viewBox") or not root.find("{http://www.w3.org/2000/svg}title"):
+            if not root.get("viewBox") or root.find("{http://www.w3.org/2000/svg}title") is None:
                 raise AssertionError(f"{name}: missing viewBox/title")
             if root.find("{http://www.w3.org/2000/svg}desc") is None:
                 raise AssertionError(f"{name}: no standalone description")
