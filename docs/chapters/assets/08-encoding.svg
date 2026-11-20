@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 252" role="img" aria-labelledby="isa-svg-title isa-svg-desc">
+<title id="isa-svg-title">Y86-64 irmovq 的十字节编码</title>
+<desc id="isa-svg-desc">第一个字节 30 表示指令种类和功能码，第二个字节 f8 表示无源寄存器和目的寄存器 r8，后八个字节为小端立即数，从 88 到 11。</desc>
+<g font-family="system-ui,sans-serif">
+<rect x="16" y="26" width="135" height="115" rx="13" fill="#e3f1ec" stroke="#8bbbae"/>
+<rect x="163" y="26" width="133" height="115" rx="13" fill="#fff0e4" stroke="#d5a991"/>
+<rect x="310" y="26" width="495" height="115" rx="13" fill="#ede9f7" stroke="#ac9bd1"/>
+<g text-anchor="middle" font-family="ui-monospace,monospace" font-size="28" font-weight="700" fill="#244b4d">
+<text x="84" y="93">30</text><text x="229" y="93" fill="#a25839">f8</text>
+<text x="557" y="88" font-size="23" fill="#5a4b8a">88 77 66 55 44 33 22 11</text></g>
+<g text-anchor="middle" fill="#405e5e" font-size="15">
+<text x="84" y="119">icode : ifun</text><text x="229" y="119">rA : rB</text><text x="557" y="119">valC · 8 字节</text>
+<text x="84" y="170">0x3 : 0x0</text><text x="229" y="170">0xF : 0x8</text><text x="557" y="170">0x1122334455667788（64 位整数）</text>
+</g><text x="16" y="218" font-size="17" fill="#3c6263">地址从左到右递增：最低有效字节 88 先出现</text>
+</g>
+</svg>
