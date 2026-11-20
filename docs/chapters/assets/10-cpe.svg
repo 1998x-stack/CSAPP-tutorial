@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 278" role="img" aria-labelledby="cpe-svg-title cpe-svg-desc">
+<title id="cpe-svg-title">通过不同输入规模估算 CPE 斜率</title>
+<desc id="cpe-svg-desc">横轴元素数 n，纵轴总周期 T，理论示意呈一条有固定开销 C 和斜率 CPE 的直线。数值并非实测。</desc>
+<g font-family="system-ui,sans-serif">
+<path d="M100 22 V221 H787" fill="none" stroke="#496d6d" stroke-width="3"/>
+<text x="26" y="28" font-size="17" fill="#496d6d">周期 T</text><text x="762" y="249" font-size="17" fill="#496d6d">元素 n</text>
+<path d="M102 180 L750 57" fill="none" stroke="#177e7c" stroke-width="5"/>
+<circle cx="102" cy="180" r="6" fill="#b66b4a"/><text x="123" y="197" font-size="15" fill="#a65b3b">固定成本 C</text>
+<circle cx="228" cy="156" r="7" fill="#177e7c" stroke="white" stroke-width="2"/><circle cx="368" cy="129.5" r="7" fill="#177e7c" stroke="white" stroke-width="2"/><circle cx="508" cy="103" r="7" fill="#177e7c" stroke="white" stroke-width="2"/><circle cx="648" cy="76.5" r="7" fill="#177e7c" stroke="white" stroke-width="2"/>
+<path d="M410 123 H555 V95" fill="none" stroke="#b46e50" stroke-width="2" stroke-dasharray="5 5"/>
+<text x="566" y="95" font-size="18" font-weight="700" fill="#a15a3e">斜率 = CPE</text>
+<text x="248" y="43" font-size="16" fill="#315b5c">T(n) ≈ C + n × CPE</text>
+<text x="104" y="267" font-size="14" fill="#617976">示意图：不同 n 测得的点需要重复实验，再拟合出稳定斜率</text>
+</g></svg>

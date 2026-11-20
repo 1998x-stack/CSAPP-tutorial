@@ -1,202 +1,256 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>第11章 存储器层次结构——技术 — 深入理解计算机系统（CSAPP）</title>
-    <link rel="stylesheet" href="theme.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="从数组访问顺序出发，理解 SRAM、DRAM、局部性、Memory Mountain 和 SSD FTL 的数据移动代价。">
+<title>第 11 章：存储器层次与局部性 · CSAPP 中文教程</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+:root{--paper:#fffdf9;--ink:#203035;--muted:#56686e;--accent:#147f80;--transform:#bf6343;--structure:#6b5da5;--edge:#d9e1dd;--wash:#f1f6f3}
+html{scroll-behavior:smooth;scroll-padding-top:1rem}
+body{padding:0;margin:0;background:#edf2ef;color:var(--ink);font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:17px;line-height:1.85}
+a{color:#096c70;text-underline-offset:.18em}a:hover{color:#a75337}
+a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.skip-link{position:absolute;top:-100px;left:12px;z-index:99;background:white;padding:8px 14px}.skip-link:focus{top:12px}
+.book-layout{display:grid;grid-template-columns:minmax(210px,254px) minmax(0,1fr);max-width:1420px;margin:auto;min-height:100vh;background:var(--paper);box-shadow:0 12px 70px #20303512}
+.book-sidebar{border-right:1px solid var(--edge);background:#f6f8f5;padding:24px 16px;position:relative}
+.sticky{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto}
+.brand{display:block;font-size:1.07rem;font-weight:800;color:var(--ink);text-decoration:none;padding:0 10px 12px;letter-spacing:-.02em}
+.brand small{display:block;font-size:.72rem;font-weight:550;color:var(--muted);letter-spacing:.1em}
+.chapter-nav{font-size:.8rem;line-height:1.5}
+.chapter-nav h2{font-size:.73rem;letter-spacing:.16em;color:var(--muted);border:0;padding:0;margin:8px 10px 12px}
+.chapter-nav ul{list-style:none;padding:0;margin:0}.chapter-nav li{margin:0}
+.chapter-nav a{display:flex;gap:9px;align-items:baseline;padding:8px 10px;color:#465960;border-radius:8px;text-decoration:none;font-weight:450}
+.chapter-nav a:hover{background:#e8f0ed;transform:none}
+.chapter-nav a span{font-size:.69rem;color:#7e928e;font-variant-numeric:tabular-nums}
+.chapter-nav a[aria-current]{background:#deece6;color:#085c5e;font-weight:750}
+.mobile-chapters{display:none}
+.essay{width:100%;min-width:0;padding:70px clamp(20px,6vw,96px) 80px}
+.article-body{max-width:850px;margin:0 auto}
+.eyebrow{color:var(--accent);font-size:.77rem;letter-spacing:.15em;text-transform:uppercase;font-weight:800}
+.essay h1{font-size:clamp(2.25rem,5vw,4.25rem);font-weight:800;letter-spacing:-.055em;line-height:1.2;margin:16px 0 23px;color:#182d30}
+.essay .dek{font-size:clamp(1.1rem,2vw,1.38rem);line-height:1.8;color:#435d60;max-width:40em}
+.essay p{margin:17px 0;color:var(--ink);line-height:1.9}
+.essay h2{font-size:clamp(1.55rem,3vw,2.12rem);margin:0 0 22px;padding:0;border:0;color:#1a3537;letter-spacing:-.035em;line-height:1.35}
+.essay h3{font-size:1.17rem;margin:29px 0 13px;color:#27454a}
+.essay section{margin-top:84px;scroll-margin-top:22px}
+.essay strong{color:#123c3f}
+.essay ul,.essay ol{padding-left:1.2rem;margin:18px 0}
+.essay li{padding-left:4px;margin:7px 0}
+.essay pre{border-radius:12px;background:#172a2e;color:#edf9f5;line-height:1.65;padding:20px;overflow-x:auto;font-size:.87rem;margin:22px 0;white-space:pre}
+.essay pre code{color:inherit;background:none;padding:0;font-size:inherit}
+.essay code{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-size:.84em;background:#eaf1ec;border-radius:4px;padding:2px 5px;overflow-wrap:anywhere}
+.essay figure{margin:30px 0 12px}
+.essay figcaption{font-size:.86rem;line-height:1.7;color:var(--muted);margin-top:10px}
+.essay svg{display:block;width:100%;height:auto}
+.section-no{display:block;font-size:.73rem;font-weight:800;letter-spacing:.17em;color:var(--accent);margin-bottom:11px}
+.lede-line{height:3px;width:66px;background:var(--accent);margin:28px 0}
+.inline-toc{display:flex;gap:8px;flex-wrap:wrap;margin:30px 0 0}
+.inline-toc a{font-size:.8rem;background:#eaf3ee;border:1px solid #cee3d8;border-radius:999px;padding:4px 11px;text-decoration:none;color:#21585a}
+.quote{border-left:3px solid var(--accent);padding:8px 0 8px 22px;font-size:1.09rem;color:#33595c;line-height:1.8;margin:30px 0}
+.figure-card{border:1px solid var(--edge);border-radius:18px;background:#fbfdfb;padding:clamp(12px,2.5vw,24px);box-shadow:0 12px 25px #102b2410}
+.pill{display:inline-block;font-size:.72rem;letter-spacing:.06em;font-weight:750;border-radius:5px;padding:2px 8px;background:#e9f3ec;color:#176f68}
+.trace-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:22px 0 12px}
+.step-button{cursor:pointer;border:1px solid #c7d8d0;border-radius:10px;padding:13px 8px;background:white;color:#31545a;text-align:center;font-weight:700;font:inherit;font-size:.85rem;line-height:1.4}
+.step-button[aria-pressed=true]{background:#176f70;color:white;border-color:#176f70}
+.step-button span{display:block;font-size:.68rem;opacity:.75;margin-bottom:2px}
+.step-detail{border-left:4px solid var(--accent);background:#eef5ef;padding:16px 20px;border-radius:0 10px 10px 0;min-height:104px}
+.step-detail p{margin:7px 0;font-size:.96rem}
+.diagram-step{transition:opacity .2s,filter .2s}
+[data-step-active="0"] .diagram-step:not([data-step-node="0"]),[data-step-active="1"] .diagram-step:not([data-step-node="1"]),[data-step-active="2"] .diagram-step:not([data-step-node="2"]),[data-step-active="3"] .diagram-step:not([data-step-node="3"]){opacity:.55}
+.callout{background:#f0f5f1;border-left:4px solid var(--accent);padding:15px 20px;border-radius:0 12px 12px 0;margin:25px 0}
+.callout p{margin:4px 0}
+.caution{background:#fff6ea;border-left-color:#ba7b32}
+.check-list{display:grid;gap:10px;margin:22px 0}
+.check-list div{border-top:1px solid var(--edge);padding:12px 0}
+.check-list b{display:block;color:var(--accent);font-size:.76rem;letter-spacing:.08em}
+.memory-bars{display:grid;gap:8px;margin:24px 0}
+.memory-row{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:center}
+.memory-row b{font-size:.88rem}
+.memory-track{height:40px;display:flex;align-items:center;border-radius:8px;background:#e8efeb;overflow:hidden}
+.memory-fill{height:100%;display:flex;align-items:center;padding-left:12px;color:white;font-size:.79rem;font-weight:750;min-width:104px}
+.memory-fill.level1{width:28%;background:#147f80}.memory-fill.level2{width:46%;background:#427eaa}.memory-fill.level3{width:72%;background:#7767a9}.memory-fill.level4{width:100%;background:#b46c4d}
+.small-note{font-size:.83rem!important;color:var(--muted)!important}
+.triad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:24px 0}
+.triad>div{border:1px solid var(--edge);border-radius:12px;padding:18px 16px;background:#fafbf8}
+.triad h3{margin:0 0 6px;color:#215c5e;font-size:1.08rem}
+.triad p{font-size:.9rem;margin:0;line-height:1.7}
+.math-panel{border-radius:14px;border:1px solid #d8e4dc;background:#f5f8f4;padding:16px 20px;margin:23px 0}
+.math-scroll{overflow-x:auto;max-width:100%;min-width:0;padding:8px 0}
+.math-scroll math[display=block]{width:max-content;min-width:100%;font-size:1.35rem;color:#1b4140}
+.math-label{font-size:.79rem;color:var(--muted);text-align:right}
+.widget{border:1px solid #cee0d9;border-radius:16px;padding:24px;margin:25px 0;background:#f5faf6}
+.widget h3{margin:0 0 8px}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:20px 0}
+.controls label{display:block;font-size:.91rem;font-weight:700}
+.controls input{width:100%;accent-color:var(--accent);margin:12px 0 0;cursor:pointer}
+.widget-output{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;border-top:1px solid #d2e3d9;padding-top:16px}
+.widget-output output{font-size:2.3rem;line-height:1.2;font-weight:800;color:#0d6c70;font-variant-numeric:tabular-nums}
+.widget-output p{margin:2px 0;font-size:.86rem}
+.table-wrap{max-width:100%;overflow-x:auto}
+.essay table{min-width:570px;font-size:.9rem;margin:16px 0;border-collapse:collapse}
+.essay th,.essay td{padding:10px 12px;border:1px solid #d6e1da;vertical-align:top}
+.essay th{background:#e8f1eb;color:#285354}
+.references{font-size:.88rem}
+.references li{overflow-wrap:anywhere}
+.footer-nav{margin-top:65px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--edge);padding:22px 0}
+.footer-nav a{background:#eaf2ee;padding:8px 16px;border-radius:999px;text-decoration:none}
+@media(max-width:900px){.book-layout{display:block}.book-sidebar{padding:9px 18px;border:0;border-bottom:1px solid var(--edge)}.sticky{position:static;max-height:none;overflow:visible}.brand{padding:5px 2px;font-size:.92rem}.brand small{display:inline;margin-left:8px}.chapter-nav{display:none}.mobile-chapters{display:block;font-size:.86rem;padding:6px 2px}.mobile-chapters summary{cursor:pointer;color:#315d5d;font-weight:700}.mobile-chapters ul{max-height:185px;overflow-y:auto;list-style:none;padding:0;margin:8px 0}.mobile-chapters li{margin:0}.mobile-chapters a{display:block;padding:5px}.essay{padding:42px 22px 60px}}
+@media(max-width:580px){.figure-card figure{max-width:100%;overflow-x:auto}.essay .figure-card svg{min-width:660px}.essay{padding:36px 16px 60px}.essay section{margin-top:62px}.trace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.controls,.triad{grid-template-columns:1fr}.memory-row{grid-template-columns:72px minmax(0,1fr);gap:7px}.memory-row b{font-size:.76rem}.figure-card{padding:10px}.essay pre{font-size:.75rem;padding:14px}.essay h1{letter-spacing:-.035em}.essay svg{min-width:0}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important}}
+@media print{body{background:white;font-size:11pt}.book-layout{display:block;box-shadow:none}.book-sidebar,.inline-toc,.trace-grid,.controls,.skip-link{display:none!important}.essay{padding:0}.article-body{max-width:none}.essay section{margin-top:24pt;break-inside:auto}.figure-card,.math-panel,.widget{break-inside:avoid;box-shadow:none}.math-scroll{overflow:visible}.math-scroll math[display=block]{font-size:1.15rem}.references a::after{content:" (" attr(href) ")";font-size:.75em}}
+
+.memory-note{font-size:.87rem!important;color:var(--muted)!important}
+.memory-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.81rem;color:var(--muted)}
+.memory-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:middle}
+@media(max-width:580px){.essay .figure-card svg{min-width:600px}.essay .compact-figure svg{min-width:500px}}
+</style>
 </head>
 <body>
-<div class="double-border">
-<div class="container">
-    <div class="sidebar">
-        <h3>💻 课程目录</h3>
-        <ul class="chapter-list">
-            <li><a href="01.html">第1章 计算机系统漫游</a></li>
-            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
-            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
-            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
-            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
-            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
-            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
-            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
-            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
-            <li><a href="10.html">第10章 优化程序性能</a></li>
-            <li><a href="11.html" class="active">第11章 存储器层次结构——技术</a></li>
-            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
-            <li><a href="13.html">第13章 链接——静态链接</a></li>
-            <li><a href="14.html">第14章 链接——动态链接</a></li>
-            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
-            <li><a href="16.html">第16章 异常控制流——信号</a></li>
-            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
-            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
-            <li><a href="19.html">第19章 系统级I/O</a></li>
-            <li><a href="20.html">第20章 网络编程——基础</a></li>
-            <li><a href="21.html">第21章 网络编程——进阶</a></li>
-            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
-            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
-            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
-            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
-            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
-            <li><a href="27.html">第27章 现代系统新趋势</a></li>
-            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
-        </ul>
-    </div>
-    <div class="main-content">
-        <h2>第十一章：存储器层次结构——技术</h2>
+<a class="skip-link" href="#content">跳转到正文</a>
+<div class="book-layout">
+<aside class="book-sidebar">
+  <div class="sticky">
+    <a class="brand" href="index.html">CSAPP · 存储层次<small>COMPUTER SYSTEMS</small></a>
+    <nav class="chapter-nav" aria-label="课程章节目录">
+      <h2>课程 · 28 讲</h2><ul><li><a href="01.html"><span>01</span>计算机系统漫游</a></li>
+<li><a href="02.html"><span>02</span>信息的表示与处理——整数</a></li>
+<li><a href="03.html"><span>03</span>信息的表示与处理——浮点数</a></li>
+<li><a href="04.html"><span>04</span>程序的机器级表示——基础</a></li>
+<li><a href="05.html"><span>05</span>程序的机器级表示——控制流</a></li>
+<li><a href="06.html"><span>06</span>程序的机器级表示——过程与栈</a></li>
+<li><a href="07.html"><span>07</span>程序的机器级表示——数据与进阶</a></li>
+<li><a href="08.html"><span>08</span>处理器体系结构——ISA设计</a></li>
+<li><a href="09.html"><span>09</span>处理器体系结构——流水线</a></li>
+<li><a href="10.html"><span>10</span>优化程序性能</a></li>
+<li><a aria-current="page" href="11.html"><span>11</span>存储器层次结构——技术</a></li>
+<li><a href="12.html"><span>12</span>存储器层次结构——Cache</a></li>
+<li><a href="13.html"><span>13</span>链接——静态链接</a></li>
+<li><a href="14.html"><span>14</span>链接——动态链接</a></li>
+<li><a href="15.html"><span>15</span>异常控制流——异常与进程</a></li>
+<li><a href="16.html"><span>16</span>异常控制流——信号</a></li>
+<li><a href="17.html"><span>17</span>虚拟内存——地址翻译</a></li>
+<li><a href="18.html"><span>18</span>虚拟内存——内存分配</a></li>
+<li><a href="19.html"><span>19</span>系统级I/O</a></li>
+<li><a href="20.html"><span>20</span>网络编程——基础</a></li>
+<li><a href="21.html"><span>21</span>网络编程——进阶</a></li>
+<li><a href="22.html"><span>22</span>并发编程——线程基础</a></li>
+<li><a href="23.html"><span>23</span>并发编程——高阶模式</a></li>
+<li><a href="24.html"><span>24</span>经典Lab实战(I)</a></li>
+<li><a href="25.html"><span>25</span>经典Lab实战(II)</a></li>
+<li><a href="26.html"><span>26</span>经典Lab实战(III)——Proxy Lab</a></li>
+<li><a href="27.html"><span>27</span>现代系统新趋势</a></li>
+<li><a href="28.html"><span>28</span>综合项目：手写高性能Web服务器</a></li></ul>
+    </nav>
+    <details class="mobile-chapters"><summary>浏览全部 28 章</summary><ul><li><a href="01.html"><span>01</span>计算机系统漫游</a></li>
+<li><a href="02.html"><span>02</span>信息的表示与处理——整数</a></li>
+<li><a href="03.html"><span>03</span>信息的表示与处理——浮点数</a></li>
+<li><a href="04.html"><span>04</span>程序的机器级表示——基础</a></li>
+<li><a href="05.html"><span>05</span>程序的机器级表示——控制流</a></li>
+<li><a href="06.html"><span>06</span>程序的机器级表示——过程与栈</a></li>
+<li><a href="07.html"><span>07</span>程序的机器级表示——数据与进阶</a></li>
+<li><a href="08.html"><span>08</span>处理器体系结构——ISA设计</a></li>
+<li><a href="09.html"><span>09</span>处理器体系结构——流水线</a></li>
+<li><a href="10.html"><span>10</span>优化程序性能</a></li>
+<li><a aria-current="page" href="11.html"><span>11</span>存储器层次结构——技术</a></li>
+<li><a href="12.html"><span>12</span>存储器层次结构——Cache</a></li>
+<li><a href="13.html"><span>13</span>链接——静态链接</a></li>
+<li><a href="14.html"><span>14</span>链接——动态链接</a></li>
+<li><a href="15.html"><span>15</span>异常控制流——异常与进程</a></li>
+<li><a href="16.html"><span>16</span>异常控制流——信号</a></li>
+<li><a href="17.html"><span>17</span>虚拟内存——地址翻译</a></li>
+<li><a href="18.html"><span>18</span>虚拟内存——内存分配</a></li>
+<li><a href="19.html"><span>19</span>系统级I/O</a></li>
+<li><a href="20.html"><span>20</span>网络编程——基础</a></li>
+<li><a href="21.html"><span>21</span>网络编程——进阶</a></li>
+<li><a href="22.html"><span>22</span>并发编程——线程基础</a></li>
+<li><a href="23.html"><span>23</span>并发编程——高阶模式</a></li>
+<li><a href="24.html"><span>24</span>经典Lab实战(I)</a></li>
+<li><a href="25.html"><span>25</span>经典Lab实战(II)</a></li>
+<li><a href="26.html"><span>26</span>经典Lab实战(III)——Proxy Lab</a></li>
+<li><a href="27.html"><span>27</span>现代系统新趋势</a></li>
+<li><a href="28.html"><span>28</span>综合项目：手写高性能Web服务器</a></li></ul></details>
+  </div>
+</aside>
 
-        <p>上一章结束时我提到，程序慢很多时候不是因为 CPU 不够快，而是数据没在正确的地方。这是一个看似简单但极其深刻的观察。让我们用数据说话：一条 L1 Cache 命中的加载指令大约需要 1ns，而一次 DRAM 主存访问需要约 100ns，一次 SSD 随机访问需要约 10,000ns（10μs）。这之间的差距是 3 到 4 个数量级。</p>
+<main class="essay" id="content"><article class="article-body">
+<header><div class="eyebrow">CHAPTER 11 · STORAGE TECHNOLOGIES</div><h1>为什么换一种访问顺序，内存就像变快了？</h1>
+<p class="dek">同一份数组、相同的计算量，只是调整遍历顺序，CPU 等待数据的时间就可能相差很大。答案不在算术，而在数据怎样穿过存储层次。</p>
+<div class="lede-line"></div><nav class="inline-toc" aria-label="本章导航"><a href="#levels">数据去哪儿了</a><a href="#locality">局部性</a><a href="#mountain">存储山</a><a href="#flash">SSD 与 FTL</a><a href="#try">动手验证</a></nav></header>
+<section id="levels"><span class="section-no">11.1 · 问题与整体模型</span><h2>CPU 不是直接从 SSD 里“取一个整数”</h2>
+<p>现代计算机采用多个层次保存数据：寄存器、处理器缓存（通常用 SRAM）、主存（DRAM）和持久存储（SSD/HDD）。不同层次的容量、功耗、价格与访问代价不能同时最优。处理器希望大部分访问在更近的一层完成，只有找不到数据时才付出向下层搬运的代价。</p>
+<div class="figure-card compact-figure"><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 278" role="img" aria-labelledby="hier-title hier-desc" data-export="11-hierarchy.svg"><title id="hier-title">命中更近一层可以避免更远的数据搬运</title><desc id="hier-desc">从 CPU、L1、L2、LLC 到 DRAM 是逐级查找的概念示意；SSD 通过缺页或文件 I/O 路径参与，不属于硬件 Cache 的直接下一级。</desc><rect width="760" height="278" rx="16" fill="#f7faf7"/><text x="24" y="31" font-size="17" fill="#234648" font-weight="700">一次数据访问：优先向近处寻找</text><rect x="20" y="78" width="95" height="82" rx="11" fill="#2b5d61"/><text x="67.5" y="111" text-anchor="middle" font-size="21" fill="white" font-weight="700">CPU</text><text x="67.5" y="138" text-anchor="middle" font-size="13" fill="white">计算</text><rect x="145" y="78" width="95" height="82" rx="11" fill="#147f80"/><text x="192.5" y="111" text-anchor="middle" font-size="21" fill="white" font-weight="700">L1</text><text x="192.5" y="138" text-anchor="middle" font-size="13" fill="white">最靠近</text><rect x="270" y="78" width="95" height="82" rx="11" fill="#3f7fa7"/><text x="317.5" y="111" text-anchor="middle" font-size="21" fill="white" font-weight="700">L2</text><text x="317.5" y="138" text-anchor="middle" font-size="13" fill="white">更大</text><rect x="395" y="78" width="95" height="82" rx="11" fill="#7067ab"/><text x="442.5" y="111" text-anchor="middle" font-size="21" fill="white" font-weight="700">LLC</text><text x="442.5" y="138" text-anchor="middle" font-size="13" fill="white">共享/末级</text><rect x="520" y="78" width="95" height="82" rx="11" fill="#bd744c"/><text x="567.5" y="111" text-anchor="middle" font-size="21" fill="white" font-weight="700">DRAM</text><text x="567.5" y="138" text-anchor="middle" font-size="13" fill="white">主存</text><rect x="645" y="78" width="95" height="82" rx="11" fill="#777f86"/><text x="692.5" y="111" text-anchor="middle" font-size="21" fill="white" font-weight="700">SSD</text><text x="692.5" y="138" text-anchor="middle" font-size="13" fill="white">持久存储</text><path d="M115 119 h22" stroke="#47666a" stroke-width="2.3"/><path d="M132 114 l5 5 -5 5" fill="none" stroke="#47666a" stroke-width="2.3"/><path d="M240 119 h22" stroke="#47666a" stroke-width="2.3"/><path d="M257 114 l5 5 -5 5" fill="none" stroke="#47666a" stroke-width="2.3"/><path d="M365 119 h22" stroke="#47666a" stroke-width="2.3"/><path d="M382 114 l5 5 -5 5" fill="none" stroke="#47666a" stroke-width="2.3"/><path d="M490 119 h22" stroke="#47666a" stroke-width="2.3"/><path d="M507 114 l5 5 -5 5" fill="none" stroke="#47666a" stroke-width="2.3"/><path d="M615 119 h22" stroke="#9c7e6e" stroke-width="2.2" stroke-dasharray="5 5"/><path d="M631 114 l6 5 -6 5" fill="none" stroke="#9c7e6e" stroke-width="2"/><text x="620" y="182" text-anchor="middle" font-size="13" fill="#8e654d">缺页 / 文件 I/O</text><path d="M60 200 h630" stroke="#d1ddd8" stroke-width="2"/><text x="24" y="227" font-size="15" fill="#36575a">左侧：更靠近处理器、通常容量较小</text><text x="24" y="253" font-size="15" fill="#36575a">右侧：通常容量更大、访问代价更高；具体时延依平台而异</text></svg><figcaption>图 11-1 · 实线是缓存逐级查找的概念路径；虚线强调 SSD 并非 DRAM 之后每次缓存未命中的必经一步。文件读写和缺页可能引发存储设备 I/O，具体路径由系统决定。</figcaption></figure></div>
+<p><strong>SRAM</strong> 靠多个晶体管构成的存储单元保持状态，通常不需要 DRAM 式定期刷新，但位密度较低；<strong>DRAM</strong> 依靠电容电荷保存信息，需要刷新，适合较大容量的主存。<strong>NAND Flash</strong> 不断电也可保留数据，但写入与擦除具有不同粒度；机械硬盘的寻道与旋转则引入额外访问开销。</p>
+<div class="callout"><p><strong>不要背固定的纳秒表。</strong> L1 命中延迟、DRAM 访问时间、SSD 读延迟会随硬件、访问模式、队列深度和工作负载改变。理解<strong>谁在搬运什么</strong>比记住“L1 必定 1 ns”更重要。</p></div></section>
+<section id="locality"><span class="section-no">11.2 · 最关键的程序性质</span><h2>局部性让小而快的缓存变得有用</h2>
+<p><strong>时间局部性</strong>指近期访问过的位置可能再次被访问；<strong>空间局部性</strong>指相邻地址常被连续使用。缓存通常按整条 cache line 搬运，而不是只为单个 <code>int</code> 搬运四个字节。因此，读取连续元素往往能用上同一次搬运的其余数据。</p>
+<div class="figure-card"><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 275" role="img" aria-labelledby="loc-title loc-desc" data-export="11-locality.svg"><title id="loc-title">相同二维数组，顺序遍历与跨行遍历的前四次访问</title><desc id="loc-desc">左边首先访问第 0 行连续四个元素；右边首先访问第 0 列跨四行的元素，内存以行优先排列。</desc><rect width="760" height="275" rx="16" fill="#f7faf7"/><text x="50" y="34" font-size="18" fill="#205657" font-weight="700">按行扫描</text><text x="442" y="34" font-size="18" fill="#205657" font-weight="700">按列扫描</text><rect x="60" y="58" width="40" height="35" rx="5" fill="#147f80" stroke="#d0ddd7"/><text x="80" y="81" text-anchor="middle" font-size="13" fill="white">1</text><rect x="106" y="58" width="40" height="35" rx="5" fill="#147f80" stroke="#d0ddd7"/><text x="126" y="81" text-anchor="middle" font-size="13" fill="white">2</text><rect x="152" y="58" width="40" height="35" rx="5" fill="#147f80" stroke="#d0ddd7"/><text x="172" y="81" text-anchor="middle" font-size="13" fill="white">3</text><rect x="198" y="58" width="40" height="35" rx="5" fill="#147f80" stroke="#d0ddd7"/><text x="218" y="81" text-anchor="middle" font-size="13" fill="white">4</text><rect x="60" y="100" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="80" y="123" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="106" y="100" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="126" y="123" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="152" y="100" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="172" y="123" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="198" y="100" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="218" y="123" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="60" y="142" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="80" y="165" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="106" y="142" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="126" y="165" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="152" y="142" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="172" y="165" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="198" y="142" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="218" y="165" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="60" y="184" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="80" y="207" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="106" y="184" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="126" y="207" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="152" y="184" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="172" y="207" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="198" y="184" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="218" y="207" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="452" y="58" width="40" height="35" rx="5" fill="#147f80" stroke="#d0ddd7"/><text x="472" y="81" text-anchor="middle" font-size="13" fill="white">1</text><rect x="498" y="58" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="518" y="81" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="544" y="58" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="564" y="81" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="590" y="58" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="610" y="81" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="452" y="100" width="40" height="35" rx="5" fill="#147f80" stroke="#d0ddd7"/><text x="472" y="123" text-anchor="middle" font-size="13" fill="white">2</text><rect x="498" y="100" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="518" y="123" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="544" y="100" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="564" y="123" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="590" y="100" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="610" y="123" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="452" y="142" width="40" height="35" rx="5" fill="#147f80" stroke="#d0ddd7"/><text x="472" y="165" text-anchor="middle" font-size="13" fill="white">3</text><rect x="498" y="142" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="518" y="165" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="544" y="142" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="564" y="165" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="590" y="142" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="610" y="165" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="452" y="184" width="40" height="35" rx="5" fill="#147f80" stroke="#d0ddd7"/><text x="472" y="207" text-anchor="middle" font-size="13" fill="white">4</text><rect x="498" y="184" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="518" y="207" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="544" y="184" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="564" y="207" text-anchor="middle" font-size="13" fill="#617777">·</text><rect x="590" y="184" width="40" height="35" rx="5" fill="#e7eeeb" stroke="#d0ddd7"/><text x="610" y="207" text-anchor="middle" font-size="13" fill="#617777">·</text><path d="M276 130 h144" stroke="#c9d7d1" stroke-width="2" stroke-dasharray="6 5"/><text x="348" y="111" text-anchor="middle" fill="#52716d" font-size="14">同一块内存</text><text x="58" y="252" fill="#476465" font-size="14">1 → 2 → 3 → 4：地址连续</text><text x="450" y="252" fill="#476465" font-size="14">1 → 2 → 3 → 4：跨行跳跃</text></svg><figcaption>图 11-2 · C 的二维数组按行优先存储。绿色数字表示前四次访问的顺序；左图通常更容易利用单条缓存行中的相邻元素，右图相邻访问地址跨过完整一行。</figcaption></figure></div>
+<pre><code>// C11：同一份数据，两种次序；N 仅作示意
+for (size_t i = 0; i &lt; N; ++i)
+    for (size_t j = 0; j &lt; N; ++j)
+        sink += a[i][j];      // 相邻列，地址连续
 
-        <p>如果你的程序频繁访问的数据恰好不在 Cache 中而在主存里，CPU 就得停下来干等——这就是所谓的"内存壁（Memory Wall）"。现代 CPU 的时钟频率已经很难大幅提升了，于是处理器设计者把更多晶体管投入到 Cache 和预取机制中，试图掩盖这个差距。但作为程序员，如果你不理解存储技术的本质差异，就无法写出能高效利用这些机制的程序。</p>
-
-        <p>这一章我们从最底层的存储技术开始，逐步构建起对整个"存储山"（Memory Mountain）的认知。先打好技术基础，下一章我们再深入 Cache 的设计与优化。</p>
-
-        <h3>11.1 存储技术全景</h3>
-
-        <p>计算机系统中使用的存储技术多种多样，从快到慢、从贵到便宜、从大到小，构成了一个层次分明的体系：</p>
-
-        <table>
-            <tr>
-                <th>技术</th>
-                <th>典型容量</th>
-                <th>访问时间</th>
-                <th>成本/GB（约）</th>
-                <th>特点</th>
-            </tr>
-            <tr>
-                <td>SRAM（CPU 缓存）</td>
-                <td>32 KB - 32 MB</td>
-                <td>0.5 - 2 ns</td>
-                <td>$500 - $1000</td>
-                <td>6 个晶体管/bit，速度极快，集成度低</td>
-            </tr>
-            <tr>
-                <td>DRAM（主存）</td>
-                <td>8 - 256 GB</td>
-                <td>50 - 100 ns</td>
-                <td>$10 - $30</td>
-                <td>1 个电容 + 1 个晶体管/bit，需刷新</td>
-            </tr>
-            <tr>
-                <td>NAND Flash（SSD）</td>
-                <td>128 GB - 8 TB</td>
-                <td>10 - 100 μs</td>
-                <td>$0.10 - $0.30</td>
-                <td>非易失，擦写次数有限（MLC ~ 3000 次）</td>
-            </tr>
-            <tr>
-                <td>磁盘（HDD）</td>
-                <td>500 GB - 20 TB</td>
-                <td>3 - 10 ms</td>
-                <td>$0.02 - $0.05</td>
-                <td>机械结构，随机访问极慢，容量成本最低</td>
-            </tr>
-        </table>
-
-        <p>SRAM（静态随机存取存储器）和 DRAM（动态随机存取存储器）的区别在于：SRAM 用 6 个晶体管构成一个触发器来存储 1 比特，不需要刷新，速度极快；DRAM 用一个晶体管加一个电容来存储 1 比特，电容会漏电，需要定期刷新（每 64ms 刷新一次），速度较慢。DRAM 的密度是 SRAM 的 4-6 倍，所以主存用 DRAM 而不是 SRAM——否则你的 16GB 内存条要花掉上万美元。</p>
-
-        <p>磁盘（HDD）是通过磁头在旋转的盘片上读写数据的机械装置。它的致命弱点是随机访问——磁头需要物理移动到正确的磁道（寻道时间 ~5ms），然后等待盘片旋转到正确的扇区（旋转延迟 ~3ms）。这就是为什么 HDD 的随机 IOPS（每秒 I/O 操作数）只有 100-200，而 SSD 可以达到数万到数十万。</p>
-
-        <div class="tip">
-            <p><strong>存储层次的核心思想</strong>：上层存储更快但更贵（容量小），下层存储更慢但更便宜（容量大）。通过把最常用的数据放在上层，不常用的放在下层，系统可以在"接近快的速度"和"接近便宜的容量"之间取得平衡。这种"用空间换时间"的思想贯穿了整个计算机系统设计。</p>
-        </div>
-
-        <h3>11.2 时间局部性与空间局部性</h3>
-
-        <p>存储层次之所以有效，不是靠硬件魔法，而是靠程序的<strong>局部性（Locality）</strong>。局部性有两种：</p>
-        <ul>
-            <li><strong>时间局部性（Temporal Locality）</strong>：如果一个内存位置被访问了，它很可能在不久的将来被再次访问。例如循环中的循环变量。</li>
-            <li><strong>空间局部性（Spatial Locality）</strong>：如果一个内存位置被访问了，它附近的地址很可能也被访问。例如数组的顺序遍历。</li>
-        </ul>
-
-        <p>来看两个对比鲜明的代码片段：</p>
-
-        <pre><code>#define N 10000
-int a[N][N];
-
-// 好的局部性——按行访问（空间局部性好）
-int sum_row_major() {
-    int sum = 0;
-    for (int i = 0; i &lt; N; i++)
-        for (int j = 0; j &lt; N; j++)
-            sum += a[i][j];  // 按内存布局顺序访问
-    return sum;
-}
-
-// 差的局部性——按列访问（空间局部性差）
-int sum_col_major() {
-    int sum = 0;
-    for (int j = 0; j &lt; N; j++)
-        for (int i = 0; i &lt; N; i++)
-            sum += a[i][j];  // 跨行跳着访问！
-    return sum;
+for (size_t j = 0; j &lt; N; ++j)
+    for (size_t i = 0; i &lt; N; ++i)
+        sink += a[i][j];      // 相邻行，跨越行跨度</code></pre>
+<p>这里的 <code>sink</code>、<code>a</code> 与 <code>N</code> 需由完整程序定义；此片段是教学伪代码，不能直接单独编译。真实表现还取决于矩阵规模、编译器优化、预取器、页映射和缓存容量。<a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf">C11 草案 N1570</a> 中多维数组的规则解释了这种地址连续性。</p></section>
+<section id="mountain"><span class="section-no">11.3 · 可观察的结果</span><h2>Memory Mountain 为什么像一座山？</h2>
+<p>在 CS:APP 的 <em>Memory Mountain</em> 思路中，横向改变<strong>工作集大小</strong>，纵向改变<strong>访问步长</strong>，记录读取吞吐量。工作集从较小缓存扩展到主存时，复用位置和失效率改变；步长变大时，每次搬入的缓存行可能只有一小部分被访问。二维参数共同塑造了吞吐量曲面。</p>
+<p>这不是一套在所有 CPU 上都成立的固定数值。硬件预取、并发内存请求、带宽饱和、NUMA、频率变化都会改变曲线；<strong>吞吐量</strong>与一次随机加载的<strong>延迟</strong>也不能等同。</p>
+<div class="widget"><h3>试算：一条 64 B 缓存行，究竟用到了多少？</h3>
+<p>仅考虑流式读取、4 B 元素、起始地址对齐、按固定步长访问的理想模型。拖动步长，看每条<strong>被触及</strong>的缓存行中使用多少有效字节；这不是实际性能测试。</p>
+<div class="controls"><label for="stride">访问步长（单位：元素）<input id="stride" type="range" min="0" max="5" step="1" value="0"></label><div><strong id="stride-label">1 个元素</strong><p class="memory-note">步长 1、2、4、8、16、32</p></div></div>
+<div class="widget-output"><div><output id="used" aria-live="polite">100%</output><p id="used-detail">每条被触及的缓存行使用 16 个元素（64 B / 64 B）</p></div><div><strong id="waste">0 B</strong><p>该缓存行中未被本轮遍历使用的字节</p></div></div></div>
+<p>注意：如果步长大于一条缓存行所含的元素数，还会跳过整条缓存行；上面的利用率是<strong>条件于已触及的行</strong>，不是所有内存地址的整体占比。</p></section>
+<section id="flash"><span class="section-no">11.4 · 持久存储的另一种不对称</span><h2>SSD 写一次 4 KB，为什么可能写得更多？</h2>
+<p>许多 NAND 设备以<strong>页</strong>为编程单元、以更大的<strong>块</strong>为擦除单元。已经写入的物理页通常不能像 DRAM 那样原地覆盖。<strong>FTL（Flash Translation Layer）</strong>把主机逻辑块地址映射到物理位置；一次更新可以写入空闲页、使旧页失效，然后在日后垃圾回收时整理有效数据并擦除块。</p>
+<div class="figure-card"><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 265" role="img" aria-labelledby="ftl-title ftl-desc" data-export="11-ftl.svg"><title id="ftl-title">FTL 将逻辑地址的更新映射到新的物理页</title><desc id="ftl-desc">主机再次写逻辑页 LBA 7，FTL 将新数据写到空闲物理页 P3，原物理页 P0 失效；之后垃圾回收可搬移有效数据并回收擦除块。</desc><rect width="760" height="265" rx="16" fill="#f7faf7"/><text x="24" y="30" font-size="17" font-weight="700" fill="#234648">逻辑页更新 ≠ 原位置覆盖</text><rect x="28" y="72" width="164" height="75" rx="11" fill="#e8f3ef" stroke="#8ab7a9"/><text x="110" y="101" text-anchor="middle" font-size="17" fill="#1c5958" font-weight="700">主机写入 LBA 7</text><text x="110" y="127" text-anchor="middle" font-size="13" fill="#47696b">第二次写入</text><path d="M194 110 h76" stroke="#16827c" stroke-width="3"/><path d="M260 104 l10 6 -10 6" fill="none" stroke="#16827c" stroke-width="3"/><rect x="273" y="72" width="145" height="75" rx="11" fill="#d7eced" stroke="#79b0b1"/><text x="345" y="102" text-anchor="middle" font-size="18" fill="#195f61" font-weight="700">FTL 映射</text><text x="345" y="125" text-anchor="middle" font-size="13" fill="#47696b">LBA 7 → P3</text><path d="M420 110 h58" stroke="#16827c" stroke-width="3"/><path d="M469 104 l10 6 -10 6" fill="none" stroke="#16827c" stroke-width="3"/><rect x="488" y="59" width="244" height="115" rx="11" fill="#fffdf9" stroke="#c7d6cc"/><text x="502" y="79" font-size="14" fill="#3c5557">NAND 物理页</text><rect x="500" y="95" width="48" height="50" rx="5" fill="#f7e4dc" stroke="#c98b73"/><text x="524" y="115" text-anchor="middle" font-size="14" fill="#385b5d">P0</text><text x="524" y="132" text-anchor="middle" font-size="12" fill="#385b5d">无效</text><rect x="557" y="95" width="48" height="50" rx="5" fill="#e8eeea" stroke="#bfd1c7"/><text x="581" y="115" text-anchor="middle" font-size="14" fill="#385b5d">P1</text><text x="581" y="132" text-anchor="middle" font-size="12" fill="#385b5d">空闲</text><rect x="614" y="95" width="48" height="50" rx="5" fill="#e8eeea" stroke="#bfd1c7"/><text x="638" y="115" text-anchor="middle" font-size="14" fill="#385b5d">P2</text><text x="638" y="132" text-anchor="middle" font-size="12" fill="#385b5d">空闲</text><rect x="671" y="95" width="48" height="50" rx="5" fill="#147f80" stroke="#bfd1c7"/><text x="695" y="115" text-anchor="middle" font-size="14" fill="white">P3</text><text x="695" y="132" text-anchor="middle" font-size="12" fill="white">新值</text><path d="M503 100 l42 42" stroke="#b66e51" stroke-width="2"/><text x="25" y="216" font-size="15" fill="#31595a">更新发生后：旧页标记为无效，新页保存有效版本</text><text x="25" y="242" font-size="14" fill="#637473">垃圾回收后续可能搬移有效页并以块为单位擦除；并非每次写入立即擦除</text></svg><figcaption>图 11-3 · 一次示意更新。图中的 P0、P3 与 LBA 7 是人为构造的教学编号，并非所有 SSD 都采用相同映射粒度或回收算法。</figcaption></figure></div>
+<div class="math-panel"><div class="math-scroll" role="region" tabindex="0" aria-label="写放大定义"><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><mrow><mi>WA</mi><mo>=</mo><mfrac><mtext>NAND 实际编程字节数</mtext><mtext>主机写入字节数</mtext></mfrac></mrow></math></div><div class="math-label">写放大系数（同一统计窗口、同一计量口径）</div></div>
+<p>当垃圾回收需要搬移仍有效的页时，NAND 的物理写入量可能超过主机请求量；准确系数与过量预留空间、写入模式、设备固件和统计口径有关。<strong>TRIM/discard</strong>允许主机告知设备某些逻辑块不再需要，但并不保证每条通知立即回收或立即提升性能。</p>
+<p>在 Linux 上可参考 <a href="https://man7.org/linux/man-pages/man8/fstrim.8.html">fstrim(8)</a> 检查文件系统如何把不再使用的块告知底层设备。是否启用周期性 TRIM 或在线 discard 应结合系统支持与业务负载评估。</p></section>
+<section id="try"><span class="section-no">11.5 · 可复现的小实验</span><h2>先验证“顺序不同，结果仍应相同”</h2>
+<p>下面的 C11 程序在固定的 16×16 数组上分别进行按行与按列求和，断言两者结果相同。这检验的是<strong>访问次序与语义</strong>，不是性能差异；数组过小，不足以展示存储山。</p>
+<pre><code>#include &lt;assert.h&gt;
+#include &lt;stdio.h&gt;
+int main(void) {
+    int a[16][16];
+    int row = 0, col = 0;
+    for (int i = 0; i &lt; 16; ++i)
+        for (int j = 0; j &lt; 16; ++j) a[i][j] = i * 16 + j;
+    for (int i = 0; i &lt; 16; ++i)
+        for (int j = 0; j &lt; 16; ++j) row += a[i][j];
+    for (int j = 0; j &lt; 16; ++j)
+        for (int i = 0; i &lt; 16; ++i) col += a[i][j];
+    assert(row == col &amp;&amp; row == 32640);
+    printf("row=%d col=%d\n", row, col);
+    return 0;
 }</code></pre>
-
-        <p>C 语言的二维数组在内存中是<strong>行优先（Row-major）</strong>存储的——a[0][0], a[0][1], a[0][2], ... , a[1][0], a[1][1], ...。行优先访问触发了空间局部性（连续的地址被顺序访问），Cache 一次加载一个 Cache 行（64 字节），连续访问能充分利用每一行。列优先访问则每次跳到不同的行——a[i][j] 和 a[i+1][j] 之间相隔 N×4 字节（如果 N=10000 就是 40KB），Cache 根本帮不上忙，每次都要去主存加载。</p>
-
-        <p>实际测试中，在 N=10000 时，行优先版本可能比列优先版本快 10-20 倍。同样的计算量，只是访问顺序不同，性能差距如此之大——这就是局部性的力量。</p>
-
-        <div class="highlight">
-            <p><strong>局部性思维</strong>：编写高性能代码的关键之一就是培养"局部性直觉"。每次你写一个多重循环，都应该问自己：内层循环是在连续访问内存吗？如果是嵌套循环访问多维数组，最内层循环应该遍历哪个维度？这个意识一旦建立，你写出的代码自然而然就是 Cache 友好的。</p>
-        </div>
-
-        <h3>11.3 存储山实验</h3>
-
-        <p>CSAPP 中有一个经典的实验叫做<strong>Memory Mountain（存储山）</strong>，它通过测量不同工作集大小和不同步长下的读吞吐量，直观地展示了存储层次的影响。</p>
-
-        <p>实验参数：</p>
-        <ul>
-            <li><strong>工作集大小（Working set size）</strong>：程序正在活跃使用的数据总量（从 1KB 到 8MB）</li>
-            <li><strong>步长（Stride）</strong>：每次访问跳过的字节数（从 1 到缓存大小）</li>
-        </ul>
-
-        <p>测量结果形成一个三维的"山"形曲面——这就是"Memory Mountain"名字的来源。山的"顶峰"（吞吐量最高）出现在工作集小、步长小的区域——数据全部在 L1 Cache 中。随着工作集增大，数据溢出到 L2、L3、主存，吞吐量逐级下降，形成"山脊"——每个平台对应一个存储层次。</p>
-
-        <p>山的不同"山坡"告诉你的信息：</p>
-        <ul>
-            <li><strong>陡峭的下降</strong>：工作集超过 L1 Cache 大小 → 数据溢出到 L2（速度下降 2-3 倍）</li>
-            <li><strong>继续下降</strong>：超过 L2 → L3（再慢 2-3 倍）</li>
-            <li><strong>急剧坠落</strong>：超过最后一级 Cache → 主存（慢 5-10 倍）</li>
-            <li><strong>步长增大</strong>：同样工作集下，大步长访问（跳过 Cache 行中的数据）会降低吞吐量</li>
-        </ul>
-
-        <p>你自己也可以做这个实验。CSAPP 官网上有 Memory Mountain 的代码（<code>mountain.c</code>），在你的机器上编译运行，看看你的"山"长什么样。每个型号的 CPU 都有独特的地形。</p>
-
-        <h3>11.4 SSD 的内部原理</h3>
-
-        <p>SSD（固态硬盘）的普及是过去十年存储界的最大变革。虽然 SSD 在存储层次中位于"慢速设备"层，但它的速度已经远超 HDD。但 SSD 内部的工作原理远比 HDD 复杂，而且有一些必须知道的陷阱。</p>
-
-        <p>SSD 的核心是 NAND Flash 芯片。一个 NAND Flash 芯片由块（Block）组成，每个块包含若干页（Page）。关键限制：</p>
-        <ul>
-            <li><strong>读取</strong>：以页为单位（通常 4-16 KB），速度较快（~10μs）</li>
-            <li><strong>写入</strong>：以页为单位，但只能写到"空"页（~100μs）</li>
-            <li><strong>擦除</strong>：以块为单位（通常几百 KB 到几 MB），很慢（~1ms），且每个块的擦除次数有限</li>
-        </ul>
-
-        <p>这就是 SSD 和 HDD 最大的不同——你不能覆盖写入一个已经写过的页，必须先擦除整个块！于是引入了<strong>Flash 转换层（FTL, Flash Translation Layer）</strong>，它负责：</p>
-        <ul>
-            <li><strong>逻辑到物理地址映射</strong>：操作系统看到的 LBA（逻辑块地址）和实际的 NAND 物理地址通过 FTL 映射表关联</li>
-            <li><strong>垃圾回收（Garbage Collection）</strong>：当块中的大部分页都变成"脏"页时，FTL 把有效页拷贝到另一个块，然后擦除原块</li>
-            <li><strong>损耗均衡（Wear Leveling）</strong>：FTL 把写入均匀分布到所有块上，延长 SSD 寿命</li>
-        </ul>
-
-        <p>这里有一个重要的性能概念——<strong>写放大（Write Amplification）</strong>：操作系统要写入 4KB 数据，但 FTL 可能需要搬移几百 KB 的有效页、擦除整个块。实际写入 NAND 的数据量 / 主机请求写入的数据量 = 写放大系数，通常在 2-5 倍之间。</p>
-
-        <div class="warning">
-            <p><strong>踩坑：SSD 写放大的真实代价</strong>：我之前维护过一个数据库系统，SSD 的寿命远低于预期。排查发现，数据库每 5 秒写一次日志文件（每次 4KB），但这 4KB 写导致了每 5 秒一个 1MB 块的垃圾回收——FTL 得搬移大量有效页。最终写放大系数达到了 50+。RocksDB 等 LSM-tree 存储引擎针对 SSD 做了专门的优化：顺序写入 + 分层合并，从源头减少随机写。这个教训是：当你在 SSD 上设计 I/O 密集型系统时，一定要考虑写放大的影响。批量写、追加写而不是原地更新，可以显著延长 SSD 寿命并提高写入性能。</p>
-        </div>
-
-        <p>还有一个实用的命令——<strong>TRIM</strong>。当你删除一个文件时，操作系统向 SSD 发送 TRIM 命令，通知 FTL："这些 LBA 上的数据不再有效"。如果没有 TRIM，FTL 不知道哪些页是"废弃"的，在垃圾回收时还得把这些无用的数据搬来搬去，浪费写入带宽。确保你的操作系统和文件系统支持 TRIM（Linux 上用 <code>fstrim</code> 命令手动触发，或通过 <code>mount -o discard</code> 自动发送）。</p>
-
-        <p>这一章我们覆盖了从 SRAM、DRAM 到 HDD、SSD 的完整存储技术谱系，理解了局部性如何让存储层次变得有效，看到了 Memory Mountain 实验的"山形"数据，也深入了解了 SSD 的 FTL、写放大和 TRIM 机制。这些技术背景知识，是我们下一章深入 Cache 设计和优化的重要基础。</p>
-
-        <div class="footer-nav">
-            <a href="10.html">← 上一章</a>
-            <a href="index.html">📖 返回目录</a>
-            <a href="12.html">下一章 →</a>
-        </div>
-    </div>
-</div>
-</div>
-</body>
-</html>
+<pre><code>cc -std=c11 -Wall -Wextra -Werror labs/cache/locality.c -o /tmp/locality
+/tmp/locality</code></pre>
+<p>若要研究性能，需要扩大工作集、重复测量并避免编译器把整段计算优化掉；应同时报告 CPU、编译选项、输入规模与采样方式。不要把上面的正确性检查误称为基准测试。</p>
+<div class="callout"><p><strong>带走的模型：</strong>存储层次不是“越快越好”的简单排序，而是数据在各级间被移动、保留和再次使用的过程；局部性决定了这些搬运有多值得。</p></div></section>
+<section id="references"><span class="section-no">参考与边界</span><h2>延伸阅读</h2><ol class="references"><li><a href="https://csapp.cs.cmu.edu/3e/">Bryant &amp; O'Hallaron, Computer Systems: A Programmer's Perspective（第 3 版官方站点）</a>，第 6 章 Memory Hierarchy；本教程的第 11、12 讲对其内容作重新编排。</li><li><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf">ISO C11 committee draft N1570</a>，数组和对象布局；代码示例针对 C11。</li><li><a href="https://man7.org/linux/man-pages/man8/fstrim.8.html">Linux fstrim(8)</a>，discard/TRIM 的使用条件与注意事项。</li></ol></section>
+<nav class="footer-nav" aria-label="章节翻页"><a href="10.html">← 上一章</a><a href="index.html">返回目录</a><a href="12.html">下一章 →</a></nav>
+</article></main></div>
+<script>
+(() => {
+  const strides=[1,2,4,8,16,32];
+  const slider=document.getElementById('stride');
+  const label=document.getElementById('stride-label');
+  const used=document.getElementById('used');
+  const detail=document.getElementById('used-detail');
+  const waste=document.getElementById('waste');
+  function update() {
+    const s=strides[Number(slider.value)];
+    const n=Math.max(1,16/s);
+    const bytes=n*4;
+    label.textContent=s+' 个元素';
+    used.textContent=(bytes/64*100).toFixed(s>=8?2:0)+'%';
+    detail.textContent='每条被触及的缓存行使用 '+n+' 个元素（'+bytes+' B / 64 B）';
+    waste.textContent=(64-bytes)+' B';
+  }
+  slider.addEventListener('input',update);
+  update();
+})();
+</script></body></html>

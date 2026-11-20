@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c13-fig-title c13-fig-desc" viewBox="0 0 760 248">
+<title id="c13-fig-title">从源文件到可执行文件：解析符号与重定位</title>
+<desc id="c13-fig-desc">左侧 main.o 引用 sum 且地址未知，中间链接器从 libmath.a 提取 sum.o，右侧把符号绑定到定义并修补调用位置。三个阶段用颜色标注。</desc>
+<rect x="12" y="32" width="212" height="170" rx="15" fill="#e8f3f0" stroke="#97c6bf"/>
+<text x="30" y="62" font-size="18" font-weight="700" fill="#1d5b5e">① main.o</text>
+<text x="30" y="97" font-size="15" fill="#203b41">call sum → ?</text>
+<text x="30" y="126" font-size="14" fill="#53676d">符号表：UND sum</text>
+<text x="30" y="150" font-size="14" fill="#53676d">重定位项：待修补</text>
+<g class="signal signal-a"><rect x="28" y="165" width="165" height="24" rx="8" fill="#147f80"/><text x="41" y="182" font-size="13" fill="white">尚未知道目标地址</text></g>
+<path d="M232 116 H260" stroke="#147f80" stroke-width="3"/><path d="M254 110 L264 116 254 122" fill="none" stroke="#147f80" stroke-width="3"/>
+<rect x="270" y="32" width="210" height="170" rx="15" fill="#fff2e9" stroke="#dcb8a6"/>
+<text x="289" y="62" font-size="18" font-weight="700" fill="#955335">② 链接器 ld</text>
+<text x="289" y="96" font-size="15" fill="#203b41">查找 sum 的定义</text>
+<text x="289" y="122" font-size="14" fill="#53676d">libmath.a → sum.o</text>
+<text x="289" y="148" font-size="14" fill="#53676d">决定布局、分配地址</text>
+<g class="signal signal-b"><rect x="285" y="165" width="170" height="24" rx="8" fill="#d06d4d"/><text x="298" y="182" font-size="13" fill="white">按需抽取目标成员</text></g>
+<path d="M488 116 H515" stroke="#147f80" stroke-width="3"/><path d="M509 110 L519 116 509 122" fill="none" stroke="#147f80" stroke-width="3"/>
+<rect x="526" y="32" width="222" height="170" rx="15" fill="#f0edfa" stroke="#b9aedf"/>
+<text x="544" y="62" font-size="18" font-weight="700" fill="#5b4d94">③ prog (ELF)</text>
+<text x="544" y="98" font-size="15" fill="#203b41">call sum → 已定位</text>
+<text x="544" y="126" font-size="14" fill="#53676d">重定位值写入调用点</text>
+<text x="544" y="152" font-size="14" fill="#53676d">运行时按入口执行</text>
+<g class="signal signal-c"><rect x="541" y="165" width="190" height="24" rx="8" fill="#7461ba"/><text x="554" y="182" font-size="13" fill="white">函数调用最终可达</text></g>
+<text x="13" y="230" font-size="13" fill="#53676d">注：图示为静态链接的简化流程；具体机器指令和重定位类型取决于架构与工具链。</text>
+</svg>

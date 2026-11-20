@@ -33,7 +33,7 @@ for (const [index, chapter] of manifest.chapters.entries()) {
   const html = read(chapter.file);
   if (!html.includes('<html lang="zh-CN">')) fail('missing lang: ' + chapter.file);
   if (!/<title>[^<]+<\/title>/.test(html)) fail('missing title: ' + chapter.file);
-  if (!/<h2>[^<]+<\/h2>/.test(html)) fail('missing article heading: ' + chapter.file);
+  if (!/<h2\b[^>]*>[^<]+<\/h2>/.test(html)) fail('missing article heading: ' + chapter.file);
   if (!html.includes('href="index.html"')) fail('missing index navigation: ' + chapter.file);
   if (/href=["']javascript:/i.test(html)) fail('inactive javascript link: ' + chapter.file);
   if (index > 0 && !html.includes('href="' + String(index).padStart(2, '0') + '.html"')) {

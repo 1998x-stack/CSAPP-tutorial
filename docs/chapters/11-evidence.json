@@ -1,0 +1,79 @@
+{
+  "article": "11.html",
+  "scope": "CSAPP 第 11 讲，重组存储技术、局部性和 SSD；不复用原书图文",
+  "learning_design": "借鉴逐步揭示与可执行微实验的教学形式，不复制参考博客图文",
+  "claims": [
+    {
+      "id": "ch11-layers",
+      "claim": "CPU 缓存、DRAM、持久存储的层次代价不同；SSD 非每次 CPU cache miss 的下一级",
+      "kind": "concept",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 6 Memory Hierarchy",
+      "status": "derived",
+      "notes": "图示为教学模型，不表述固定访问延迟"
+    },
+    {
+      "id": "ch11-sram-dram",
+      "claim": "SRAM 通常不按 DRAM 的方式刷新；DRAM 使用需刷新存储单元",
+      "kind": "storage-technology",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 6 Storage Technologies",
+      "status": "verified",
+      "notes": "不同工艺和存储器件细节可变"
+    },
+    {
+      "id": "ch11-row-major",
+      "claim": "C 多维数组的最后一维对象连续存储，行优先访问具有空间局部性",
+      "kind": "language-layout",
+      "source_url": "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf",
+      "locator": "§6.5.2.1 Array subscripting",
+      "status": "verified",
+      "notes": "对应 C11 对象布局；不保证性能倍数"
+    },
+    {
+      "id": "ch11-mountain",
+      "claim": "访问吞吐量随工作集大小与步长的改变呈现层次效应",
+      "kind": "experiment-design",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 6, Memory Mountain",
+      "status": "verified",
+      "notes": "未虚构机器测量值"
+    },
+    {
+      "id": "ch11-stride-widget",
+      "claim": "64 B/4 B=16；流式步长 1/2/4/8/16/32 对应被触及 cache line 的示意利用率",
+      "kind": "toy-model",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 6 cache lines/locality model",
+      "status": "illustrative",
+      "notes": "对齐、固定步长、无重复读的玩具模型，并非带宽测量"
+    },
+    {
+      "id": "ch11-ftl",
+      "claim": "NAND 编程与擦除粒度不同，FTL 可重映射更新、回收失效页",
+      "kind": "storage-model",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 6 Solid State Disks",
+      "status": "derived",
+      "notes": "设备内部机制不同，P0/P3 为示意，不报告固件结果"
+    },
+    {
+      "id": "ch11-fstrim",
+      "claim": "Linux fstrim 可以 discard 文件系统未使用的数据块，支持取决于设备和堆栈",
+      "kind": "operating-system",
+      "source_url": "https://man7.org/linux/man-pages/man8/fstrim.8.html",
+      "locator": "DESCRIPTION and usage notes",
+      "status": "verified",
+      "notes": "不保证实时回收或性能提升"
+    },
+    {
+      "id": "ch11-code",
+      "claim": "16×16 连续整数按行与按列求和均为 32640",
+      "kind": "code-invariant",
+      "source_url": "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf",
+      "locator": "§6.5.2.1; derived arithmetic",
+      "status": "derived",
+      "notes": "可编译 C11 程序，用于正确性而非性能测量"
+    }
+  ]
+}

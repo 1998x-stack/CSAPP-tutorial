@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第14章 链接——动态链接 — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="chapter-olah.css">
 </head>
-<body>
+<body class="chapter-refined">
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
     <div class="sidebar">
@@ -42,14 +44,47 @@
             <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
         </ul>
     </div>
-    <div class="main-content">
-        <h2>第十四章：链接——动态链接</h2>
+    <div class="main-content"><main id="content"><article class="chapter-olah">
+<h1>第十四章：链接——动态链接</h1>
 
-        <p>上一章我们学习了静态链接——链接器把多个 .o 文件和 .a 静态库打包成一个独立的可执行文件。静态链接有很明显的缺陷：每个可执行文件都自带一份 <code>printf</code> 的代码，100 个程序就有 100 份 printf 的副本，浪费磁盘空间和内存。更糟糕的是，如果 libc 发现了一个安全漏洞需要修复，你得重新链接所有依赖它的程序——这简直是一场噩梦。</p>
+        <p>上一章我们学习了静态链接——链接器把多个 .o 文件和 .a 静态库打包成一个独立的可执行文件。静态链接会把程序实际需要的归档库成员带入可执行文件，因此多个程序可能分别保留库代码。库升级后，已经静态链接进去的代码通常也需要重新链接与部署。</p>
 
-        <p>动态链接（Dynamic Linking）就是来解决这些问题的。它的核心思想是：把链接过程推迟到程序加载时甚至运行时进行。共享库（Shared Library，Linux 上为 .so 文件，Windows 上为 .dll 文件）在磁盘和内存中都只有一份物理副本，被所有程序共享。这一章，我们深入这个机制的核心——看看 GOT、PLT、PIC 这些听起来很高深的概念到底是什么。</p>
+        <p>动态链接（Dynamic Linking）就是来解决这些问题的。它的核心思想是：把链接过程推迟到程序加载时甚至运行时进行。共享库（Shared Library，Linux 上为 .so 文件，Windows 上为 .dll 文件）可以复用磁盘上的库文件，并让多个进程共享只读代码的物理内存页。这一章，我们深入这个机制的核心——看看 GOT、PLT、PIC 这些听起来很高深的概念到底是什么。</p>
 
-        <h3>14.1 共享库的动机</h3>
+        
+<p class="chapter-eyebrow">共享库 · GOT/PLT · 位置无关代码</p>
+<p class="dek">同一个 <code>puts</code>，编译时不知道它会被映射到哪里，调用却能成功。这背后是「独立确定代码位置」与「晚一点解析符号」的分工。</p>
+<nav class="chapter-map" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c14-motive">为什么共享</a><a href="#c14-plt">GOT / PLT</a><a href="#c14-pic">PIC</a><a href="#c14-preload">插桩</a><a href="#c14-practice">动手验证</a></nav>
+<div class="concept-steps" id="ch14-state" data-stage="a">
+<figure><div class="diagram-scroll" tabindex="0" aria-label="可水平滚动查看动态链接路径"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c14-title c14-desc" viewBox="0 0 760 250">
+<title id="c14-title">调用共享库函数：PLT、GOT 与动态链接器</title>
+<desc id="c14-desc">主程序调用 puts，经由 PLT 跳转表和 GOT 槽。首次延迟绑定可能前往动态链接器解析；后续通过已解析 GOT 直接到共享库。立即绑定则在启动时解析。</desc>
+<rect x="14" y="41" width="135" height="148" rx="13" fill="#e8f3f0" stroke="#99c6bf"/>
+<text x="31" y="70" font-size="18" font-weight="700" fill="#1f6062">main</text>
+<text x="31" y="101" font-size="14" fill="#24444a">call puts</text>
+<path d="M153 118 H193" stroke="#147f80" stroke-width="3"/><path d="M186 111 l11 7 -11 7" stroke="#147f80" stroke-width="3" fill="none"/>
+<rect x="202" y="41" width="150" height="148" rx="13" fill="#e8f3f0" stroke="#99c6bf"/>
+<text x="218" y="70" font-size="18" font-weight="700" fill="#1f6062">puts@plt</text>
+<text x="218" y="100" font-size="14" fill="#24444a">跳到 GOT 槽</text>
+<text x="218" y="124" font-size="13" fill="#53676d">函数调用桩</text>
+<path d="M355 118 H397" stroke="#147f80" stroke-width="3"/><path d="M391 111 l11 7 -11 7" stroke="#147f80" stroke-width="3" fill="none"/>
+<rect x="405" y="41" width="146" height="148" rx="13" fill="#f0edfa" stroke="#b8acdf"/>
+<text x="421" y="70" font-size="18" font-weight="700" fill="#5b4d94">GOT 槽</text>
+<text x="420" y="103" font-size="14" fill="#34444a">保存函数地址</text>
+<g class="signal signal-a"><text x="420" y="129" font-size="13" fill="#955335">初次：解析入口</text></g>
+<g class="signal signal-b"><text x="420" y="148" font-size="13" fill="#147f80">后续：真实地址</text></g>
+<g class="signal signal-c"><text x="420" y="171" font-size="13" fill="#5b4d94">启动时已解析</text></g>
+<path d="M555 107 H606" stroke="#147f80" stroke-width="3"/><path d="M600 100 l11 7 -11 7" stroke="#147f80" stroke-width="3" fill="none"/>
+<rect x="614" y="64" width="130" height="102" rx="13" fill="#e8f3f0" stroke="#99c6bf"/>
+<text x="624" y="94" font-size="18" font-weight="700" fill="#1f6062">libc.so</text>
+<text x="624" y="124" font-size="14" fill="#24444a">puts 实现</text>
+<g class="signal signal-a"><path d="M474 191 V222 H662 V169" fill="none" stroke="#d06d4d" stroke-width="2.5" stroke-dasharray="5 5"/><text x="483" y="218" font-size="12" fill="#955335">第一次可能经过 resolver</text></g>
+<text x="15" y="236" font-size="13" fill="#53676d">示意：实际入口、段名与跳板指令随架构、链接选项和安全加固策略变化。</text>
+</svg></div><figcaption>调用路径不是把库机器码放进程序本体。PLT 是间接入口，GOT 保存需要重定位的地址；在允许延迟绑定时，首轮调用可能经过解析器。</figcaption></figure>
+<div class="step-controls" role="group" aria-label="切换符号绑定时机"><button type="button" data-stage="a" aria-pressed="true">首次延迟绑定</button><button type="button" data-stage="b" aria-pressed="false">后续调用</button><button type="button" data-stage="c" aria-pressed="false">立即绑定</button></div>
+<p class="step-reading" id="ch14-state-description" aria-live="polite">首次延迟绑定：GOT 槽可能指向解析路径，由动态链接器找到 puts 并更新地址。</p>
+</div>
+<h2 id="c14-motive">14.1 共享库的动机</h2>
 
         <p>我们从一个实际的对比开始：</p>
 
@@ -66,23 +101,23 @@
             </tr>
             <tr>
                 <td>磁盘空间占用</td>
-                <td>每个程序一份副本</td>
-                <td>所有程序共享一份</td>
+                <td>各可执行文件包含所提取的库代码</td>
+                <td>多个程序可引用同一份库文件</td>
             </tr>
             <tr>
                 <td>运行时内存占用</td>
                 <td>每个进程一份副本</td>
-                <td>共享库代码在物理内存中只有一份</td>
+                <td>只读代码页可共享；数据与私有映射通常各进程独立</td>
             </tr>
             <tr>
                 <td>库更新</td>
                 <td>需要重新链接</td>
-                <td>替换 .so 文件即可（重启程序）</td>
+                <td>需兼容 ABI、版本与部署策略；运行中进程未必自动切换</td>
             </tr>
             <tr>
                 <td>启动速度</td>
-                <td>快（地址已固定）</td>
-                <td>稍慢（需要运行时重定位 + 符号解析）</td>
+                <td>依程序与链接策略而异</td>
+                <td>可能有动态装载和重定位成本</td>
             </tr>
             <tr>
                 <td>版本兼容性</td>
@@ -105,142 +140,89 @@
 
         <p><code>ldd</code> 命令显示一个可执行文件依赖的所有共享库。你会发现，就连最简单的 <code>ls</code> 命令也依赖多个共享库。这就是现代 Linux 系统的常态——几乎所有程序都在使用动态链接。</p>
 
-        <h3>14.2 GOT 与 PLT</h3>
+        
+<h2 id="c14-plt">14.2 GOT 与 PLT：把调用地址延后决定</h2>
+<p>假设 <code>main</code> 调用了共享库里的 <code>puts</code>。编译器不能预先知道运行时库的虚拟地址，因此需要间接入口。以常见的 x86-64 ELF 方案为例：</p>
+<ul>
+<li><strong>PLT（Procedure Linkage Table）</strong>：可执行文件里的过程调用跳板，很多传统构建会生成 <code>puts@plt</code>。它通常通过 GOT 中的相应槽间接跳转。</li>
+<li><strong>GOT（Global Offset Table）</strong>：保存可由装载器修正的指针，常见相关节有 <code>.got</code> 与 <code>.got.plt</code>。并非每个编译模式都会为每次外部调用生成同样的 PLT 形式。</li>
+<li><strong>动态链接器</strong>：在装载阶段解析必须解析的重定位；若允许 lazy binding，部分函数的调用目标可推迟到首次调用时才解析。</li>
+</ul>
+<p>首次通过 PLT/GOT 的调用可能转入 resolver，把解析到的真实函数地址写入槽中；后续调用走已解析的地址。若启用了 <code>-Wl,-z,now</code> 或 <code>LD_BIND_NOW=1</code>，通常会在装载时完成相关函数绑定，不走这个首次调用解析流程。现代工具链的 <code>-fno-plt</code>、RELRO 等也会影响细节。</p>
+<pre><code>$ cc -O0 hello_puts.c -o hello_puts
+$ readelf -dW hello_puts | grep NEEDED
+$ readelf -rW hello_puts
+$ objdump -d hello_puts | grep -A6 '@plt'
+$ LD_BIND_NOW=1 ./hello_puts
+# 输出与编译选项、架构、libc 和发行版设置有关</code></pre>
+<div class="tip"><p><strong>诊断而非猜测：</strong>使用 <code>readelf -d</code> 观察动态依赖，<code>readelf -r</code> 查看重定位，<code>objdump -d</code> 检查是否真的生成了 PLT。不要把某段固定的伪汇编当作所有 x86-64 ELF 程序的真实实现。</p></div>
 
-        <p>动态链接面临一个根本性难题：编译器在编译 main.c 时，并不知道 <code>printf</code> 在共享库中的地址——因为共享库的加载地址是在运行时才确定的（地址空间布局随机化 ASLR 进一步确保这一点）。那么，编译器如何生成对 printf 的函数调用指令？</p>
+<h2 id="c14-pic">14.3 PIC：同一段机器码为什么能被复用</h2>
+<p>共享对象的代码可能映射到不同进程的不同虚拟地址。<strong>位置无关代码（PIC）</strong>尽量避免让共享代码页包含必须在加载时修改的绝对地址。x86-64 常利用 RIP 相对寻址，并通过 GOT 对可被抢占的外部数据对象间接寻址。</p>
+<pre><code>/* demo.c：外部全局变量 */
+extern int counter;
+int read_counter(void) { return counter; }
 
-        <p>答案就是 <strong>GOT（全局偏移表）</strong> 和 <strong>PLT（过程链接表）</strong> 这两个精巧的机制。</p>
+$ cc -O2 -fPIC -c demo.c -o demo.o
+$ objdump -dr demo.o
+# 典型 x86-64 形态（示意，并非保证逐字匹配）：
+# mov counter@GOTPCREL(%rip), %rax
+# mov (%rax), %eax</code></pre>
+<p><code>RIP + 位移</code> 对代码装载基址的整体平移不敏感；GOT 数据项可按需重定位。对于本地不可抢占符号，编译器还可能省掉 GOT 间接层。<strong>PIC 没有固定的性能损失百分比</strong>：额外成本需结合机器架构、访问模式、链接器优化与真实基准测试讨论。</p>
+<p>使用 <code>cc -shared -fPIC</code> 构建共享对象；ASLR 让映射基址更不固定，但 PIC 的价值并不限于 ASLR。</p>
 
-        <p><strong>PLT（过程链接表）</strong></p>
-        <p>PLT 是放在 <code>.text</code> 节中的一段小代码桩（stub）。每个外部函数在 PLT 中有一个条目。PLT 条目的功能如下：</p>
-
-        <pre><code># PLT 条目示例（对于 printf 函数）
-printf@plt:
-    jmp *printf@GOT        # 跳转到 GOT 中记录 printf 地址的位置
-    push $index             # 如果第一次调用，把函数索引压栈
-    jmp resolver            # 跳转到动态链接器解析函数</code></pre>
-
-        <p><strong>GOT（全局偏移表）</strong></p>
-        <p>GOT 是放在 <code>.data</code> 节中的一个地址数组。每个外部函数（或全局变量）在 GOT 中有一个 8 字节条目。初始时，GOT 条目指向 PLT 中对应的 push 指令——这实现了<strong>延迟绑定（Lazy Binding）</strong>：</p>
-
-        <ol>
-            <li><strong>第一次调用</strong>：通过 PLT 跳转到 GOT，GOT 指向 PLT 的下一行（push index），然后跳转到动态链接器中的函数解析器（resolver）。解析器找到 printf 的实际地址，更新 GOT 条目，然后调用 printf。</li>
-            <li><strong>后续调用</strong>：再次调用 printf 时，PLT 跳转到 GOT，这次 GOT 已经指向 printf 的真实地址——直接执行 printf，无需再次解析。</li>
-        </ol>
-
-        <p>用图来表示就是：</p>
-
-        <pre><code>第一次调用:  main → printf@plt → GOT(初始) → push index → resolver → 找到printf → GOT=printf地址 → 执行printf
-后续调用:   main → printf@plt → GOT(已更新) → 直接执行printf</code></pre>
-
-        <p>这种"第一次慢，后面快"的设计就是<strong>延迟绑定（Lazy Binding）</strong>——只在函数第一次被调用时才解析其地址。它的好处很明显：</p>
-        <ul>
-            <li>启动速度更快（不需要在加载时解析所有函数）</li>
-            <li>如果某个函数在整个程序运行期间从未被调用，就永远不需要解析它</li>
-        </ul>
-
-        <div class="tip">
-            <p><strong>相关环境变量</strong>：你可以用 <code>LD_BIND_NOW=1</code> 来禁用延迟绑定——让动态链接器在加载时就解析所有符号。这会增加启动时间但消除了"第一次调用慢"的问题。对于实时性要求高的程序可能有意义。你也可以用 <code>LD_DEBUG=all</code> 来观察动态链接器的详细工作过程，非常有利于调试和理解。</p>
-        </div>
-
-        <h3>14.3 位置无关代码（PIC）</h3>
-
-        <p>共享库有一个特殊要求：它必须能在内存中的<strong>任何地址</strong>加载。这在两个层面上有必要：</p>
-        <ul>
-            <li>ASLR（地址空间布局随机化）要求库的基地址每次加载可能不同</li>
-            <li>不同的程序可能把库加载到不同的地址（因为内存布局不同）</li>
-        </ul>
-
-        <p>传统的非 PIC 代码中，对全局变量和函数的访问都使用绝对地址。如果把这样的代码编译成共享库，链接器必须在加载时修改代码中的地址——但代码段（.text）通常是只读的，而且被多个进程共享，不能修改。这就是矛盾所在！</p>
-
-        <p>解决办法是 <strong>PIC（Position-Independent Code，位置无关代码）</strong>。PIC 的核心技巧是<strong>通过 PC 相对寻址来访问 GOT</strong>。GOT 放在数据段中，每个进程有自己的 GOT 副本（可写），所以可以在运行时修改。代码段通过 GOT 间接访问数据，而 GOT 的地址通过 PC 相对寻址获得——无论代码加载到哪个地址，PC 相对偏移量都是固定的。</p>
-
-        <p>来看编译出的代码差异：</p>
-
-        <pre><code># 非 PIC 版本（需要重定位）
-movq $0x605010, %rax      # 直接使用绝对地址访问全局变量
-movq (%rax), %rdx
-
-# PIC 版本（位置无关）
-call next                  # 获取当前 PC
-next: popq %rax           # %rax = next 的运行时地址
-addq $GOT_offset, %rax   # %rax = GOT 的地址
-movq (%rax), %rdx         # 通过 GOT 间接访问全局变量</code></pre>
-
-        <p>当然，实际中编译器不会用 <code>call/pop</code> 这么原始的方式——它使用更高效的技巧（如 x86-64 的 RIP 相对寻址）来计算 GOT 地址。编译时加 <code>-fPIC</code> 选项即可生成位置无关代码。</p>
-
-        <div class="highlight">
-            <p><strong>PIC 的性能代价</strong>：PIC 并非没有代价。间接寻址（通过 GOT）相比直接寻址多了几次访存操作，通常导致 5-10% 的性能损失（在 GOT 命中的情况下）。这就是为什么在性能关键的场景中，有时会选择静态链接。但大多数情况下，共享库节省的内存和多进程共享的好处远大于这点性能损失。在 x86-64 平台上，由于 RIP 相对寻址的引入，PIC 的开销已经大大降低，几乎可以忽略不计。</p>
-        </div>
-
-        <h3>14.4 LD_PRELOAD 库插桩</h3>
-
-        <p>动态链接的强大之处不仅在于运行时加载，还在于提供了<strong>拦截和替换</strong>函数的能力。这通过 <code>LD_PRELOAD</code> 环境变量实现：你可以指定一个共享库，让动态链接器在所有其他库<strong>之前</strong>加载它。由于符号解析顺序规则，LD_PRELOAD 库中的符号会覆盖其他库（包括 libc）中的同名符号。</p>
-
-        <p>来看一个实战例子——用 LD_PRELOAD Hook malloc 来统计内存使用：</p>
-
-        <pre><code>/* memtrace.c — LD_PRELOAD 拦截 malloc/free */
+<h2 id="c14-preload">14.4 LD_PRELOAD：安全地理解符号插桩</h2>
+<p>在 Linux 的常见动态链接环境中，<code>LD_PRELOAD</code> 可以让一个共享对象提前参与符号查找。这是学习动态符号解析的实用实验，但它不是安全边界，也无法拦截静态链接、隐藏符号、直接系统调用等所有路径。</p>
+<p>先用较简单的 <code>puts</code> 做实验，而不是直接拦截 <code>malloc</code>：后者容易因 <code>dlsym</code>、日志或初始化过程再次分配内存，导致递归、死锁或崩溃。</p>
+<pre><code>/* trace_puts.c：GNU/Linux 演示性插桩 */
 #define _GNU_SOURCE
-#include &lt;stdio.h&gt;
 #include &lt;dlfcn.h&gt;
-#include &lt;stdlib.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;unistd.h&gt;
 
-static int malloc_count = 0;
-static size_t total_bytes = 0;
-
-void *malloc(size_t size) {
-    static void *(*real_malloc)(size_t) = NULL;
-    if (!real_malloc)
-        real_malloc = dlsym(RTLD_NEXT, "malloc");  // 找到真正的 malloc
-
-    void *ptr = real_malloc(size);
-    malloc_count++;
-    total_bytes += size;
-
-    // 记录每次分配的信息（生产环境要加锁！）
-    fprintf(stderr, "[MEMTRACE] malloc(%zu) = %p (total=%zu, count=%d)\n",
-            size, ptr, total_bytes, malloc_count);
-    return ptr;
-}
-
-void free(void *ptr) {
-    static void (*real_free)(void *) = NULL;
-    if (!real_free)
-        real_free = dlsym(RTLD_NEXT, "free");
-
-    fprintf(stderr, "[MEMTRACE] free(%p)\n", ptr);
-    real_free(ptr);
+int puts(const char *s) {
+    int (*next_puts)(const char *) = dlsym(RTLD_NEXT, "puts");
+    const char label[] = "[hook] puts called\n";
+    (void)write(STDERR_FILENO, label, sizeof(label) - 1);
+    if (next_puts == NULL) return EOF;
+    return next_puts(s);
 }</code></pre>
+<pre><code>/* hello_puts.c */
+#include &lt;stdio.h&gt;
+int main(void) { return puts("hello") == EOF ? 1 : 0; }
 
-        <pre><code># 编译共享库
-$ gcc -shared -fPIC -o libmemtrace.so memtrace.c -ldl
+$ cc -fPIC -shared trace_puts.c -o libtraceputs.so -ldl
+$ cc hello_puts.c -o hello_puts
+$ LD_PRELOAD=./libtraceputs.so ./hello_puts
+# 标准错误：[hook] puts called
+# 标准输出：hello</code></pre>
+<p>这个例子仅演示符号插桩的基本路径，不等于生产可用的通用 tracing 框架。<code>RTLD_NEXT</code> 查找当前对象之后的下一个符号定义；真实场景要处理线程安全、递归、错误报告和 ABI。安全执行模式（如 set-user-ID 程序）还会对 <code>LD_PRELOAD</code> 施加限制。</p>
 
-# 使用 LD_PRELOAD 拦截任何程序的 malloc/free
-$ LD_PRELOAD=./libmemtrace.so ./my_program arg1 arg2
-# 运行输出中会混入 malloc/free 的追踪信息！</code></pre>
+<h2 id="c14-practice">14.5 动手验证：让链接器显示它的工作</h2>
+<p>仓库提供 <a href="https://github.com/1998x-stack/CSAPP-tutorial/tree/main/labs/linking">共享库插桩实验文件</a>。先预测以下三种情况，再运行比较：</p>
+<ol>
+<li>普通运行 <code>./hello_puts</code>：是否会输出插桩前缀？</li>
+<li>带 <code>LD_PRELOAD</code> 运行：哪一个输出属于标准错误？哪一个属于标准输出？</li>
+<li>再加 <code>LD_BIND_NOW=1</code>：输出行为是否改变？<strong>绑定时机</strong>和<strong>函数语义</strong>是两个不同问题。</li>
+</ol>
+<p>最后用 <code>readelf -rW</code> 对比两份程序的重定位信息，并说明：<code>LD_PRELOAD</code> 影响的是符号查找路径，而不是把 <code>puts</code> 的机器码复制进 <code>main</code>。</p>
+<section class="references" aria-label="第14章参考资料">
+<h3>参考与边界</h3>
+<p>以下以 ELF/GNU/Linux 动态链接为主：<a href="https://man7.org/linux/man-pages/man8/ld.so.8.html">ld.so(8)</a>、<a href="https://man7.org/linux/man-pages/man3/dlsym.3.html">dlsym(3)</a>、<a href="https://sourceware.org/binutils/docs/ld.html">GNU ld（-z now、RELRO）</a>。其他系统的运行时装载器并不保证相同机制。</p>
+</section>
 
-        <p>这个例子用 <code>dlsym(RTLD_NEXT, "malloc")</code> 找到了"下一个"malloc——也就是 libc 中的真正 malloc，然后包装它。LD_PRELOAD 的强大之处在于：你不需要修改目标程序的代码甚至不需要重新编译，就能介入它的内存分配、文件操作、网络请求等。</p>
-
-        <div class="highlight">
-            <p><strong>LD_PRELOAD 的更多用法</strong>：</p>
-            <ul>
-                <li><strong>内存错误检测</strong>：拦截 malloc/free，在分配的内存前后添加"保护区域"，检测越界写入和释放后使用（类似 Electric Fence 和 AddressSanitizer 的原理）</li>
-                <li><strong>性能分析</strong>：拦截 malloc/free，记录分配热点（类似于 valgrind 的 massif 工具）</li>
-                <li><strong>兼容性修复</strong>：拦截存在 bug 的库函数，提供修正版本</li>
-                <li><strong>功能扩展</strong>：拦截 open/read/write 添加透明加密、压缩功能</li>
-            </ul>
-            <p>注意：LD_PRELOAD 对 setuid/setgid 程序不起作用（安全原因）。并且滥用 LD_PRELOAD 可能导致意外行为——尤其是当你拦截的函数内部又调用了被拦截的函数时（死循环陷阱）。</p>
-        </div>
-
-        <p>这一章我们完成了链接部分的"双拼"——从静态链接到动态链接。你理解了共享库的优势（节省空间、独立更新），掌握了 GOT+PLT+延迟绑定的工作机制，区分了 PIC 和非 PIC 代码，最后还学会了用 LD_PRELOAD 进行库插桩这一实战利器。从下一章开始，我们将进入一个全新的主题——异常控制流（Exceptional Control Flow, ECF）。你写的每个程序都会涉及系统调用、信号处理、进程控制——这些都属于 ECF 的范畴。理解了 ECF，你就理解了操作系统的"灵魂"。</p>
+<p>这一章把动态链接拆成三个独立问题：共享对象如何映射、调用目标何时解析、PIC 如何避免对共享代码页做绝对地址修补。通过 <code>puts</code> 的小实验，我们还能观察符号插桩如何改变查找结果。从下一章开始，我们将进入一个全新的主题——异常控制流（Exceptional Control Flow, ECF）。你写的每个程序都会涉及系统调用、信号处理、进程控制——这些都属于 ECF 的范畴。理解了 ECF，你就理解了操作系统的"灵魂"。</p>
 
         <div class="footer-nav">
             <a href="13.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="15.html">下一章 →</a>
         </div>
-    </div>
+    </article></main></div>
 </div>
 </div>
+<script>
+(()=>{const root=document.getElementById('ch14-state');const out=document.getElementById('ch14-state-description');const notes={a:'首次延迟绑定：GOT 槽可能指向解析路径，由动态链接器找到 puts 并更新地址。',b:'后续调用：GOT 槽已有真实 puts 地址，经过间接入口直接跳向共享库函数。',c:'立即绑定：使用 -z now 或 LD_BIND_NOW 时，相关函数地址通常在装载阶段就完成解析。'};root.querySelectorAll('button[data-stage]').forEach(button=>button.addEventListener('click',()=>{const stage=button.dataset.stage;root.dataset.stage=stage;out.textContent=notes[stage];root.querySelectorAll('button[data-stage]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));}));})();
+</script>
 </body>
 </html>

@@ -1,0 +1,79 @@
+{
+  "article": "09.html",
+  "scope": "独立中文 CSAPP 教学改写；内容与全部 SVG 为本项目原创，未经原书插图复用",
+  "learning_design": "依据 1998x-stack/Olah-style-posts 的逐层叙述、图示+机制+可验证示例、证据记录与离线可读原则",
+  "claims": [
+    {
+      "id": "ch09-stages",
+      "claim": "Y86-64 PIPE 使用 F D E M W 五个阶段",
+      "kind": "processor",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 4 §4.5, pipelined Y86-64 implementation",
+      "status": "verified",
+      "notes": "PC 选择逻辑在取指附近，不是第六流水级"
+    },
+    {
+      "id": "ch09-schedule",
+      "claim": "五级流水线无气泡时 n 条指令需约 n+4 个周期",
+      "kind": "model",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 4, pipelining performance",
+      "status": "derived",
+      "notes": "忽略停顿、缓存、异常等；图1为四指令示意"
+    },
+    {
+      "id": "ch09-speed",
+      "claim": "8 条、五级 200ps、流水寄存器 20ps 时简化模型给出 SEQ 8000ps 与 PIPE 2640ps",
+      "kind": "model",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 4, throughput versus latency",
+      "status": "derived",
+      "notes": "假定数据，非实测；speedup≈3.0303"
+    },
+    {
+      "id": "ch09-forward",
+      "claim": "PIPE 的寄存器值旁路能帮助消除多数 ALU RAW 依赖",
+      "kind": "control",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 4 §4.5, data forwarding",
+      "status": "verified",
+      "notes": "描述 Decode 阶段转发选择，不误写为同一 Execute 自转发"
+    },
+    {
+      "id": "ch09-load-use",
+      "claim": "紧邻 load-use 依赖在经典 PIPE 中通常需要一个 bubble",
+      "kind": "hazard",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 4 §4.5, load/use hazard",
+      "status": "verified",
+      "notes": "图2为抽象化的一周期停顿"
+    },
+    {
+      "id": "ch09-branch-ret",
+      "claim": "教学 PIPE 对条件跳转预测跳转，ret 暂停取指直到返回地址可用",
+      "kind": "control",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 4 §4.5, branch prediction and ret handling",
+      "status": "verified",
+      "notes": "不宣称教学模型必需 BTB"
+    },
+    {
+      "id": "ch09-exception",
+      "claim": "状态随指令传播，停止发生于异常指令到达 W",
+      "kind": "correctness",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 4, exception handling in the pipeline",
+      "status": "verified",
+      "notes": "教学模拟器不等于 OS 异常处理"
+    },
+    {
+      "id": "ch09-spectre",
+      "claim": "Spectre 和 Meltdown 在成因上有所区别，瞬态执行可能留下微架构侧效应",
+      "kind": "security",
+      "source_url": "https://spectreattack.com/",
+      "locator": "Project overview and paper",
+      "status": "verified",
+      "notes": "作为背景介绍，不涉及可操作利用代码"
+    }
+  ]
+}
