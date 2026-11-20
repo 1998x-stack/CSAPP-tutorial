@@ -1,0 +1,70 @@
+{
+  "article": "08.html",
+  "scope": "独立中文 CSAPP 教学改写；内容与全部 SVG 为本项目原创，未经原书插图复用",
+  "learning_design": "依据 1998x-stack/Olah-style-posts 的逐层叙述、图示+机制+可验证示例、证据记录与离线可读原则",
+  "claims": [
+    {
+      "id": "ch08-registers",
+      "claim": "Y86-64 有 15 个程序寄存器，0xF 是 RNONE",
+      "kind": "isa",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 4, Y86-64 programmer-visible state and register ID encoding",
+      "status": "verified",
+      "notes": "第 8 章正文已纠正旧版 8 寄存器描述"
+    },
+    {
+      "id": "ch08-endian",
+      "claim": "Y86-64 多字节整数按小端字节序编码",
+      "kind": "encoding",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 4, Y86-64 instruction encoding",
+      "status": "verified",
+      "notes": "图1为 0x1122334455667788 的派生例子"
+    },
+    {
+      "id": "ch08-families",
+      "claim": "指令类别按首字节 icode 0x0 至 0xB 计 12 类",
+      "kind": "isa",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 4, instruction formats",
+      "status": "derived",
+      "notes": "条件传送等有 ifun 变体；不是 11 类"
+    },
+    {
+      "id": "ch08-encoding",
+      "claim": "irmovq 立即数编码 30 f8 88 77 66 55 44 33 22 11",
+      "kind": "encoding",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 4, opcode 3, register byte, little-endian valC",
+      "status": "derived",
+      "notes": "字节序与图示独立算式交叉核对"
+    },
+    {
+      "id": "ch08-seq",
+      "claim": "SEQ 的六段为组合逻辑功能分段，单条指令在一个较长时钟周期内完成",
+      "kind": "processor",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 4 §4.3, sequential implementation and state update",
+      "status": "verified",
+      "notes": "图2仅示意数据流，不是实际门级时序"
+    },
+    {
+      "id": "ch08-hcl",
+      "claim": "HCL case expression描述多路选择信号，不是程序中的逐条时序执行",
+      "kind": "control",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 4, HCL descriptions of combinational circuits",
+      "status": "verified",
+      "notes": "srcA 示例适用于指定指令"
+    },
+    {
+      "id": "ch08-cisc",
+      "claim": "Y86-64 与 RISC-V 是不同设计目的的 ISA，不从 ISA 风格直接推断速度",
+      "kind": "qualification",
+      "source_url": "https://riscv.org/specifications/ratified/",
+      "locator": "Ratified RISC-V ISA specifications",
+      "status": "illustrative",
+      "notes": "定性比较，不含性能或指令总量排行"
+    }
+  ]
+}
