@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
 </head>
-<body>
+<body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳转至正文</a>
 <div class="double-border">
 <div class="container">
@@ -143,7 +143,7 @@ void *checked_int_array(size_t n) {
   if (!slider || !output) return;
   function update() {
     const n = Number(slider.value);
-    const signed = n &gt;= 128 ? n - 256 : n;
+    const signed = n >= 128 ? n - 256 : n;
     output.textContent = n.toString(2).padStart(8, '0') + '₂ = 无符号 ' + n + ' / 补码 ' + signed;
   }
   slider.addEventListener('input', update);
