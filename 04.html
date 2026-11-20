@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第4章 程序的机器级表示——基础 — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="olah-chapters.css">
 </head>
-<body>
+<body class="olah-lesson">
+<a href="#chapter-main" class="skip-link">跳转至正文</a>
 <div class="double-border">
 <div class="container">
     <div class="sidebar">
@@ -43,401 +45,103 @@
         </ul>
     </div>
     <div class="main-content">
-        <h2>第四章：程序的机器级表示——基础</h2>
 
-        <p>大家好，我是你们的讲师。从这一章开始，我们将进入一个全新的世界——<strong>程序的机器级表示</strong>。</p>
-
-        <p>前面两章我们一直在讲"数据怎么存"——整数在寄存器里怎么编码，浮点数在内存里怎么布局。但从现在开始，我们要问的是"<strong>指令怎么动</strong>"。你写的 C 语言 <code>a = b + c</code>，在 CPU 眼里到底是什么样的？</p>
-
-        <p>让我分享一个我早年做嵌入式开发时的经历。有一次，我写的通信协议栈在特定环境下隔几个小时就随机死机。代码评审过三遍没发现问题，日志分析也看不出规律。最后我打印了崩溃时的汇编上下文，对照指令一条条看——发现编译器优化后，一个 volatile 变量被"聪明"地优化掉了，导致中断和主循环之间共享的变量不同步。那一刻我意识到：不了解汇编，你在某些 bug 面前就是瞎子。</p>
-
-        <p>本章的焦点是 x86-64 架构——这是当今绝大多数桌面和服务器 CPU 使用的指令集。我们只讲最核心、最常用的指令，不讲冷门内容。</p>
-
-        <h3>4.1 x86-64 寄存器全景图</h3>
-
-        <p>x86-64 架构提供了 16 个 64 位通用寄存器，外加程序计数器（PC / %rip）和条件码寄存器（后面两章会细讲）。理解这些寄存器是看懂汇编代码的第一步。</p>
-
-        <table>
-            <tr>
-                <th>64 位寄存器</th>
-                <th>32 位子集</th>
-                <th>16 位子集</th>
-                <th>8 位子集</th>
-                <th>角色/用途</th>
-                <th>保存责任</th>
-            </tr>
-            <tr>
-                <td>%rax</td>
-                <td>%eax</td>
-                <td>%ax</td>
-                <td>%al</td>
-                <td>返回值、累加器</td>
-                <td>Caller-saved</td>
-            </tr>
-            <tr>
-                <td>%rbx</td>
-                <td>%ebx</td>
-                <td>%bx</td>
-                <td>%bl</td>
-                <td>基址寄存器</td>
-                <td>Callee-saved</td>
-            </tr>
-            <tr>
-                <td>%rcx</td>
-                <td>%ecx</td>
-                <td>%cx</td>
-                <td>%cl</td>
-                <td>第 4 个函数参数、计数器</td>
-                <td>Caller-saved</td>
-            </tr>
-            <tr>
-                <td>%rdx</td>
-                <td>%edx</td>
-                <td>%dx</td>
-                <td>%dl</td>
-                <td>第 3 个函数参数、数据寄存器</td>
-                <td>Caller-saved</td>
-            </tr>
-            <tr>
-                <td>%rsi</td>
-                <td>%esi</td>
-                <td>%si</td>
-                <td>%sil</td>
-                <td>第 2 个函数参数、源索引</td>
-                <td>Caller-saved</td>
-            </tr>
-            <tr>
-                <td>%rdi</td>
-                <td>%edi</td>
-                <td>%di</td>
-                <td>%dil</td>
-                <td>第 1 个函数参数、目标索引</td>
-                <td>Caller-saved</td>
-            </tr>
-            <tr>
-                <td>%r8</td>
-                <td>%r8d</td>
-                <td>%r8w</td>
-                <td>%r8b</td>
-                <td>第 5 个函数参数</td>
-                <td>Caller-saved</td>
-            </tr>
-            <tr>
-                <td>%r9</td>
-                <td>%r9d</td>
-                <td>%r9w</td>
-                <td>%r9b</td>
-                <td>第 6 个函数参数</td>
-                <td>Caller-saved</td>
-            </tr>
-            <tr>
-                <td>%r10</td>
-                <td>%r10d</td>
-                <td>%r10w</td>
-                <td>%r10b</td>
-                <td>临时寄存器</td>
-                <td>Caller-saved</td>
-            </tr>
-            <tr>
-                <td>%r11</td>
-                <td>%r11d</td>
-                <td>%r11w</td>
-                <td>%r11b</td>
-                <td>临时寄存器</td>
-                <td>Caller-saved</td>
-            </tr>
-            <tr>
-                <td>%r12</td>
-                <td>%r12d</td>
-                <td>%r12w</td>
-                <td>%r12b</td>
-                <td>通用寄存器</td>
-                <td>Callee-saved</td>
-            </tr>
-            <tr>
-                <td>%r13</td>
-                <td>%r13d</td>
-                <td>%r13w</td>
-                <td>%r13b</td>
-                <td>通用寄存器</td>
-                <td>Callee-saved</td>
-            </tr>
-            <tr>
-                <td>%r14</td>
-                <td>%r14d</td>
-                <td>%r14w</td>
-                <td>%r14b</td>
-                <td>通用寄存器</td>
-                <td>Callee-saved</td>
-            </tr>
-            <tr>
-                <td>%r15</td>
-                <td>%r15d</td>
-                <td>%r15w</td>
-                <td>%r15b</td>
-                <td>通用寄存器</td>
-                <td>Callee-saved</td>
-            </tr>
-            <tr>
-                <td>%rsp</td>
-                <td>%esp</td>
-                <td>%sp</td>
-                <td>%spl</td>
-                <td>栈指针（Stack Pointer）</td>
-                <td>专用</td>
-            </tr>
-            <tr>
-                <td>%rbp</td>
-                <td>%ebp</td>
-                <td>%bp</td>
-                <td>%bpl</td>
-                <td>基址指针（Frame Pointer，可选）</td>
-                <td>Callee-saved</td>
-            </tr>
-        </table>
-
-        <p>这里最关键的概念是 <strong>Caller-saved vs Callee-saved</strong>。Caller-saved 寄存器由调用者负责保存（如果调用后还要用）；Callee-saved 寄存器由被调用者负责保存（如果被调用者想用，必须先 push 保存，返回前 pop 恢复）。这个机制在第六章讲过程调用时会详细分析。</p>
-
-        <h3>4.2 数据传送指令家族</h3>
-
-        <p>最常用的指令就是 <strong>mov</strong> 指令——它把数据从一个位置复制到另一个位置。x86-64 的 mov 指令有四种主要变体：</p>
-
-        <table>
-            <tr>
-                <th>指令</th>
-                <th>操作数大小</th>
-                <th>示例</th>
-                <th>含义</th>
-            </tr>
-            <tr>
-                <td><code>movb</code></td>
-                <td>1 字节</td>
-                <td><code>movb %al, %bl</code></td>
-                <td>复制 1 字节</td>
-            </tr>
-            <tr>
-                <td><code>movw</code></td>
-                <td>2 字节</td>
-                <td><code>movw %ax, %bx</code></td>
-                <td>复制 1 个字（word）</td>
-            </tr>
-            <tr>
-                <td><code>movl</code></td>
-                <td>4 字节</td>
-                <td><code>movl %eax, %ebx</code></td>
-                <td>复制双字（double word），同时将高 32 位清零</td>
-            </tr>
-            <tr>
-                <td><code>movq</code></td>
-                <td>8 字节</td>
-                <td><code>movq %rax, %rbx</code></td>
-                <td>复制四字（quad word）</td>
-            </tr>
-        </table>
-
-        <p>另外还有一个特殊的 <code>movabsq</code>，用于将 64 位立即数加载到寄存器——普通的 <code>movq</code> 只能接受 32 位立即数（符号扩展后），而 64 位立即数必须用 <code>movabsq</code>。</p>
-
-        <p><strong>push 和 pop：</strong></p>
-        <p><code>pushq %rax</code> 等价于以下两步的微操作：</p>
-        <pre><code>subq $8, %rsp       # 栈指针减 8
-movq %rax, (%rsp)   # 将 %rax 的值写入新的栈顶</code></pre>
-        <p><code>popq %rax</code> 等价于：</p>
-        <pre><code>movq (%rsp), %rax   # 从栈顶读取到 %rax
-addq $8, %rsp       # 栈指针加 8</code></pre>
-
-        <p><strong>lea 指令——不访问内存的"计算器"：</strong></p>
-        <p><code>lea</code>（Load Effective Address）是一个被低估的强力指令。它的本意是计算有效地址，但因为地址计算涉及灵活的加法和移位，聪明的程序员（和编译器）把它当作了"免内存访问的算术指令"：</p>
-        <pre><code>leaq (%rdi, %rsi, 4), %rax   # %rax = %rdi + %rsi * 4
-leaq 8(%rdx), %rax            # %rax = %rdx + 8</code></pre>
-        <p>注意 lea 不访问内存——它只是做地址计算并存结果！这就让 lea 成了一个隐形的加法+乘法指令，而且比用 add+imul 组合更快。</p>
-
-        <h3>4.3 算术与逻辑指令</h3>
-
-        <p>x86-64 提供了一套丰富的算术与逻辑指令。来看一个 C 函数和它编译后的汇编对比：</p>
-
-        <pre><code>// C 源码
-long arith(long a, long b, long c)
-{
-    return a + b * 4 - c / 8 + (a &amp; 0xFF);
+<main id="chapter-main" class="reading-page">
+<article>
+<header class="chapter-hero">
+<p class="eyebrow">计算机系统 · 机器级程序 / 04</p>
+<h1>一行 C 代码，CPU 到底做了什么？</h1>
+<p class="lede">假设有 <code>return a[i] + 7;</code>。人看见“数组取值，再加七”；x86-64 则要从寄存器里取出基址和下标，算出有效地址，访问内存，最后执行加法。<strong>汇编是理解这些数据路径的放大镜。</strong></p>
+<p class="chapter-scope">以下汇编统一采用 Linux/macOS 上常见的 System V AMD64 ABI 与 GNU AT&amp;T 语法，假定 <code>long</code> 为 64 位；Windows x64 的传参规则不同。示例是符合语义的教学译法，不声称所有编译器都生成完全相同的指令。</p>
+</header>
+<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c4-regs">01 寄存器地图</a><a href="#c4-mov">02 搬运与计算</a><a href="#c4-addr">03 读懂地址公式</a><a href="#c4-arith">04 算术的边界</a><a href="#c4-lab">05 反汇编实验</a></nav>
+<section id="c4-regs">
+<h2>4.1 寄存器：CPU 里离运算最近的工作台</h2>
+<p>一个 x86-64 核心具有 16 个 64 位通用整数寄存器。它们不是“16 种不同用途的内存”，而是一组高速存储位置；ABI 决定了函数间怎样协作使用。对 System V AMD64 中的整数/指针参数，前六个常用寄存器按顺序是 <code>%rdi</code>、<code>%rsi</code>、<code>%rdx</code>、<code>%rcx</code>、<code>%r8</code>、<code>%r9</code>，返回值通常放入 <code>%rax</code>。</p>
+<figure class="lesson-figure"><img src="chapter-assets/04-registers.svg" alt="System V AMD64 前六个整数参数依次进入 rdi、rsi、rdx、rcx、r8、r9；返回值经 rax；rsp 指向栈顶。" width="880" height="310"><figcaption>图 4-1：颜色表达的是<strong>本章使用的 ABI 中的常见角色</strong>，不代表寄存器在所有指令中有固定职务。</figcaption></figure>
+<table><thead><tr><th>用途 / 保留规则</th><th>64 位寄存器</th><th>关键事实</th></tr></thead><tbody><tr><td>参数与调用者易失</td><td><code>rdi rsi rdx rcx r8 r9</code></td><td>可用于前六个整数/指针参数；调用方如需跨调用保留，自己保存</td></tr><tr><td>返回值与临时寄存器</td><td><code>rax r10 r11</code></td><td>通常调用者易失；<code>rax</code> 用于常见整数返回值</td></tr><tr><td>被调用者保存</td><td><code>rbx rbp r12 r13 r14 r15</code></td><td>使用后须按 ABI 恢复原值；<code>rbp</code> 不一定用作帧指针</td></tr><tr><td>栈指针</td><td><code>rsp</code></td><td>始终需要按调用约定维持正确的栈状态</td></tr><tr><td>特殊寄存器</td><td><code>rip</code> / <code>rflags</code></td><td>指令指针与标志，不属于上述 16 个通用寄存器</td></tr></tbody></table>
+<p>同一个寄存器还有不同宽度的名字：<code>%rax</code>（64 位）、<code>%eax</code>（低 32 位）、<code>%ax</code>（低 16 位）、<code>%al</code>（低 8 位）。在 64 位模式下，<strong>写入 32 位子寄存器会把对应 64 位寄存器的高 32 位清零</strong>；写入 8 或 16 位子寄存器通常保留其余位。</p>
+<pre><code>movq $-1, %rax      # rax = 0xffffffffffffffff
+movl $1, %eax       # rax = 0x0000000000000001
+movb $2, %al        # rax = 0x0000000000000002</code></pre>
+</section>
+<section id="c4-mov">
+<h2>4.2 同一个括号，MOV 会读内存，LEA 只算地址</h2>
+<p>先记住 AT&amp;T 语法的方向：<code>指令 源, 目的</code>；寄存器前缀为 <code>%</code>，立即数前缀为 <code>$</code>，常见的 <code>b/w/l/q</code> 后缀分别表示 1/2/4/8 字节。</p>
+<figure class="lesson-figure"><img src="chapter-assets/04-mov-lea.svg" alt="若rdi等于0x1000，地址0x1008中存值42；movq 8(rdi), rax 会取出42，而 leaq 8(rdi), rax 会得到地址0x1008。" width="880" height="315"><figcaption>图 4-2：<code>movq 8(%rdi), %rax</code> 读取地址 <code>0x1008</code> 的 8 字节；<code>leaq 8(%rdi), %rax</code> 得到的只是 <code>0x1008</code>。</figcaption></figure>
+<pre><code>movq %rdi, %rax          # 复制寄存器的 64 位值
+movq 8(%rdi), %rax       # 从内存读 8 字节
+movq %rax, 8(%rdi)       # 往内存写 8 字节
+leaq 8(%rdi), %rax       # 仅计算地址，不读内存</code></pre>
+<p>一般 <code>mov</code> 的两个操作数不能同时都是内存位置；需借助寄存器中转。<code>lea</code> 本意是 Load Effective Address，因此可以把比例与偏移组合成加法：<code>leaq (%rdi,%rsi,4), %rax</code> 计算 <code>rdi + 4*rsi</code>，但不会解引用这个地址，也不会像普通 <code>add</code> 那样修改算术条件标志。<strong>这是一种语义便利，不等于在所有 CPU 上永远“零成本”或更快。</strong></p>
+</section>
+<section id="c4-addr">
+<h2>4.3 地址计算：把数组访问拆成一条公式</h2>
+<p>典型的 AT&amp;T 内存寻址形式是 <code>D(Rb,Ri,S)</code>，有效地址等于位移 <em>D</em>、基址寄存器 <em>Rb</em> 和变址寄存器 <em>Ri</em> 乘比例因子 <em>S</em> 之和。比例只能选 <code>1, 2, 4, 8</code>；变址位置不能使用 <code>%rsp</code>。位移可以省略；<code>symbol(%rip)</code> 是常见的相对指令指针寻址形式。</p>
+<div class="math-scroll" tabindex="0" role="group" aria-label="有效地址计算公式"><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><mrow><mi>EA</mi><mo>=</mo><mi>D</mi><mo>+</mo><msub><mi>R</mi><mi>b</mi></msub><mo>+</mo><msub><mi>R</mi><mi>i</mi></msub><mo>×</mo><mi>S</mi></mrow></math></div>
+<p>假设 <code>long *a</code> 指向地址 <code>0x1000</code>，每个元素 8 字节，则 <code>a[3]</code> 位于 <code>0x1000 + 3×8 = 0x1018</code>。把公式交给 CPU 的地址生成逻辑：</p>
+<pre><code>/* System V AMD64：a 在 rdi，i 在 rsi */
+long read_item(const long *a, long i) {
+    return a[i] + 7;
 }
 
-// GCC -O1 编译后的汇编
-arith:
-    leaq    (%rdi, %rdi, 4), %rax   // %rax = a * 5 (用 lea 做乘法)
-    addq    %rax, %rsi              // %rsi = b + a*5
-    movq    %rdx, %rax              // %rax = c
-    sarq    $3, %rax                // %rax = c >> 3 (有符号除以 8)
-    subq    %rax, %rsi              // %rsi = (b+a*5) - (c/8)
-    movzbl  %dil, %eax              // %eax = a & 0xFF (零扩展)
-    addq    %rsi, %rax              // %rax = (b+a*5-c/8) + (a&0xFF)
+/* 一种语义等价的教学汇编，不保证编译器逐字生成 */
+read_item:
+    movq (%rdi,%rsi,8), %rax  # 读取 a[i]
+    addq $7, %rax             # 加 7
     ret</code></pre>
+<figure class="lesson-figure"><img src="chapter-assets/04-address.svg" alt="从基址0x1000按每元素8字节向右找到下标3，对应地址0x1018；位移、基址、索引和比例因子共同组成有效地址。" width="880" height="295"><figcaption>图 4-3：<code>movq</code> 使用计算出的有效地址访问内存；<code>leaq</code> 则只保留计算出的地址本身。</figcaption></figure>
+<div class="micro-lab" aria-label="有效地址计算交互">
+<h3>交互：调整下标，观察地址如何变化</h3>
+<label for="idx">数组下标 i（0 到 12）</label>
+<input id="idx" type="range" min="0" max="12" value="3" step="1">
+<output id="addr-result" for="idx" aria-live="polite">0x1000 + 3 × 8 = 0x1018</output>
+<p class="small-note">演示假设基址固定、每个 <code>long</code> 为 8 字节，且下标有效；真实程序还需保证指针位于合法对象范围内。</p>
+</div>
+</section>
+<section id="c4-arith">
+<h2>4.4 算术指令：尤其要警惕负数除法</h2>
+<p><code>addq</code>、<code>subq</code> 等在目的操作数上就地计算；<code>andq</code>、<code>orq</code>、<code>xorq</code> 做位运算。<code>salq</code>/<code>shlq</code> 左移，<code>shrq</code> 逻辑右移，<code>sarq</code> 算术右移并复制符号位。但<strong>算术右移不是一般情况下的 C 有符号除法</strong>：例如二补码的 <code>-9 &gt;&gt; 3</code> 在典型 x86 机器上向负无穷方向取整为 −2，而 C 的 <code>-9 / 8</code> 向零截断是 −1。C 中负有符号数右移的语义还取决于所采用的语言标准版本。</p>
+<pre><code>/* 语义示例：x 与 y 均为 long，且 y 非 0，
+   同时避免 LONG_MIN / -1 的不可表示商 */
+long quotient(long x, long y) { return x / y; }
 
-        <p>常用算术与移位指令速览：</p>
-
-        <table>
-            <tr>
-                <th>指令</th>
-                <th>含义</th>
-                <th>注意事项</th>
-            </tr>
-            <tr>
-                <td><code>addq src, dst</code></td>
-                <td>dst += src</td>
-                <td>影响条件码</td>
-            </tr>
-            <tr>
-                <td><code>subq src, dst</code></td>
-                <td>dst -= src</td>
-                <td>影响条件码</td>
-            </tr>
-            <tr>
-                <td><code>imulq src, dst</code></td>
-                <td>dst *= src（有符号）</td>
-                <td>64 位乘法结果可能溢出</td>
-            </tr>
-            <tr>
-                <td><code>imulq src</code></td>
-                <td><code>%rdx:%rax = %rax * src</code></td>
-                <td>单操作数版本，结果 128 位存入 rdx:rax</td>
-            </tr>
-            <tr>
-                <td><code>idivq src</code></td>
-                <td><code>%rax = %rdx:%rax / src</code>，<code>%rdx = 余数</code></td>
-                <td>有符号除法，需先符号扩展 %rax 到 %rdx</td>
-            </tr>
-            <tr>
-                <td><code>salq k, dst</code> / <code>shlq k, dst</code></td>
-                <td>dst <<= k（左移）</td>
-                <td>左移同算术/逻辑，无区别</td>
-            </tr>
-            <tr>
-                <td><code>sarq k, dst</code></td>
-                <td>dst >>= k（算术右移，保留符号位）</td>
-                <td>有符号数的右移</td>
-            </tr>
-            <tr>
-                <td><code>shrq k, dst</code></td>
-                <td>dst >>= k（逻辑右移，高位补 0）</td>
-                <td>无符号数的右移</td>
-            </tr>
-            <tr>
-                <td><code>andq src, dst</code></td>
-                <td>dst &= src</td>
-                <td></td>
-            </tr>
-            <tr>
-                <td><code>orq src, dst</code></td>
-                <td>dst |= src</td>
-                <td></td>
-            </tr>
-            <tr>
-                <td><code>xorq src, dst</code></td>
-                <td>dst ^= src</td>
-                <td></td>
-            </tr>
-            <tr>
-                <td><code>negq dst</code></td>
-                <td>dst = -dst</td>
-                <td></td>
-            </tr>
-            <tr>
-                <td><code>notq dst</code></td>
-                <td>dst = ~dst</td>
-                <td></td>
-            </tr>
-        </table>
-
-        <div class="tip">
-            <p><strong>编译实践</strong>：自己动手试试！写一个简单的 C 文件，然后执行 <code>gcc -O1 -S test.c -o test.s</code> 来查看生成的汇编代码。注意不同优化级别（<code>-O0</code> vs <code>-O1</code> vs <code>-O2</code>）产生的汇编差异巨大。<code>-O0</code> 几乎每行 C 代码都有对应汇编，便于调试；<code>-O2</code> 的代码简洁高效但更难对应源码。</p>
-        </div>
-
-        <h3>4.4 寻址模式详解</h3>
-
-        <p>x86-64 的寻址模式可以归纳为三类操作数类型：<strong>立即数（Immediate）</strong>、<strong>寄存器（Register）</strong>、<strong>内存（Memory）</strong>。</p>
-
-        <p>而内存寻址中最强大的是<strong>比例变址寻址（Indexed Addressing）</strong>，其通用格式为：</p>
-
-        <pre><code>Imm(%rb, %ri, s)   →   有效地址 = Imm + %rb + %ri * s</code></pre>
-
-        <p>其中 <code>Imm</code> 是立即数偏移（1, 2 或 4 字节），<code>%rb</code> 是基址寄存器，<code>%ri</code> 是变址寄存器（不能是 %rsp），<code>s</code> 是比例因子（1, 2, 4 或 8）。</p>
-
-        <table>
-            <tr>
-                <th>寻址模式</th>
-                <th>示例</th>
-                <th>有效地址计算</th>
-                <th>使用场景</th>
-            </tr>
-            <tr>
-                <td>立即数寻址</td>
-                <td><code>$0x42</code></td>
-                <td>常数本身</td>
-                <td>加载常量</td>
-            </tr>
-            <tr>
-                <td>寄存器寻址</td>
-                <td><code>%rax</code></td>
-                <td>寄存器中的值</td>
-                <td>寄存器间数据移动</td>
-            </tr>
-            <tr>
-                <td>绝对寻址</td>
-                <td><code>0x404000</code></td>
-                <td>固定的内存地址</td>
-                <td>访问全局变量</td>
-            </tr>
-            <tr>
-                <td>基址寻址</td>
-                <td><code>(%rax)</code></td>
-                <td>%rax 中的值</td>
-                <td>指针解引用</td>
-            </tr>
-            <tr>
-                <td>基址+偏移量</td>
-                <td><code>8(%rax)</code></td>
-                <td>%rax + 8</td>
-                <td>访问结构体字段</td>
-            </tr>
-            <tr>
-                <td>基址+变址</td>
-                <td><code>(%rax, %rbx)</code></td>
-                <td>%rax + %rbx</td>
-                <td>数组索引</td>
-            </tr>
-            <tr>
-                <td>变址+比例因子</td>
-                <td><code>(, %rbx, 4)</code></td>
-                <td>%rbx * 4</td>
-                <td>int 数组的元素访问</td>
-            </tr>
-            <tr>
-                <td>比例变址寻址</td>
-                <td><code>(%rax, %rbx, 8)</code></td>
-                <td>%rax + %rbx * 8</td>
-                <td>long 数组的元素访问</td>
-            </tr>
-            <tr>
-                <td>比例变址+偏移</td>
-                <td><code>16(%rax, %rbx, 4)</code></td>
-                <td>16 + %rax + %rbx * 4</td>
-                <td>结构体数组成员访问</td>
-            </tr>
-        </table>
-
-        <div class="highlight">
-            <p><strong>编译器使用 lea 进行优化的常见模式</strong>：</p>
-            <ul>
-                <li><code>leaq (%rdi, %rdi, 2), %rax</code> → <code>%rax = %rdi * 3</code>（乘以 3）</li>
-                <li><code>leaq (%rdi, %rdi, 4), %rax</code> → <code>%rax = %rdi * 5</code>（乘以 5）</li>
-                <li><code>leaq (%rdi, %rdi, 8), %rax</code> → <code>%rax = %rdi * 9</code>（乘以 9）</li>
-                <li><code>leaq (%rdx, %rdx, 2), %rax; salq $2, %rax</code> → <code>%rax = %rdx * 12</code>（乘以 12 = 3×4）</li>
-            </ul>
-            <p>这些技巧表明：<strong>lea 是 x86-64 中最好的"免费"算术指令</strong>——因为它只做地址计算，不访问内存，通常能在 1 个时钟周期内完成。</p>
-        </div>
-
-        <p>以上就是本章的全部内容。我们走马观花地看了寄存器布局、数据传送指令、算术逻辑指令和寻址模式。这些知识就像乐高积木——单独的每块都很简单，但组合起来就能构建出复杂的程序行为。</p>
-
-        <p>下一章，我们将在这套基础指令之上，学习"程序如何做决策"——条件码、条件跳转，以及如何用汇编实现 C 语言的 if-else、switch-case 和循环。</p>
+/* x86-64 对应的常见指令序列 */
+movq %rdi, %rax    # 被除数放入 rax
+cqto               # 将 rax 的符号扩展到 rdx:rax
+idivq %rsi         # 商进入 rax，余数进入 rdx
+ret</code></pre>
+<p>用 <code>lea</code> 做小常数乘法是常见的编译器策略；但带地址形式的算术与 C 的“有符号溢出未定义”之间仍有语言层面的区别。读汇编时，把<strong>机器指令的位级行为</strong>与<strong>C 源程序的可移植语义</strong>分开看。</p>
+<div class="insight"><strong>分清三个层次</strong><p>C 表达式规定语言语义；ABI 规定函数间如何传值和保存寄存器；ISA 指令规定机器如何实际移动、寻址与算术。不要把某一种编译器输出当成语言标准。</p></div>
+</section>
+<section id="c4-lab">
+<h2>4.5 验证：自己生成汇编，再反向阅读</h2>
+<p>将上述 <code>read_item</code> 的 C 实现保存为 <code>machine.c</code>，在 x86-64 Linux 环境中运行：</p>
+<pre><code>cc -std=c11 -O1 -S machine.c -o machine.s
+cc -std=c11 -O0 -S machine.c -o machine-O0.s
+cc -std=c11 -O2 -c machine.c -o machine.o
+objdump -dr machine.o</code></pre>
+<p>对照三份结果观察：参数在哪里？数组元素如何寻址？<code>O0</code> 与 <code>O2</code> 是否产生相同数量的指令？实际输出随编译器、平台和版本而不同，<strong>你自己的反汇编结果才是对应环境的证据</strong>。在非 x86-64 架构上会看到另一套指令集，这不代表源代码不正确。</p>
+<div class="exercise"><h3>自测</h3><p>如果 <code>%rdi = 0x2000</code>、<code>%rsi = 5</code>，那么 <code>leaq 16(%rdi,%rsi,8), %rax</code> 后 <code>%rax</code> 是多少？会不会读取这个地址上的内存？</p><details><summary>查看推导</summary><p>有效地址为 <code>0x2000 + 16 + 5×8 = 0x2038</code>；<code>lea</code> 不读取该地址上的内存。</p></details></div>
+</section>
+<section id="c4-summary"><h2>带走什么？</h2><p>阅读 x86-64 的有效次序是：先认出寄存器角色，再判断源/目的和宽度，随后把 <code>D(Rb,Ri,S)</code> 翻译成地址公式，最后区分“计算地址”和“访问内存”。下一章会在这些基础上继续看条件码、分支与循环。</p>
+<h3>资料与边界</h3><p>参阅 <a href="https://csapp.cs.cmu.edu/3e/students.html">CS:APP 3e 学生资源（教材第 3 章）</a>、<a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel® 64/IA-32 软件开发手册</a> 与 <a href="https://gitlab.com/x86-psABIs/x86-64-ABI">System V AMD64 psABI</a>。本课程第 4 章是教材机器级表示内容的上半部分；Windows x64、不同编译器与调试符号有各自约定。</p></section>
+</article>
+</main>
+<script>
+(() => {
+  const slider = document.getElementById('idx');
+  const output = document.getElementById('addr-result');
+  if (!slider || !output) return;
+  function update() {
+    const index = Number(slider.value);
+    const address = 4096 + index * 8;
+    output.textContent = '0x1000 + ' + index + ' × 8 = 0x' + address.toString(16);
+  }
+  slider.addEventListener('input', update);
+  update();
+})();
+</script>
 
         <div class="footer-nav">
             <a href="03.html">← 上一章</a>

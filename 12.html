@@ -1,246 +1,258 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>第12章 存储器层次结构——Cache — 深入理解计算机系统（CSAPP）</title>
-    <link rel="stylesheet" href="theme.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="从地址位拆解和两路缓存的命中追踪，学习缓存 3C Miss、矩阵访问次序与分块。">
+<title>第 12 章：Cache 映射与性能 · CSAPP 中文教程</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+:root{--paper:#fffdf9;--ink:#203035;--muted:#56686e;--accent:#147f80;--transform:#bf6343;--structure:#6b5da5;--edge:#d9e1dd;--wash:#f1f6f3}
+html{scroll-behavior:smooth;scroll-padding-top:1rem}
+body{padding:0;margin:0;background:#edf2ef;color:var(--ink);font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:17px;line-height:1.85}
+a{color:#096c70;text-underline-offset:.18em}a:hover{color:#a75337}
+a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.skip-link{position:absolute;top:-100px;left:12px;z-index:99;background:white;padding:8px 14px}.skip-link:focus{top:12px}
+.book-layout{display:grid;grid-template-columns:minmax(210px,254px) minmax(0,1fr);max-width:1420px;margin:auto;min-height:100vh;background:var(--paper);box-shadow:0 12px 70px #20303512}
+.book-sidebar{border-right:1px solid var(--edge);background:#f6f8f5;padding:24px 16px;position:relative}
+.sticky{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto}
+.brand{display:block;font-size:1.07rem;font-weight:800;color:var(--ink);text-decoration:none;padding:0 10px 12px;letter-spacing:-.02em}
+.brand small{display:block;font-size:.72rem;font-weight:550;color:var(--muted);letter-spacing:.1em}
+.chapter-nav{font-size:.8rem;line-height:1.5}
+.chapter-nav h2{font-size:.73rem;letter-spacing:.16em;color:var(--muted);border:0;padding:0;margin:8px 10px 12px}
+.chapter-nav ul{list-style:none;padding:0;margin:0}.chapter-nav li{margin:0}
+.chapter-nav a{display:flex;gap:9px;align-items:baseline;padding:8px 10px;color:#465960;border-radius:8px;text-decoration:none;font-weight:450}
+.chapter-nav a:hover{background:#e8f0ed;transform:none}
+.chapter-nav a span{font-size:.69rem;color:#7e928e;font-variant-numeric:tabular-nums}
+.chapter-nav a[aria-current]{background:#deece6;color:#085c5e;font-weight:750}
+.mobile-chapters{display:none}
+.essay{width:100%;min-width:0;padding:70px clamp(20px,6vw,96px) 80px}
+.article-body{max-width:850px;margin:0 auto}
+.eyebrow{color:var(--accent);font-size:.77rem;letter-spacing:.15em;text-transform:uppercase;font-weight:800}
+.essay h1{font-size:clamp(2.25rem,5vw,4.25rem);font-weight:800;letter-spacing:-.055em;line-height:1.2;margin:16px 0 23px;color:#182d30}
+.essay .dek{font-size:clamp(1.1rem,2vw,1.38rem);line-height:1.8;color:#435d60;max-width:40em}
+.essay p{margin:17px 0;color:var(--ink);line-height:1.9}
+.essay h2{font-size:clamp(1.55rem,3vw,2.12rem);margin:0 0 22px;padding:0;border:0;color:#1a3537;letter-spacing:-.035em;line-height:1.35}
+.essay h3{font-size:1.17rem;margin:29px 0 13px;color:#27454a}
+.essay section{margin-top:84px;scroll-margin-top:22px}
+.essay strong{color:#123c3f}
+.essay ul,.essay ol{padding-left:1.2rem;margin:18px 0}
+.essay li{padding-left:4px;margin:7px 0}
+.essay pre{border-radius:12px;background:#172a2e;color:#edf9f5;line-height:1.65;padding:20px;overflow-x:auto;font-size:.87rem;margin:22px 0;white-space:pre}
+.essay pre code{color:inherit;background:none;padding:0;font-size:inherit}
+.essay code{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-size:.84em;background:#eaf1ec;border-radius:4px;padding:2px 5px;overflow-wrap:anywhere}
+.essay figure{margin:30px 0 12px}
+.essay figcaption{font-size:.86rem;line-height:1.7;color:var(--muted);margin-top:10px}
+.essay svg{display:block;width:100%;height:auto}
+.section-no{display:block;font-size:.73rem;font-weight:800;letter-spacing:.17em;color:var(--accent);margin-bottom:11px}
+.lede-line{height:3px;width:66px;background:var(--accent);margin:28px 0}
+.inline-toc{display:flex;gap:8px;flex-wrap:wrap;margin:30px 0 0}
+.inline-toc a{font-size:.8rem;background:#eaf3ee;border:1px solid #cee3d8;border-radius:999px;padding:4px 11px;text-decoration:none;color:#21585a}
+.quote{border-left:3px solid var(--accent);padding:8px 0 8px 22px;font-size:1.09rem;color:#33595c;line-height:1.8;margin:30px 0}
+.figure-card{border:1px solid var(--edge);border-radius:18px;background:#fbfdfb;padding:clamp(12px,2.5vw,24px);box-shadow:0 12px 25px #102b2410}
+.pill{display:inline-block;font-size:.72rem;letter-spacing:.06em;font-weight:750;border-radius:5px;padding:2px 8px;background:#e9f3ec;color:#176f68}
+.trace-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:22px 0 12px}
+.step-button{cursor:pointer;border:1px solid #c7d8d0;border-radius:10px;padding:13px 8px;background:white;color:#31545a;text-align:center;font-weight:700;font:inherit;font-size:.85rem;line-height:1.4}
+.step-button[aria-pressed=true]{background:#176f70;color:white;border-color:#176f70}
+.step-button span{display:block;font-size:.68rem;opacity:.75;margin-bottom:2px}
+.step-detail{border-left:4px solid var(--accent);background:#eef5ef;padding:16px 20px;border-radius:0 10px 10px 0;min-height:104px}
+.step-detail p{margin:7px 0;font-size:.96rem}
+.diagram-step{transition:opacity .2s,filter .2s}
+[data-step-active="0"] .diagram-step:not([data-step-node="0"]),[data-step-active="1"] .diagram-step:not([data-step-node="1"]),[data-step-active="2"] .diagram-step:not([data-step-node="2"]),[data-step-active="3"] .diagram-step:not([data-step-node="3"]){opacity:.55}
+.callout{background:#f0f5f1;border-left:4px solid var(--accent);padding:15px 20px;border-radius:0 12px 12px 0;margin:25px 0}
+.callout p{margin:4px 0}
+.caution{background:#fff6ea;border-left-color:#ba7b32}
+.check-list{display:grid;gap:10px;margin:22px 0}
+.check-list div{border-top:1px solid var(--edge);padding:12px 0}
+.check-list b{display:block;color:var(--accent);font-size:.76rem;letter-spacing:.08em}
+.memory-bars{display:grid;gap:8px;margin:24px 0}
+.memory-row{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:center}
+.memory-row b{font-size:.88rem}
+.memory-track{height:40px;display:flex;align-items:center;border-radius:8px;background:#e8efeb;overflow:hidden}
+.memory-fill{height:100%;display:flex;align-items:center;padding-left:12px;color:white;font-size:.79rem;font-weight:750;min-width:104px}
+.memory-fill.level1{width:28%;background:#147f80}.memory-fill.level2{width:46%;background:#427eaa}.memory-fill.level3{width:72%;background:#7767a9}.memory-fill.level4{width:100%;background:#b46c4d}
+.small-note{font-size:.83rem!important;color:var(--muted)!important}
+.triad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:24px 0}
+.triad>div{border:1px solid var(--edge);border-radius:12px;padding:18px 16px;background:#fafbf8}
+.triad h3{margin:0 0 6px;color:#215c5e;font-size:1.08rem}
+.triad p{font-size:.9rem;margin:0;line-height:1.7}
+.math-panel{border-radius:14px;border:1px solid #d8e4dc;background:#f5f8f4;padding:16px 20px;margin:23px 0}
+.math-scroll{overflow-x:auto;max-width:100%;min-width:0;padding:8px 0}
+.math-scroll math[display=block]{width:max-content;min-width:100%;font-size:1.35rem;color:#1b4140}
+.math-label{font-size:.79rem;color:var(--muted);text-align:right}
+.widget{border:1px solid #cee0d9;border-radius:16px;padding:24px;margin:25px 0;background:#f5faf6}
+.widget h3{margin:0 0 8px}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:20px 0}
+.controls label{display:block;font-size:.91rem;font-weight:700}
+.controls input{width:100%;accent-color:var(--accent);margin:12px 0 0;cursor:pointer}
+.widget-output{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;border-top:1px solid #d2e3d9;padding-top:16px}
+.widget-output output{font-size:2.3rem;line-height:1.2;font-weight:800;color:#0d6c70;font-variant-numeric:tabular-nums}
+.widget-output p{margin:2px 0;font-size:.86rem}
+.table-wrap{max-width:100%;overflow-x:auto}
+.essay table{min-width:570px;font-size:.9rem;margin:16px 0;border-collapse:collapse}
+.essay th,.essay td{padding:10px 12px;border:1px solid #d6e1da;vertical-align:top}
+.essay th{background:#e8f1eb;color:#285354}
+.references{font-size:.88rem}
+.references li{overflow-wrap:anywhere}
+.footer-nav{margin-top:65px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--edge);padding:22px 0}
+.footer-nav a{background:#eaf2ee;padding:8px 16px;border-radius:999px;text-decoration:none}
+@media(max-width:900px){.book-layout{display:block}.book-sidebar{padding:9px 18px;border:0;border-bottom:1px solid var(--edge)}.sticky{position:static;max-height:none;overflow:visible}.brand{padding:5px 2px;font-size:.92rem}.brand small{display:inline;margin-left:8px}.chapter-nav{display:none}.mobile-chapters{display:block;font-size:.86rem;padding:6px 2px}.mobile-chapters summary{cursor:pointer;color:#315d5d;font-weight:700}.mobile-chapters ul{max-height:185px;overflow-y:auto;list-style:none;padding:0;margin:8px 0}.mobile-chapters li{margin:0}.mobile-chapters a{display:block;padding:5px}.essay{padding:42px 22px 60px}}
+@media(max-width:580px){.figure-card figure{max-width:100%;overflow-x:auto}.essay .figure-card svg{min-width:660px}.essay{padding:36px 16px 60px}.essay section{margin-top:62px}.trace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.controls,.triad{grid-template-columns:1fr}.memory-row{grid-template-columns:72px minmax(0,1fr);gap:7px}.memory-row b{font-size:.76rem}.figure-card{padding:10px}.essay pre{font-size:.75rem;padding:14px}.essay h1{letter-spacing:-.035em}.essay svg{min-width:0}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important}}
+@media print{body{background:white;font-size:11pt}.book-layout{display:block;box-shadow:none}.book-sidebar,.inline-toc,.trace-grid,.controls,.skip-link{display:none!important}.essay{padding:0}.article-body{max-width:none}.essay section{margin-top:24pt;break-inside:auto}.figure-card,.math-panel,.widget{break-inside:avoid;box-shadow:none}.math-scroll{overflow:visible}.math-scroll math[display=block]{font-size:1.15rem}.references a::after{content:" (" attr(href) ")";font-size:.75em}}
+
+.cache-trace{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:20px 0}
+.cache-trace button{border:1px solid #bdcec8;background:white;color:#335b5a;border-radius:10px;padding:10px;cursor:pointer;font:inherit;font-size:.84rem}
+.cache-trace button[aria-pressed=true]{background:#176f70;color:white}
+.cache-result{background:#eef5f0;border-left:4px solid var(--accent);padding:13px 16px;border-radius:0 9px 9px 0;min-height:80px}
+.cache-result p{margin:2px 0;font-size:.95rem}
+@media(max-width:580px){.essay .figure-card svg{min-width:620px}.cache-trace{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
 </head>
 <body>
-<div class="double-border">
-<div class="container">
-    <div class="sidebar">
-        <h3>💻 课程目录</h3>
-        <ul class="chapter-list">
-            <li><a href="01.html">第1章 计算机系统漫游</a></li>
-            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
-            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
-            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
-            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
-            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
-            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
-            <li><a href="08.html">第8章 处理器体系结构——ISA设计</a></li>
-            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
-            <li><a href="10.html">第10章 优化程序性能</a></li>
-            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
-            <li><a href="12.html" class="active">第12章 存储器层次结构——Cache</a></li>
-            <li><a href="13.html">第13章 链接——静态链接</a></li>
-            <li><a href="14.html">第14章 链接——动态链接</a></li>
-            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
-            <li><a href="16.html">第16章 异常控制流——信号</a></li>
-            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
-            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
-            <li><a href="19.html">第19章 系统级I/O</a></li>
-            <li><a href="20.html">第20章 网络编程——基础</a></li>
-            <li><a href="21.html">第21章 网络编程——进阶</a></li>
-            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
-            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
-            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
-            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
-            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
-            <li><a href="27.html">第27章 现代系统新趋势</a></li>
-            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
-        </ul>
-    </div>
-    <div class="main-content">
-        <h2>第十二章：存储器层次结构——Cache</h2>
+<a class="skip-link" href="#content">跳转到正文</a>
+<div class="book-layout">
+<aside class="book-sidebar">
+  <div class="sticky">
+    <a class="brand" href="index.html">CSAPP · Cache<small>COMPUTER SYSTEMS</small></a>
+    <nav class="chapter-nav" aria-label="课程章节目录">
+      <h2>课程 · 28 讲</h2><ul><li><a href="01.html"><span>01</span>计算机系统漫游</a></li>
+<li><a href="02.html"><span>02</span>信息的表示与处理——整数</a></li>
+<li><a href="03.html"><span>03</span>信息的表示与处理——浮点数</a></li>
+<li><a href="04.html"><span>04</span>程序的机器级表示——基础</a></li>
+<li><a href="05.html"><span>05</span>程序的机器级表示——控制流</a></li>
+<li><a href="06.html"><span>06</span>程序的机器级表示——过程与栈</a></li>
+<li><a href="07.html"><span>07</span>程序的机器级表示——数据与进阶</a></li>
+<li><a href="08.html"><span>08</span>处理器体系结构——ISA设计</a></li>
+<li><a href="09.html"><span>09</span>处理器体系结构——流水线</a></li>
+<li><a href="10.html"><span>10</span>优化程序性能</a></li>
+<li><a href="11.html"><span>11</span>存储器层次结构——技术</a></li>
+<li><a aria-current="page" href="12.html"><span>12</span>存储器层次结构——Cache</a></li>
+<li><a href="13.html"><span>13</span>链接——静态链接</a></li>
+<li><a href="14.html"><span>14</span>链接——动态链接</a></li>
+<li><a href="15.html"><span>15</span>异常控制流——异常与进程</a></li>
+<li><a href="16.html"><span>16</span>异常控制流——信号</a></li>
+<li><a href="17.html"><span>17</span>虚拟内存——地址翻译</a></li>
+<li><a href="18.html"><span>18</span>虚拟内存——内存分配</a></li>
+<li><a href="19.html"><span>19</span>系统级I/O</a></li>
+<li><a href="20.html"><span>20</span>网络编程——基础</a></li>
+<li><a href="21.html"><span>21</span>网络编程——进阶</a></li>
+<li><a href="22.html"><span>22</span>并发编程——线程基础</a></li>
+<li><a href="23.html"><span>23</span>并发编程——高阶模式</a></li>
+<li><a href="24.html"><span>24</span>经典Lab实战(I)</a></li>
+<li><a href="25.html"><span>25</span>经典Lab实战(II)</a></li>
+<li><a href="26.html"><span>26</span>经典Lab实战(III)——Proxy Lab</a></li>
+<li><a href="27.html"><span>27</span>现代系统新趋势</a></li>
+<li><a href="28.html"><span>28</span>综合项目：手写高性能Web服务器</a></li></ul>
+    </nav>
+    <details class="mobile-chapters"><summary>浏览全部 28 章</summary><ul><li><a href="01.html"><span>01</span>计算机系统漫游</a></li>
+<li><a href="02.html"><span>02</span>信息的表示与处理——整数</a></li>
+<li><a href="03.html"><span>03</span>信息的表示与处理——浮点数</a></li>
+<li><a href="04.html"><span>04</span>程序的机器级表示——基础</a></li>
+<li><a href="05.html"><span>05</span>程序的机器级表示——控制流</a></li>
+<li><a href="06.html"><span>06</span>程序的机器级表示——过程与栈</a></li>
+<li><a href="07.html"><span>07</span>程序的机器级表示——数据与进阶</a></li>
+<li><a href="08.html"><span>08</span>处理器体系结构——ISA设计</a></li>
+<li><a href="09.html"><span>09</span>处理器体系结构——流水线</a></li>
+<li><a href="10.html"><span>10</span>优化程序性能</a></li>
+<li><a href="11.html"><span>11</span>存储器层次结构——技术</a></li>
+<li><a aria-current="page" href="12.html"><span>12</span>存储器层次结构——Cache</a></li>
+<li><a href="13.html"><span>13</span>链接——静态链接</a></li>
+<li><a href="14.html"><span>14</span>链接——动态链接</a></li>
+<li><a href="15.html"><span>15</span>异常控制流——异常与进程</a></li>
+<li><a href="16.html"><span>16</span>异常控制流——信号</a></li>
+<li><a href="17.html"><span>17</span>虚拟内存——地址翻译</a></li>
+<li><a href="18.html"><span>18</span>虚拟内存——内存分配</a></li>
+<li><a href="19.html"><span>19</span>系统级I/O</a></li>
+<li><a href="20.html"><span>20</span>网络编程——基础</a></li>
+<li><a href="21.html"><span>21</span>网络编程——进阶</a></li>
+<li><a href="22.html"><span>22</span>并发编程——线程基础</a></li>
+<li><a href="23.html"><span>23</span>并发编程——高阶模式</a></li>
+<li><a href="24.html"><span>24</span>经典Lab实战(I)</a></li>
+<li><a href="25.html"><span>25</span>经典Lab实战(II)</a></li>
+<li><a href="26.html"><span>26</span>经典Lab实战(III)——Proxy Lab</a></li>
+<li><a href="27.html"><span>27</span>现代系统新趋势</a></li>
+<li><a href="28.html"><span>28</span>综合项目：手写高性能Web服务器</a></li></ul></details>
+  </div>
+</aside>
 
-        <p>上一章我们讨论了存储技术的全景图，了解了局部性的概念。现在，我们要聚焦于整个存储层次中最关键的一环——Cache（缓存）。Cache 处在 CPU 和主存之间，是弥合处理器速度与内存速度之间巨大鸿沟的关键桥梁。</p>
+<main class="essay" id="content"><article class="article-body">
+<header><div class="eyebrow">CHAPTER 12 · CACHE MAPPING</div><h1>为什么缓存还有空位，却偏偏装不下两个数？</h1>
+<p class="dek">两个地址只相差 64 字节，在一个极小的直接映射缓存里也可能反复驱逐彼此。原因不是总容量用完，而是地址中的几位决定了它们必须去同一个组。</p>
+<div class="lede-line"></div><nav class="inline-toc" aria-label="本章导航"><a href="#address">地址拆分</a><a href="#associativity">动态追踪</a><a href="#misses">3C Miss</a><a href="#matrix">矩阵分块</a><a href="#practice">实验</a></nav></header>
+<section id="address"><span class="section-no">12.1 · 从一条缓存行开始</span><h2>容量不是一袋任意摆放的字节</h2>
+<p>经典教学模型的缓存由 <strong>S 组（sets）</strong>、每组 <strong>E 行（ways）</strong>及每行 <strong>B 字节（block/line）</strong>组成。数据容量 <code>C = S × E × B</code>；每行另有有效位、标签和实现相关的替换状态等元数据，<strong>C 不包含这些开销</strong>。若有 4 组、每组 2 行、每行 16 B，则数据容量为 128 B。</p>
+<div class="math-panel"><div class="math-scroll" tabindex="0" role="region" aria-label="缓存容量公式"><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><mrow><mi>C</mi><mo>=</mo><mi>S</mi><mo>×</mo><mi>E</mi><mo>×</mo><mi>B</mi><mo>=</mo><mn>4</mn><mo>×</mo><mn>2</mn><mo>×</mo><mn>16</mn><mo>=</mo><mn>128</mn><mtext> B</mtext></mrow></math></div><div class="math-label">教学模型只计算数据存储容量</div></div>
+<p>在 S 和 B 都是 2 的幂、按简单模映射的模型中：低 <code>b=log₂B</code> 位给出块内偏移，随后 <code>s=log₂S</code> 位选组，余下高位作为标签。组内只要有一行有效且标签匹配，就是命中；否则发生未命中并进行填充/替换。</p>
+<div class="figure-card"><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 244" role="img" aria-labelledby="addr-title addr-desc" data-export="12-address.svg"><title id="addr-title">16 位地址按 Tag 10 位、Set 2 位、Offset 4 位拆解</title><desc id="addr-desc">示例地址 0x1234 二进制为 0001001000110100。高 10 位标签 0001001000 即 0x48，中间两位组索引 11 即 3，低四位块内偏移 0100 即 4。</desc><rect width="760" height="244" rx="16" fill="#f7faf7"/><text x="25" y="35" font-size="19" font-weight="700" fill="#24484b">地址 0x1234（假设是 16 位地址）</text><rect x="24" y="68" width="436" height="86" rx="10" fill="#7067ab"/><rect x="465" y="68" width="118" height="86" rx="9" fill="#147f80"/><rect x="588" y="68" width="146" height="86" rx="9" fill="#c1724b"/><text x="242" y="99" text-anchor="middle" font-size="17" fill="white" font-weight="700">Tag · t = 10</text><text x="242" y="127" text-anchor="middle" font-size="20" fill="white" font-family="monospace">0001001000</text><text x="524" y="99" text-anchor="middle" font-size="17" fill="white" font-weight="700">Set · s = 2</text><text x="524" y="127" text-anchor="middle" font-size="20" fill="white" font-family="monospace">11</text><text x="661" y="99" text-anchor="middle" font-size="17" fill="white" font-weight="700">Offset · b = 4</text><text x="661" y="127" text-anchor="middle" font-size="20" fill="white" font-family="monospace">0100</text><text x="54" y="192" font-size="16" fill="#4b5e6c">tag = 0x48</text><text x="465" y="192" font-size="16" fill="#156c68">组号 = 3</text><text x="605" y="192" font-size="16" fill="#a05b3e">偏移 = 4 B</text><text x="24" y="225" font-size="14" fill="#617371">S = 4 组，B = 16 B/行；示意模型使用 2 的幂参数</text></svg><figcaption>图 12-1 · 取 16 位地址 <code>0x1234</code>，<code>S=4</code>、<code>B=16</code>。正确结果为 offset=4、set=3、tag=0x48。原版将两位组索引写成四位，现已修正。</figcaption></figure></div>
+<pre><code>// 假设本题地址宽度为 16 位
+unsigned addr = 0x1234;
+unsigned offset = addr &amp; 0xf;       // 4
+unsigned set = (addr &gt;&gt; 4) &amp; 0x3;  // 3
+unsigned tag = addr &gt;&gt; 6;         // 0x48</code></pre>
+<p>直接映射是 <code>E=1</code>；多路组相联是 <code>E&gt;1</code>；全相联则是 <code>S=1</code>、<code>E=C/B</code>，并不是“E 等于 S”。真实处理器还可能采用复杂索引、不同缓存层级及地址翻译相关设计，先掌握这个清晰的抽象模型。</p></section>
+<section id="associativity"><span class="section-no">12.2 · 让一个冲突发生在眼前</span><h2>0x00 与 0x40，为什么相遇在 set 0？</h2>
+<p>仍取 <code>S=4, B=16</code>：地址 <code>0x00</code> 的块号是 0，<code>0x40</code> 的块号是 4；两者 <code>block mod S</code> 都为 0，但标签分别为 0 和 1。对于直接映射，它们必然轮流占据唯一一行；对于 <strong>2 路组相联</strong>，它们可以同时留在组 0 的两行。</p>
+<div class="figure-card"><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" role="img" aria-labelledby="set-title set-desc" data-export="12-sets.svg"><title id="set-title">两个地址共享 set 0，但在两路组相联缓存中可共存</title><desc id="set-desc">S 为四组、E 为两路、B 为十六字节，0x00 和 0x40 的组索引同为零，标签分别是零和一；两个标签可同时占据组零的不同行。</desc><rect width="760" height="330" rx="16" fill="#f7faf7"/><text x="25" y="31" font-size="18" fill="#234648" font-weight="700">同一个 set，可以有多个 way</text><rect x="25" y="70" width="185" height="66" rx="8" fill="#e9f2ee" stroke="#b0c7bf"/><text x="40" y="95" font-size="17" fill="#1e5354">0x00 → set 0</text><text x="40" y="119" font-size="14" fill="#48706c">tag = 0</text><rect x="25" y="150" width="185" height="66" rx="8" fill="#f0ecec" stroke="#c6ada2"/><text x="40" y="175" font-size="17" fill="#88533d">0x40 → set 0</text><text x="40" y="199" font-size="14" fill="#88533d">tag = 1</text><path d="M210 104 h82 v76 h47" fill="none" stroke="#157c79" stroke-width="3"/><path d="M210 183 h129" stroke="#bd704e" stroke-width="3"/><path d="M330 176 l9 7 -9 7" fill="none" stroke="#bd704e" stroke-width="3"/><rect x="350" y="70" width="380" height="220" rx="11" fill="#fffdf9" stroke="#cbdad1"/><text x="369" y="98" font-size="15" fill="#36585d">组索引</text><text x="475" y="98" font-size="15" fill="#36585d">Way 0</text><text x="613" y="98" font-size="15" fill="#36585d">Way 1</text><text x="375" y="131" font-size="17" fill="#4b6a69">set 0</text><rect x="455" y="112" width="116" height="32" rx="6" fill="#d5ebdf" stroke="#c2d6cb"/><rect x="595" y="112" width="116" height="32" rx="6" fill="#f7e3d8" stroke="#ddc4b8"/><text x="375" y="172" font-size="17" fill="#4b6a69">set 1</text><rect x="455" y="153" width="116" height="32" rx="6" fill="#e9efeb" stroke="#c2d6cb"/><rect x="595" y="153" width="116" height="32" rx="6" fill="#e9efeb" stroke="#ddc4b8"/><text x="375" y="213" font-size="17" fill="#4b6a69">set 2</text><rect x="455" y="194" width="116" height="32" rx="6" fill="#e9efeb" stroke="#c2d6cb"/><rect x="595" y="194" width="116" height="32" rx="6" fill="#e9efeb" stroke="#ddc4b8"/><text x="375" y="254" font-size="17" fill="#4b6a69">set 3</text><rect x="455" y="235" width="116" height="32" rx="6" fill="#e9efeb" stroke="#c2d6cb"/><rect x="595" y="235" width="116" height="32" rx="6" fill="#e9efeb" stroke="#ddc4b8"/><text id="way0-text" x="513" y="134" font-size="14" text-anchor="middle" fill="#166863">空</text><text id="way1-text" x="653" y="134" font-size="14" text-anchor="middle" fill="#92533b">空</text><text x="513" y="175" text-anchor="middle" font-size="14" fill="#6b7d79">空</text><text x="653" y="175" text-anchor="middle" font-size="14" fill="#6b7d79">空</text><text x="513" y="216" text-anchor="middle" font-size="14" fill="#6b7d79">空</text><text x="653" y="216" text-anchor="middle" font-size="14" fill="#6b7d79">空</text><text x="513" y="257" text-anchor="middle" font-size="14" fill="#6b7d79">空</text><text x="653" y="257" text-anchor="middle" font-size="14" fill="#6b7d79">空</text><text x="26" y="268" font-size="15" fill="#45646b">按按钮逐步演示</text><text x="26" y="293" font-size="13" fill="#657c7d">图中仅展示该组状态</text></svg><figcaption>图 12-2 · 绿色表示 tag 0、赭色表示 tag 1；下面的按钮会更新图中 set 0 的两个位置。图示采用空组起步、优先填充空行的确定性规则。</figcaption></figure></div>
+<div class="cache-trace" role="group" aria-label="两路缓存访问步骤"><button type="button" data-cache-step="0" aria-pressed="true">0 · 空缓存</button><button type="button" data-cache-step="1" aria-pressed="false">1 · 读 0x00</button><button type="button" data-cache-step="2" aria-pressed="false">2 · 读 0x40</button><button type="button" data-cache-step="3" aria-pressed="false">3 · 再读 0x00</button></div>
+<div class="cache-result" aria-live="polite"><strong id="cache-result">空组：两路都无有效数据</strong><p id="cache-why">按顺序点选步骤，观察标签与命中结果。</p></div>
+<p>对照直接映射（E=1），访问序列 <code>0x00 → 0x40 → 0x00</code> 会得到<strong>未命中、未命中、未命中</strong>；2 路缓存则是<strong>未命中、未命中、命中</strong>。这里讨论读访问与填充，尚不涉及写回、替换策略或多级缓存。</p></section>
+<section id="misses"><span class="section-no">12.3 · 三个不同的“慢”</span><h2>3C Miss：区分第一次、装不下与放错位置</h2>
+<div class="triad"><div><h3>冷不命中</h3><p>某个块此前从未被带入该缓存。第一次触及该块时通常发生，依访问历史与预取等条件而定。</p></div><div><h3>容量不命中</h3><p>在给定容量下，即使采用理想化的全相联缓存，复用距离仍可能太大而被逐出。</p></div><div><h3>冲突不命中</h3><p>相同总容量下，组索引/关联度让本可共存的块互相竞争位置。</p></div></div>
+<p>“3C”是在指定缓存模型与替换策略下帮助解释失效的分类，而不是 <code>perf</code> 计数器自动输出的三个独立数值。特别是现代处理器中的预取、替换启发式、共享缓存等因素会让实测现象更复杂。</p>
+<div class="callout caution"><p><strong>常见误解：</strong>有 32 KB 的数组并不意味着它“恰好适合 32 KB 的 L1”；同时活跃的栈、代码、其他数据以及组冲突都会争用容量。不能从“数组大小小于 L1”直接推断零未命中。</p></div></section>
+<section id="matrix"><span class="section-no">12.4 · 从地址位走回代码</span><h2>矩阵乘法中，改变循环次序会改变数据流</h2>
+<p>对于 C 的行优先布局，朴素 <code>i-j-k</code> 乘法在内层按列读 <code>B[k][j]</code>，可能不断跨行；改成 <code>i-k-j</code> 后，在内层顺序读取 <code>B[k][j]</code> 和更新 <code>C[i][j]</code>。但 <strong>i-k-j 版本必须先把 C 清零</strong>，因为它执行的是累加，而非直接赋值。</p>
+<pre><code>// C11；N 为编译时常量，A/B/C 为 N×N double 数组
+for (int i = 0; i &lt; N; ++i)
+    for (int j = 0; j &lt; N; ++j) {
+        double sum = 0;
+        for (int k = 0; k &lt; N; ++k)
+            sum += A[i][k] * B[k][j];
+        C[i][j] = sum;           // i-j-k
+    }
 
-        <p>你可以把 Cache 想象成"CPU 的桌面"——你经常用的工具（螺丝刀、扳手）放在桌面上，伸手就能拿到（1ns）；不常用的收到抽屉里（100ns）；基本不用的放到车库（10μs+）。整理桌面（管理 Cache）的艺术，决定了你的工作效率。同样，你的程序如果让 Cache 保持高命中率，就能跑出接近处理器的理论峰值——而如果老是 Cache Miss，性能直接"跳水"到主存的速度。</p>
-
-        <p>这一章是 CSAPP 中实用性最强的章节之一。理解了 Cache 的设计和优化策略，你就能写出远超"语法正确但性能平庸"水平的代码。</p>
-
-        <h3>12.1 缓存组织结构</h3>
-
-        <p>一个 Cache 由什么组成？有三个核心参数：</p>
-        <ul>
-            <li><strong>S</strong>（组数）：Cache 分成 S 个组（Sets），每个组包含 E 行</li>
-            <li><strong>E</strong>（每组的行数）：关联度，E=1 是直接映射，E=S 是全相联</li>
-            <li><strong>B</strong>（块大小）：每行（Cache Line）存储的数据字节数，通常 64 字节</li>
-        </ul>
-
-        <p>总 Cache 容量：C = S × E × B。</p>
-
-        <p>每一行（Cache Line）的结构：</p>
-        <pre><code>| Valid bit (1 bit) | Tag (t bits) | Data Block (B bytes) |</code></pre>
-        <ul>
-            <li><strong>有效位（Valid Bit）</strong>：标记该行是否包含有效数据。刚上电时所有有效位为 0。</li>
-            <li><strong>标记位（Tag）</strong>：地址的高位部分，用来区分映射到同一 Cache 组的不同内存块。</li>
-            <li><strong>数据块（Data Block）</strong>：从内存中取来的数据，大小 B 字节。</li>
-        </ul>
-
-        <p>CPU 要访问一个内存地址时，地址被分解为三个部分：</p>
-        <pre><code>| Tag (t bits) | Set Index (s bits) | Block Offset (b bits) |</code></pre>
-
-        <p>其中：</p>
-        <ul>
-            <li><strong>Set Index</strong>：选择 Cache 中的哪个组（S = 2^s）</li>
-            <li><strong>Tag</strong>：与组内每个行的 Tag 比较，判断是否命中</li>
-            <li><strong>Block Offset</strong>：在数据块内的偏移量（B = 2^b）</li>
-        </ul>
-
-        <p>不同的 Cache 配置对比：</p>
-
-        <table>
-            <tr>
-                <th>Cache 类型</th>
-                <th>S（组数）</th>
-                <th>E（行数/组）</th>
-                <th>B（块大小）</th>
-                <th>C（总容量）</th>
-            </tr>
-            <tr>
-                <td>L1 i-Cache（Intel Core i7）</td>
-                <td>64</td>
-                <td>8（8 路组相联）</td>
-                <td>64 B</td>
-                <td>32 KB</td>
-            </tr>
-            <tr>
-                <td>L1 d-Cache（Intel Core i7）</td>
-                <td>64</td>
-                <td>8（8 路组相联）</td>
-                <td>64 B</td>
-                <td>32 KB</td>
-            </tr>
-            <tr>
-                <td>L2 Cache（Intel Core i7）</td>
-                <td>512</td>
-                <td>8（8 路组相联）</td>
-                <td>64 B</td>
-                <td>256 KB</td>
-            </tr>
-            <tr>
-                <td>L3 Cache（Intel Core i7）</td>
-                <td>8192</td>
-                <td>16（16 路组相联）</td>
-                <td>64 B</td>
-                <td>8 MB</td>
-            </tr>
-        </table>
-
-        <h3>12.2 从直接映射到全相联</h3>
-
-        <p>根据 E 的不同取值，Cache 有三种组织方式：</p>
-
-        <p><strong>1. 直接映射（Direct-Mapped Cache, E=1）</strong></p>
-        <p>每个组只有 1 行。地址分解后，set index 唯一决定该地址映射到哪个 Cache 行。硬件最简单（只需要一个比较器），但冲突不命中的概率最高——两个不同的地址如果映射到同一个组，就会互相驱逐，即使其他组还空着。这种情况称为"抖动（Thrashing）"。</p>
-
-        <p><strong>2. 组相联（Set-Associative Cache, 1 &lt; E &lt; C/B）</strong></p>
-        <p>每个组有多行。CPU 同时比较组内所有行的 Tag——全并行比较，需要 E 个比较器。这是最主流的 Cache 设计，在硬件成本和命中率之间取得了良好平衡。上面的 Intel Core i7 的 L1 到 L3 全部是组相联。</p>
-
-        <p><strong>3. 全相联（Fully-Associative Cache, E = C/B）</strong></p>
-        <p>只有一个组，包含所有行。任何内存地址可以放在任何一行。最灵活，冲突不命中最少，但硬件最复杂（需要全局比较所有 Tag），通常只用于 TLB（后面虚拟内存章节会讲）这种行数很少的缓存。</p>
-
-        <p>来看一个地址分解的具体例子。假设：</p>
-        <pre><code>内存地址 = 0x1234（二进制：0001 0010 0011 0100）
-参数：S = 4 组（s = 2 位），B = 16 字节（b = 4 位）
-地址分解：
-  Offset (bits 0-3):  0100 → offset = 4
-  Index  (bits 4-5):  1101 → index = 3（第 3 组）
-  Tag    (bits 6-15): 0001 0010 00 → tag = 0x048</code></pre>
-
-        <p>CPU 用 index=3 找到第 3 组，然后在该组的所有行中搜索 tag=0x048 且 valid=1 的行。找到则 Cache Hit，从该行的数据块的 offset=4 处读取数据；否则 Cache Miss，从主存加载整个块（16 字节）到 Cache 中。</p>
-
-        <h3>12.3 缓存未命中的三种类型</h3>
-
-        <p>"3C" 是理解 Cache 未命中的经典分类框架——三个以 C 开头的英文名词：</p>
-
-        <p><strong>1. 冷不命中（Compulsory Miss / Cold Miss）</strong></p>
-        <p>程序第一次访问某个数据时，该数据必然不在 Cache 中——Cache 刚上电时空的，没有任何数据。这种不命中是"不可避免"的。也称为"工作集首次加载"。</p>
-
-        <p><strong>2. 容量不命中（Capacity Miss）</strong></p>
-        <p>程序的工作集（活跃使用的数据总量）超过了 Cache 的容量。例如，你在一个只有 32KB L1 Cache 的 CPU 上处理一个 1MB 的数组，大部分数据注定放不进 Cache。以前访问过但已被驱逐出去的数据再次被访问时，就会发生容量不命中。</p>
-
-        <p><strong>3. 冲突不命中（Conflict Miss）</strong></p>
-        <p>数据明明可以在 Cache 中（工作集小于 Cache 容量），但因为映射到同一个 Cache 组而互相驱逐。直接映射 Cache 的冲突不命中最严重，组相联 Cache 可以缓解但无法完全消除。</p>
-
-        <p>一个经典的冲突不命中例子——两个大小恰好为 2 的幂的数组：</p>
-
-        <pre><code>float a[1024], b[1024];
-for (int i = 0; i &lt; 1024; i++) {
-    for (int j = 0; j &lt; 1024; j++) {
-        a[i] += b[j];  // a[i] 和 b[j] 地址相差 1024*4 = 4KB
-    }                  // 如果 Cache 组数 = 2^s，两个数组可能在 Cache 中冲突
-}</code></pre>
-
-        <p>当 a 和 b 的地址映射到相同的 Cache 组时，访问 b[j] 会把 a[i] 驱逐出去，下次循环 a[i] 又要重新加载。这种"乒乓效应"会让性能急剧下降。解决办法之一是"填充"——在数组间故意留出空隙，打破整数倍的对齐关系。</p>
-
-        <div class="tip">
-            <p><strong>如何判断 Cache Miss 的类型</strong>：用 <code>perf stat -e cache-misses,cache-references</code> 查看程序的 Cache Miss 率。如果 Miss 率异常高，可以用 <code>perf record -e cache-misses</code> 结合 <code>perf report</code> 定位是哪些指令导致的。冷不命中通常只在程序初始阶段出现（预热后消失），容量不命中在工作集缩小后自动解决，冲突不命中则需要改数据结构或对齐方式。</p>
-        </div>
-
-        <h3>12.4 编写 Cache 友好代码</h3>
-
-        <p>前面讲了很多理论，现在来点实际的——如何写出 Cache 友好的代码。CSAPP 中最经典的例子是矩阵乘法的优化。</p>
-
-        <p><strong>朴素的矩阵乘法（三重循环，i-j-k 顺序）：</strong></p>
-
-        <pre><code>void matmul_ijk(int n, float *A, float *B, float *C) {
-    for (int i = 0; i &lt; n; i++)
-        for (int j = 0; j &lt; n; j++) {
-            float sum = 0;
-            for (int k = 0; k &lt; n; k++)
-                sum += A[i*n + k] * B[k*n + j];  // B 按列访问！空间局部性差
-            C[i*n + j] = sum;
-        }
-}</code></pre>
-
-        <p>问题：B[k*n + j] 在 k 循环中按列访问 B 矩阵，跳着读，Cache Miss 率极高。</p>
-
-        <p><strong>优化：循环交换（i-k-j 顺序）：</strong></p>
-
-        <pre><code>void matmul_ikj(int n, float *A, float *B, float *C) {
-    for (int i = 0; i &lt; n; i++)
-        for (int k = 0; k &lt; n; k++) {
-            float a_ik = A[i*n + k];
-            for (int j = 0; j &lt; n; j++)
-                C[i*n + j] += a_ik * B[k*n + j];  // 内层 j 循环按行访问 B 和 C
-        }
-}</code></pre>
-
-        <p>内层 j 循环变成按行访问 B[k*n + j] 和 C[i*n + j]——空间局部性大大改善。仅仅改变了循环嵌套顺序，Cache Miss 率可能下降一个数量级。</p>
-
-        <p><strong>更进一步：分块（Tiling / Blocking）</strong></p>
-        <p>即使做了循环交换，当 n 很大时，矩阵的"行"仍然可能超出 Cache 容量。分块的核心思想是把矩阵切分成小块（block/tile），确保每个小块在 Cache 中完全"转完"再处理下一块。</p>
-
-        <pre><code>void matmul_block(int n, float *A, float *B, float *C, int BLOCK) {
-    for (int i = 0; i &lt; n; i += BLOCK)
-        for (int j = 0; j &lt; n; j += BLOCK)
-            for (int k = 0; k &lt; n; k += BLOCK)
-                // 处理一个小块 [i:i+BLOCK][j:j+BLOCK]
-                for (int ii = i; ii &lt; i+BLOCK &amp;&amp; ii &lt; n; ii++)
-                    for (int jj = j; jj &lt; j+BLOCK &amp;&amp; jj &lt; n; jj++) {
-                        float sum = C[ii*n + jj];
-                        for (int kk = k; kk &lt; k+BLOCK &amp;&amp; kk &lt; n; kk++)
-                            sum += A[ii*n + kk] * B[kk*n + jj];
-                        C[ii*n + jj] = sum;
-                    }
-}</code></pre>
-
-        <div class="highlight">
-            <p><strong>分块优化的实际效果</strong>：在我的实际测试中，对于 n=1024 的 float 矩阵乘法（矩阵大小为 4MB），朴素 ijk 版本的 CPE 约为 8-10（主要花在等待 B 矩阵的行数据上）。通过 i-k-j 循环交换，CPE 降到 3-4。再加上分块优化（BLOCK=64，让块完全放进 L1 Cache），CPE 可以进一步降到 1-2，总体加速比达到 5-10 倍。注意 BLOCK 大小的选择——太小则块数太多（循环开销大），太大则放不进 Cache。通常选择 BLOCK 使得三个小矩阵的尺寸总和不超过 L1 Cache 的一半。</p>
-        </div>
-
-        <p>Cache 友好代码的几个实用原则：</p>
-        <ol>
-            <li><strong>步长 1 优先</strong>：尽量按存储顺序遍历数据</li>
-            <li><strong>循环交换</strong>：让最内层循环遍历连续的地址</li>
-            <li><strong>分块</strong>：处理大数组时，切分成 Cache 能容纳的小块</li>
-            <li><strong>合并访问</strong>：如果能一次读入多个字段，就合并数据结构而不是使用指针链</li>
-            <li><strong>避免 2 的幂的"陷阱"</strong>：数组大小避开 2 的幂，或使用 padding 来减少冲突</li>
-        </ol>
-
-        <p>这一章我们从 Cache 的硬件组织方式（S、E、B 三参数）出发，走过了从直接映射到全相联的三种设计，理解了"3C"（冷不命中、容量不命中、冲突不命中），最后通过矩阵乘法的实际案例掌握了编写 Cache 友好代码的核心技巧。下一章我们将进入一个全新的主题——链接。你写的每个 C 程序都需要经过链接这一步才能变成可执行文件，而链接中的许多陷阱，是很多资深程序员都栽过跟头的。</p>
-
-        <div class="footer-nav">
-            <a href="11.html">← 上一章</a>
-            <a href="index.html">📖 返回目录</a>
-            <a href="13.html">下一章 →</a>
-        </div>
-    </div>
-</div>
-</div>
-</body>
-</html>
+// 下面是另一种算法，执行前须初始化 C 为零
+for (int i = 0; i &lt; N; ++i)
+    for (int k = 0; k &lt; N; ++k)
+        for (int j = 0; j &lt; N; ++j)
+            C[i][j] += A[i][k] * B[k][j];  // i-k-j</code></pre>
+<p>以上是与外层变量定义配合的教学片段，并不单独构成可执行程序。更大矩阵还可<strong>分块（tiling/blocking）</strong>：让活跃的 A/B/C 子块尽可能重复使用；块尺寸需要结合缓存层次和实际测量决定，不能断言“64×64 三个 float 子块一定都能装进某款 L1”。</p>
+<div class="figure-card"><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" role="img" aria-labelledby="tile-title tile-desc" data-export="12-blocking.svg"><title id="tile-title">按行访问与分块复用矩阵局部区域</title><desc id="tile-desc">左侧示意按顺序扫描矩阵的一整行；右侧示意把矩阵划分成小块，并在当前块内使用数据后再移动到下一块。</desc><rect width="760" height="300" rx="16" fill="#f7faf7"/><text x="30" y="33" font-size="17" fill="#245457" font-weight="700">连续访问：让一条线的数据都派上用场</text><text x="415" y="33" font-size="17" fill="#245457" font-weight="700">分块复用：缩小同时活跃的数据</text><rect x="58" y="62" width="31" height="25" rx="3" fill="#147f80" stroke="#d5dfd8"/><rect x="95" y="62" width="31" height="25" rx="3" fill="#147f80" stroke="#d5dfd8"/><rect x="132" y="62" width="31" height="25" rx="3" fill="#147f80" stroke="#d5dfd8"/><rect x="169" y="62" width="31" height="25" rx="3" fill="#147f80" stroke="#d5dfd8"/><rect x="206" y="62" width="31" height="25" rx="3" fill="#147f80" stroke="#d5dfd8"/><rect x="243" y="62" width="31" height="25" rx="3" fill="#147f80" stroke="#d5dfd8"/><rect x="58" y="93" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="95" y="93" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="132" y="93" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="169" y="93" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="206" y="93" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="243" y="93" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="58" y="124" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="95" y="124" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="132" y="124" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="169" y="124" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="206" y="124" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="243" y="124" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="58" y="155" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="95" y="155" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="132" y="155" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="169" y="155" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="206" y="155" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="243" y="155" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="58" y="186" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="95" y="186" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="132" y="186" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="169" y="186" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="206" y="186" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="243" y="186" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="58" y="217" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="95" y="217" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="132" y="217" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="169" y="217" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="206" y="217" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="243" y="217" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="447" y="62" width="31" height="25" rx="3" fill="#147f80" stroke="#d5dfd8"/><rect x="484" y="62" width="31" height="25" rx="3" fill="#147f80" stroke="#d5dfd8"/><rect x="521" y="62" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="558" y="62" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="595" y="62" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="632" y="62" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="447" y="93" width="31" height="25" rx="3" fill="#147f80" stroke="#d5dfd8"/><rect x="484" y="93" width="31" height="25" rx="3" fill="#147f80" stroke="#d5dfd8"/><rect x="521" y="93" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="558" y="93" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="595" y="93" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="632" y="93" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="447" y="124" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="484" y="124" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="521" y="124" width="31" height="25" rx="3" fill="#dbece5" stroke="#d5dfd8"/><rect x="558" y="124" width="31" height="25" rx="3" fill="#dbece5" stroke="#d5dfd8"/><rect x="595" y="124" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="632" y="124" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="447" y="155" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="484" y="155" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="521" y="155" width="31" height="25" rx="3" fill="#dbece5" stroke="#d5dfd8"/><rect x="558" y="155" width="31" height="25" rx="3" fill="#dbece5" stroke="#d5dfd8"/><rect x="595" y="155" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="632" y="155" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="447" y="186" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="484" y="186" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="521" y="186" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="558" y="186" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="595" y="186" width="31" height="25" rx="3" fill="#dbece5" stroke="#d5dfd8"/><rect x="632" y="186" width="31" height="25" rx="3" fill="#dbece5" stroke="#d5dfd8"/><rect x="447" y="217" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="484" y="217" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="521" y="217" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="558" y="217" width="31" height="25" rx="3" fill="#eef2ee" stroke="#d5dfd8"/><rect x="595" y="217" width="31" height="25" rx="3" fill="#dbece5" stroke="#d5dfd8"/><rect x="632" y="217" width="31" height="25" rx="3" fill="#dbece5" stroke="#d5dfd8"/><text x="52" y="274" font-size="14" fill="#4d6a6b">突出同一行的连续元素</text><text x="436" y="274" font-size="14" fill="#4d6a6b">突出一个 2×2 教学块（块可更大）</text></svg><figcaption>图 12-3 · 左图突出顺序访问，右图突出分块复用的区域；块大小与颜色只是教学画法，不是对真实矩阵尺寸、缓存映射或速度的测量。</figcaption></figure></div>
+<p>改变循环次序对浮点求和的舍入顺序可能有影响；并行化、向量化、编译器重排和 BLAS 内核还可能比手工简单分块更有效。优化前先保证数值正确性，之后再测量吞吐率、延迟与缓存行为。</p></section>
+<section id="practice"><span class="section-no">12.5 · 可执行而不是猜测</span><h2>两个小实验：验证映射，验证分块</h2>
+<p><strong>实验 A</strong>（<a href="labs/cache/cache_mapping.c">cache_mapping.c</a>）将访问序列喂给极小的直接映射与两路缓存模拟器；它断言前者三个 miss、后者两次 miss 后一次 hit。模拟器仅实现本例需要的读填充与简化替换，不代表真实 CPU。</p>
+<pre><code>cc -std=c11 -Wall -Wextra -Werror labs/cache/cache_mapping.c -o /tmp/cache_mapping
+/tmp/cache_mapping
+# 应输出：direct=MMM two-way=MMH</code></pre>
+<p><strong>实验 B</strong>（<a href="labs/cache/matmul_block.c">matmul_block.c</a>）采用 <code>N=7</code>、<code>TILE=3</code>，包含<strong>尾块不满</strong>的情况。两个算法对小的整数值进行 double 运算，并比较结果；同样是正确性测试，未生成或冒充任何性能数据。</p>
+<pre><code>cc -std=c11 -Wall -Wextra -Werror labs/cache/matmul_block.c -o /tmp/matmul_block
+/tmp/matmul_block
+# 应输出：naive and tiled results match</code></pre>
+<p>要做可信的性能比较，应针对多个矩阵规模、不同块大小、重复运行与稳定频率环境测量，并报告 CPU 型号、编译器、优化选项、数据对齐和采样方式。<code>perf</code> 的原始计数器也不总能直接区分前述 3C 原因。</p>
+<div class="callout"><p><strong>带走的模型：</strong>先按块号选择 set，再比较 tag，最后靠 offset 找到数据；组织结构限制了“可能保留什么”，而访问次序决定“是否真的复用它”。</p></div></section>
+<section id="references"><span class="section-no">参考与边界</span><h2>延伸阅读</h2><ol class="references"><li><a href="https://csapp.cs.cmu.edu/3e/">Bryant &amp; O'Hallaron, CS:APP（第 3 版官方站点）</a>，第 6 章 Caches、Writing Cache-Friendly Code。</li><li><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf">ISO C11 committee draft N1570</a>，数组布局与浮点语义。</li><li><a href="https://man7.org/linux/man-pages/man1/perf-stat.1.html">Linux perf-stat(1)</a>，硬件性能事件的计量工具与其局限。</li></ol></section>
+<nav class="footer-nav" aria-label="章节翻页"><a href="11.html">← 上一章</a><a href="index.html">返回目录</a><a href="13.html">下一章 →</a></nav>
+</article></main></div>
+<script>
+(() => {
+  const tags=[['空','空'],['tag 0','空'],['tag 0','tag 1'],['tag 0','tag 1']];
+  const results=[
+    ['空组：两路都无有效数据','按顺序点选步骤，观察标签与命中结果。'],
+    ['访问 0x00：未命中','装入 set 0 的 Way 0；此时 tag 0 有效。'],
+    ['访问 0x40：未命中','标签不同，但 Way 1 还空着，因此两条缓存行可以共存。'],
+    ['再次访问 0x00：命中','set 0 的 Way 0 中仍然是有效的 tag 0，无需再填充。']
+  ];
+  const btns=[...document.querySelectorAll('button[data-cache-step]')];
+  const way0=document.getElementById('way0-text'), way1=document.getElementById('way1-text');
+  const result=document.getElementById('cache-result'),why=document.getElementById('cache-why');
+  function show(index){
+    const i=Number(index);
+    way0.textContent=tags[i][0]; way1.textContent=tags[i][1];
+    result.textContent=results[i][0]; why.textContent=results[i][1];
+    btns.forEach((button,j)=>button.setAttribute('aria-pressed',String(i===j)));
+  }
+  btns.forEach((button,i)=>button.addEventListener('click',()=>show(i)));
+  show(0);
+})();
+</script></body></html>

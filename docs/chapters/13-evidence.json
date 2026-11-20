@@ -1,0 +1,60 @@
+{
+  "chapter": "13",
+  "scope": "Linux x86-64 ELF and GNU toolchains; example names, addresses and diagrams are illustrative.",
+  "claims": [
+    {
+      "id": "13-elf",
+      "claim": "Relocatable ELF objects include symbols and relocation entries inspected by readelf.",
+      "kind": "toolchain",
+      "source_url": "https://sourceware.org/binutils/docs/binutils/readelf.html",
+      "locator": "--syms, --relocs, --section-headers",
+      "status": "verified",
+      "notes": "Output varies by architecture and compiler."
+    },
+    {
+      "id": "13-common",
+      "claim": "GCC 10 changed C default from -fcommon to -fno-common.",
+      "kind": "versioned behavior",
+      "source_url": "https://gcc.gnu.org/gcc-10/porting_to.html",
+      "locator": "Default to -fno-common",
+      "status": "verified",
+      "notes": "Tentative definitions are not the same as ELF weak symbols."
+    },
+    {
+      "id": "13-archive",
+      "claim": "GNU ld scans archives based on currently unresolved references and may require rescan/group.",
+      "kind": "toolchain",
+      "source_url": "https://sourceware.org/binutils/docs/ld.html",
+      "locator": "Archives and --start-group",
+      "status": "verified",
+      "notes": "The toy example models normal one-pass archive processing."
+    },
+    {
+      "id": "13-reloc",
+      "claim": "PC-relative relocation depends on symbol value, addend and relocation place.",
+      "kind": "architecture",
+      "source_url": "https://refspecs.linuxfoundation.org/elf/x86_64-abi-0.99.pdf",
+      "locator": "Relocation Types, R_X86_64_PC32 / R_X86_64_PLT32",
+      "status": "verified",
+      "notes": "Apply formula only to named x86-64 relocation types."
+    },
+    {
+      "id": "13-example",
+      "claim": "Two-function library yields 42 for sum2(20,22).",
+      "kind": "toy experiment",
+      "source_url": "https://github.com/1998x-stack/CSAPP-tutorial/blob/main/labs/linking/add.c",
+      "locator": "sum2 implementation",
+      "status": "illustrative",
+      "notes": "CI script compiles and asserts output; not a performance benchmark."
+    },
+    {
+      "id": "13-diagram",
+      "claim": "Schematic shows unresolved symbol, archive member extraction, relocation.",
+      "kind": "teaching model",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 7 Linking",
+      "status": "derived",
+      "notes": "Original independently drawn simplified SVG."
+    }
+  ]
+}

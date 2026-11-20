@@ -1,0 +1,41 @@
+{
+  "chapter": 4,
+  "claims": [
+    {
+      "id": "c4-abi",
+      "claim": "System V AMD64 first six integer/pointer arguments use rdi rsi rdx rcx r8 r9",
+      "kind": "abi",
+      "source_url": "https://gitlab.com/x86-psABIs/x86-64-ABI",
+      "locator": "Calling sequence",
+      "status": "verified",
+      "notes": "Windows x64 differs"
+    },
+    {
+      "id": "c4-zerohigh",
+      "claim": "Writing 32-bit general register clears its upper 32 bits",
+      "kind": "isa",
+      "source_url": "https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html",
+      "locator": "Volume 1, x86-64 registers",
+      "status": "verified",
+      "notes": "8 and 16-bit writes differ"
+    },
+    {
+      "id": "c4-lea",
+      "claim": "LEA computes effective address without reading memory",
+      "kind": "isa",
+      "source_url": "https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html",
+      "locator": "Volume 2, LEA",
+      "status": "verified",
+      "notes": "No universal cycle count"
+    },
+    {
+      "id": "c4-div",
+      "claim": "IDIV truncates signed division toward zero; SAR differs for negative operands",
+      "kind": "isa",
+      "source_url": "https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html",
+      "locator": "Volume 2, IDIV and SAR",
+      "status": "verified",
+      "notes": "Example for x86-64 machine instructions"
+    }
+  ]
+}
