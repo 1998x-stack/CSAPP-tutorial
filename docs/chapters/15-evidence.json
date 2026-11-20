@@ -1,0 +1,60 @@
+{
+  "chapter": "15",
+  "scope": "Linux/POSIX process APIs, x86-64 syscall register ABI, CSAPP exception teaching taxonomy.",
+  "claims": [
+    {
+      "id": "15-fork",
+      "claim": "fork creates a new child process with its own PID, using COW for memory where possible.",
+      "kind": "system call",
+      "source_url": "https://man7.org/linux/man-pages/man2/fork.2.html",
+      "locator": "DESCRIPTION and NOTES",
+      "status": "verified",
+      "notes": "Avoid claiming fork is independent of page table size."
+    },
+    {
+      "id": "15-exec",
+      "claim": "execve replaces current process image and does not return on success.",
+      "kind": "system call",
+      "source_url": "https://man7.org/linux/man-pages/man2/execve.2.html",
+      "locator": "DESCRIPTION and Effect on process attributes",
+      "status": "verified",
+      "notes": "PID preserved; FD_CLOEXEC may close descriptors."
+    },
+    {
+      "id": "15-wait",
+      "claim": "waitpid retrieves child exit state and reaps a zombie; adoption can use subreapers.",
+      "kind": "system call",
+      "source_url": "https://man7.org/linux/man-pages/man2/wait.2.html",
+      "locator": "DESCRIPTION and NOTES",
+      "status": "verified",
+      "notes": "Orphans and zombies are separate concepts."
+    },
+    {
+      "id": "15-syscall",
+      "claim": "Linux x86-64 system call arguments and error handling differ from C ABI wrappers.",
+      "kind": "ABI",
+      "source_url": "https://man7.org/linux/man-pages/man2/syscall.2.html",
+      "locator": "Architecture calling conventions",
+      "status": "verified",
+      "notes": "Raw error return is not glibc wrapper result."
+    },
+    {
+      "id": "15-exceptions",
+      "claim": "Interrupt/trap/fault/abort taxonomy is an instructional CPU exception model.",
+      "kind": "teaching model",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 8 Exceptional Control Flow",
+      "status": "derived",
+      "notes": "Hardware abort is distinct from C assert/abort function."
+    },
+    {
+      "id": "15-example",
+      "claim": "Child successfully execs /bin/true, parent prints child exit=0 after waitpid.",
+      "kind": "toy experiment",
+      "source_url": "https://github.com/1998x-stack/CSAPP-tutorial/blob/main/labs/processes/fork_exec_wait.c",
+      "locator": "main",
+      "status": "illustrative",
+      "notes": "CI script verifies; expected on GNU/Linux with /bin/true."
+    }
+  ]
+}
