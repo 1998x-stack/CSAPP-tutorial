@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 293" role="img" aria-labelledby="hazard-svg-title hazard-svg-desc">
+<title id="hazard-svg-title">相邻 load 与消费者之间插入一个气泡</title>
+<desc id="hazard-svg-desc">当 mrmovq 在 Execute 而紧接的 addq 在 Decode，加载值尚未就绪，暂停取指与译码，在 Execute 注入气泡；下一周期 load 进入 Memory，再转发加载值。</desc>
+<g font-family="system-ui,sans-serif" text-anchor="middle">
+<text x="20" y="29" text-anchor="start" font-size="18" font-weight="700" fill="#274d4f">检测到 load-use</text>
+<rect x="25" y="49" width="235" height="68" rx="12" fill="#ede9f7" stroke="#9480bf"/><text x="142" y="77" font-size="18" font-weight="700" fill="#594687">E: mrmovq（load）</text><text x="142" y="102" font-size="15" fill="#594687">valM 尚不可转发</text>
+<rect x="313" y="49" width="235" height="68" rx="12" fill="#fff0e4" stroke="#cfa38c"/><text x="430" y="77" font-size="18" font-weight="700" fill="#9d5537">D: addq（消费者）</text><text x="430" y="102" font-size="15" fill="#9d5537">需要 load 目标寄存器</text>
+<rect x="612" y="49" width="225" height="68" rx="12" fill="#e3f1eb" stroke="#83b3a6"/><text x="724" y="78" font-size="17" font-weight="700" fill="#236b66">F / D : stall</text><text x="724" y="102" font-size="15" fill="#236b66">E : bubble</text>
+<text x="430" y="155" font-size="18" fill="#48716f">↓ 下一个时钟周期 ↓</text>
+<rect x="25" y="177" width="235" height="69" rx="12" fill="#e1f1ea" stroke="#83b3a6"/><text x="142" y="204" font-size="18" font-weight="700" fill="#236b66">M: mrmovq</text><text x="142" y="229" font-size="15" fill="#236b66">从内存产生 valM</text>
+<path d="M260 210 H315" stroke="#3b8b82" stroke-width="3"/><path d="M312 204 l9 6 -9 6" fill="none" stroke="#3b8b82" stroke-width="3"/>
+<rect x="325" y="177" width="235" height="69" rx="12" fill="#e9eef9" stroke="#91a7cd"/><text x="442" y="205" font-size="17" font-weight="700" fill="#526d9d">转发加载结果</text><text x="442" y="229" font-size="15" fill="#526d9d">交给消费者的数据通路</text>
+<rect x="612" y="177" width="225" height="69" rx="12" fill="#fff0e4" stroke="#cfa38c"/><text x="724" y="206" font-size="17" font-weight="700" fill="#9d5537">E: bubble</text><text x="724" y="230" font-size="15" fill="#9d5537">依赖指令仍在 D</text>
+<text x="20" y="278" text-anchor="start" font-size="15" fill="#55716f">示意：寄存器控制信号与转发路径省略；具体时序以 PIPE 控制逻辑为准</text>
+</g></svg>
