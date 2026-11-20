@@ -4,9 +4,9 @@ The lesson structure uses the causal, progressive-disclosure approach described 
 
 ## Source boundaries
 
-- Course **02**: byte order, two's-complement interpretation, C integer conversions, signed/unsigned overflow. See [evidence ledger](../../evidence/02.json).
-- Course **03**: IEEE binary32/64, category encodings, nearest-even rounding and reproducible precision-dependent comparisons. See [evidence ledger](../../evidence/03.json).
-- Course **04**: System V AMD64 (not Windows x64), AT&T syntax, register subsets, effective-address arithmetic, division. See [evidence ledger](../../evidence/04.json).
+- Course **02**: byte order, two's-complement interpretation, C integer conversions, signed/unsigned overflow. See [evidence ledger](../evidence/02.json).
+- Course **03**: IEEE binary32/64, category encodings, nearest-even rounding and reproducible precision-dependent comparisons. See [evidence ledger](../evidence/03.json).
+- Course **04**: System V AMD64 (not Windows x64), AT&T syntax, register subsets, effective-address arithmetic, division. See [evidence ledger](../evidence/04.json).
 
 These are course chapters 02–04, not one-to-one mappings of the official CS:APP book chapter numbers.
 
@@ -18,8 +18,8 @@ The original SVG diagrams are located in \`chapter-assets/\`, and chapter-specif
 
 ## Additional illustrated lessons 16–18
 
-- **16**: POSIX signals: generation/pending/delivery, async-safe handlers, atomic `sigsuspend` waiting and nonlocal-jump constraints. See [evidence](../../evidence/16.json) and [C experiment](../../examples/olah-ch16-signals.c).
-- **17**: virtual-to-physical page mapping, 4-/5-level paging scope, TLB misses versus page faults, illustrative page-address calculation. See [evidence](../../evidence/17.json) and [C experiment](../../examples/olah-ch17-vm.c).
-- **18**: `mmap` semantics, user-space allocator block management, deterministic fixed-pool fragmentation and mark-sweep boundaries. See [evidence](../../evidence/18.json) and [C experiment](../../examples/olah-ch18-allocator.c).
+- **16**: POSIX signals: generation/pending/delivery, async-safe handlers, atomic `sigsuspend` waiting and nonlocal-jump constraints. See [evidence](../evidence/16.json) and [C experiment](../../examples/olah-ch16-signals.c).
+- **17**: virtual-to-physical page mapping, 4-/5-level paging scope, TLB misses versus page faults, illustrative page-address calculation. See [evidence](../evidence/17.json) and [C experiment](../../examples/olah-ch17-vm.c).
+- **18**: `mmap` semantics, user-space allocator block management, deterministic fixed-pool fragmentation and mark-sweep boundaries. See [evidence](../evidence/18.json) and [C experiment](../../examples/olah-ch18-allocator.c).
 
 These lessons add 9 original stand-alone SVG diagrams under `chapter-assets/`. CI covers C snippets, XML SVG parsing, inline JS syntax, full navigation, and Playwright 1440/390/360 px screenshot checks. `scripts/build-static.mjs` now copies both lesson stylesheets and SVG assets into `dist/`, making offline and GitHub Pages output consistent. The script references explain which behavior is an illustrative model, which is POSIX, and which is Linux-specific.

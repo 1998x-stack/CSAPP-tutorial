@@ -7,6 +7,7 @@ on:
       - '07.html'
       - 'olah-ch05-07.css'
       - 'assets/chapters/**'
+      - 'docs/evidence/0[5-7].json'
       - 'scripts/browser-qa-ch05-07.py'
       - '.github/workflows/olah-ch05-07-browser.yml'
   workflow_dispatch:

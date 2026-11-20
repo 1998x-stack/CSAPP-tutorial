@@ -32,7 +32,7 @@ for (const [chapter, page] of Object.entries(pages)) {
       assert.match(asset, /xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
       assert.ok(!/<script\b/i.test(asset));
     });
-    const evidence = JSON.parse(read('docs/chapters/' + chapter + '-evidence.json'));
+    const evidence = JSON.parse(read('docs/evidence/' + chapter + '.json'));
     assert.ok(evidence.claims.length >= 7);
     assert.ok(evidence.claims.every(c => c.id && c.claim && c.kind && c.source_url && c.locator && c.status && c.notes));
     assert.ok(evidence.claims.every(c => ['verified','derived','illustrative','unverified'].includes(c.status)));

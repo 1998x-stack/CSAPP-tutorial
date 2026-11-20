@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 
 const html = readFileSync(new URL("../../01.html", import.meta.url), "utf8");
-const ledger = JSON.parse(readFileSync(new URL("../../docs/chapters/01-evidence.json", import.meta.url), "utf8"));
+const ledger = JSON.parse(readFileSync(new URL("../../docs/evidence/01.json", import.meta.url), "utf8"));
 
 test("chapter 01 has semantic headings, navigation, source links and original diagrams", () => {
   assert.match(html, /<html lang="zh-CN">/);

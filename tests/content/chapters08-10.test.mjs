@@ -37,7 +37,7 @@ for (const ch of targets) {
       assert.match(svg[i], /viewBox=/);
     }
     if (ch.id !== "08") assert.match(html, /<math\b/);
-    const ledger = JSON.parse(read("docs/chapters/" + ch.id + "-evidence.json"));
+    const ledger = JSON.parse(read("docs/evidence/" + ch.id + ".json"));
     assert.ok(ledger.claims.length >= 6);
     assert.ok(ledger.claims.every(c => c.id && c.claim && c.source_url && c.locator && c.status));
     assert.equal([...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].length, 1);

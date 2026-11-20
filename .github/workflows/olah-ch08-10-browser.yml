@@ -6,6 +6,8 @@ on:
       - '08.html'
       - '09.html'
       - '10.html'
+      - 'docs/evidence/0[8-9].json'
+      - 'docs/evidence/10.json'
       - 'scripts/browser-qa-olah-08-10.py'
       - '.github/workflows/olah-ch08-10-browser.yml'
   workflow_dispatch:

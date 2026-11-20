@@ -1,6 +1,6 @@
 # 章节内容迁移说明
 
-V0.1 保留仓库根目录的 01.html 至 28.html 为唯一正式教学正文；不建立虚假的 Markdown 章节副本。
+V0.1 保留仓库根目录的 01.html 至 28.html 为正式教学正文；不建立虚假的 Markdown 章节副本。各章核查材料已集中到 [`docs/evidence/`](../evidence/README.md)，此目录保留迁移说明、QA 记录和章节插图。
 
 V0.2 计划按 `courses.json` 顺序迁移：
 

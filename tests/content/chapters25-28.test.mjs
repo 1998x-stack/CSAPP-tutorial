@@ -30,7 +30,7 @@ for (const chapter of chapters) {
     assert.match(svg, /<title\b/);
     assert.match(svg, /<desc\b/);
     assert.match(svg, /<\/svg>\s*$/);
-    const ledger = JSON.parse(read("evidence/" + chapter + ".json"));
+    const ledger = JSON.parse(read("docs/evidence/" + chapter + ".json"));
     assert.equal(ledger.chapter, chapter);
     assert.ok(ledger.claims.length >= 4);
     assert.ok(ledger.claims.every(c => c.id && c.claim && c.source_url && c.locator && c.status));

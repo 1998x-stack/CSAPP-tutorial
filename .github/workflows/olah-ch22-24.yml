@@ -11,6 +11,7 @@ on:
       - 'docs/chapters/22-*'
       - 'docs/chapters/23-*'
       - 'docs/chapters/24-*'
+      - 'docs/evidence/2[2-4].json'
       - 'examples/olah-ch22-*'
       - 'examples/olah-ch23-*'
       - 'examples/olah-ch24-*'
@@ -24,6 +25,7 @@ on:
       - '22.html'
       - '23.html'
       - '24.html'
+      - 'docs/evidence/2[2-4].json'
 permissions:
   contents: read
 jobs:
