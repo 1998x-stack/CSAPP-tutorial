@@ -1,0 +1,35 @@
+name: Olah lessons 05–07 browser QA
+on:
+  pull_request:
+    paths:
+      - '05.html'
+      - '06.html'
+      - '07.html'
+      - 'olah-ch05-07.css'
+      - 'assets/chapters/**'
+      - 'scripts/browser-qa-ch05-07.py'
+      - '.github/workflows/olah-ch05-07-browser.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser tooling
+        run: |
+          python -m pip install playwright==1.65.2
+          python -m playwright install --with-deps chromium
+      - name: Run viewport, figure, math, widget and print QA
+        run: python scripts/browser-qa-ch05-07.py --output reports/olah-05-07
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: olah-ch05-07-browser-qa
+          path: reports/olah-05-07
+          if-no-files-found: ignore

@@ -1,0 +1,52 @@
+{
+  "chapter": "05",
+  "topic": "x86-64 condition codes and control flow",
+  "scope": "Illustrative x86-64 AT&T syntax; compiler output is not claimed exact.",
+  "assumptions": [
+    "cmp source,destination sets flags based on destination minus source",
+    "4-bit interactive comparison is a toy model, not a hardware operand width"
+  ],
+  "claims": [
+    {
+      "claim": "CMP sets status flags from subtraction without retaining result",
+      "sources": [
+        {
+          "url": "https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html",
+          "locator": "Instruction set reference: CMP"
+        }
+      ]
+    },
+    {
+      "claim": "Signed JL and JGE use SF/OF while unsigned JB and JAE use CF",
+      "sources": [
+        {
+          "url": "https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html",
+          "locator": "Instruction set reference: Jcc"
+        }
+      ]
+    },
+    {
+      "claim": "Switch lowering and loop shape depend on compilation and optimization",
+      "sources": [
+        {
+          "url": "https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html",
+          "locator": "Optimize Options"
+        }
+      ]
+    },
+    {
+      "claim": "Machine-level programming belongs to textbook chapter 3, not site chapter 5",
+      "sources": [
+        {
+          "url": "https://csapp.cs.cmu.edu/3e/",
+          "locator": "CS:APP Third Edition contents"
+        }
+      ]
+    }
+  ],
+  "figures": [
+    "assets/chapters/05-branch.svg",
+    "assets/chapters/05-loop.svg"
+  ],
+  "interaction": "4-bit signed/unsigned comparison, deterministic; no benchmark claims"
+}

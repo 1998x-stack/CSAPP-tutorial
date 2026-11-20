@@ -1,0 +1,89 @@
+/* Olah-inspired reading layout for chapters 05–07.
+   Original explanatory design; no remote fonts or runtime dependencies. */
+:root{--paper:#fffdf9;--ink:#203035;--muted:#586c72;--teal:#117c7d;--coral:#bc6242;--violet:#6e5ca8;--line:#dbe4df;--pale:#eff5f1}
+*{box-sizing:border-box}
+body.olah-body{padding:0;margin:0;background:#eaf0ed;color:var(--ink);font:17px/1.85 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.olah-body a{color:#096e73;text-underline-offset:3px}
+.olah-body a:hover{color:#a75038;transform:none}
+.olah-body :is(a,button,input,summary,select):focus-visible{outline:3px solid var(--teal);outline-offset:3px}
+.olah-body .skip-link{position:absolute;top:-90px;left:16px;background:#fff;padding:7px 13px;z-index:20}
+.olah-body .skip-link:focus{top:10px}
+.olah-body .olah-shell{max-width:1450px;margin:auto;border:0;border-radius:0;box-shadow:0 14px 70px #1d3c3420;overflow:visible;background:var(--paper)}
+.olah-body .olah-grid{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:100vh}
+.olah-body .olah-sidebar{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;border-right:1px solid var(--line);background:#f3f7f3;padding:28px 14px}
+.olah-sidebar .site-title{display:block;font-weight:800;font-size:1.04rem;text-decoration:none;color:var(--ink);padding:0 10px 18px;letter-spacing:-.02em}
+.olah-sidebar .site-title small{display:block;font-size:.72rem;color:var(--muted);font-weight:500;letter-spacing:.08em}
+.olah-sidebar .nav-hint{font-size:.7rem;color:var(--muted);margin:0 10px 7px;letter-spacing:.12em}
+.olah-body .olah-sidebar .chapter-list{margin:0;padding:0;list-style:none}
+.olah-body .olah-sidebar .chapter-list li{margin:0}
+.olah-body .olah-sidebar .chapter-list a{display:block;padding:7px 9px;border-radius:7px;font-size:.77rem;line-height:1.5;font-weight:450;color:#50636a}
+.olah-body .olah-sidebar .chapter-list a.active,.olah-body .olah-sidebar .chapter-list a[aria-current="page"]{background:#dceee8;color:#075d5d;font-weight:750;box-shadow:none}
+.olah-body .olah-main{min-width:0;padding:66px clamp(22px,6vw,95px) 76px;background:var(--paper)}
+.olah-body .olah-lesson{max-width:860px;margin:0 auto;color:var(--ink)}
+.olah-body .olah-lesson p{color:var(--ink);margin:15px 0;line-height:1.9}
+.olah-body .olah-lesson strong{color:#183c3e}
+.olah-body .olah-lesson .eyebrow{color:var(--teal);letter-spacing:.16em;font-size:.72rem;font-weight:800;margin:0 0 9px}
+.olah-body .olah-lesson h1{font-size:clamp(2.1rem,4vw,3.3rem);line-height:1.24;font-weight:850;letter-spacing:-.04em;color:#1c3032;max-width:16em;margin:0 0 17px}
+.olah-body .olah-lesson .dek{font-size:1.12rem;color:#445c60;line-height:1.8;max-width:700px}
+.olah-lesson .reading-map{display:flex;flex-wrap:wrap;gap:8px 12px;margin:24px 0 36px;padding:15px 18px;border:1px solid var(--line);border-radius:12px;background:#f6f9f6;font-size:.8rem}
+.olah-lesson .reading-map a{white-space:nowrap}
+.olah-body .olah-lesson .chapter-section{margin:0 0 58px;scroll-margin-top:25px}
+.olah-body .olah-lesson h2{font-size:clamp(1.55rem,2.6vw,2.12rem);line-height:1.4;margin:0 0 18px;padding:0;border:0;color:#233d3e;letter-spacing:-.02em}
+.olah-body .olah-lesson h3{font-size:1.22rem;color:#2a4b4e;margin:35px 0 13px}
+.olah-body .olah-lesson ul,.olah-body .olah-lesson ol{margin:12px 0 20px 26px;line-height:1.8}
+.olah-body .olah-lesson li{margin:7px 0;color:var(--ink)}
+.olah-body .olah-lesson code{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;overflow-wrap:anywhere;font-size:.85em;color:#31515d;background:#e9f1ee;padding:1px 4px;border-radius:4px}
+.olah-body .olah-lesson pre{overflow:auto;background:#182b32;color:#edf3f0;border-radius:12px;padding:18px 20px;margin:22px 0;line-height:1.63;font-size:.82rem}
+.olah-body .olah-lesson pre code{overflow-wrap:normal;white-space:pre;background:transparent;color:inherit;padding:0;font-size:inherit}
+.olah-lesson .snippet-caption{font-size:.76rem;color:var(--muted);margin-top:-14px}
+.olah-body .olah-lesson table{margin:25px 0;background:white;font-size:.88rem}
+.olah-body .olah-lesson :is(th,td){padding:11px;border:1px solid #d7e2dd}
+.olah-body .olah-lesson th{background:#edf4f1;color:#28464a}
+.olah-lesson .table-scroll{overflow-x:auto;max-width:100%}
+.olah-lesson .insight{margin:24px 0;padding:18px 21px;border-left:3px solid var(--teal);background:#eef6f2;border-radius:0 9px 9px 0}
+.olah-lesson .caution{margin:24px 0;padding:18px 21px;border-left:3px solid var(--coral);background:#fff3ed;border-radius:0 9px 9px 0}
+.olah-lesson :is(.insight,.caution) p{margin:0}
+.olah-lesson .diagram{margin:30px 0 32px;background:#f8faf8;border:1px solid var(--line);padding:18px;border-radius:14px}
+.olah-lesson .diagram img{display:block;width:100%;max-width:100%;height:auto}
+.olah-lesson figcaption{margin-top:12px;font-size:.81rem;line-height:1.75;color:#586d71}
+.olah-lesson .equation{padding:16px 18px;margin:21px 0;border-radius:9px;border:1px solid var(--line);background:#f8faf8;overflow:auto;tabindex:0;font-size:1.05rem}
+.olah-lesson .equation math{font-size:1.08em}
+.olah-lesson .lab-widget{border:1px solid #a9c7be;border-radius:13px;background:#f2f8f5;margin:30px 0;padding:22px}
+.olah-lesson .lab-widget h3{margin:0 0 8px}
+.olah-lesson .lab-widget label{display:block;font-weight:700;font-size:.88rem}
+.olah-lesson .lab-widget input[type=range]{display:block;width:100%;margin:15px 0;accent-color:var(--teal)}
+.olah-lesson .lab-widget .widget-result{background:#fff;border-radius:8px;padding:12px 16px;border:1px solid var(--line);font-variant-numeric:tabular-nums;min-height:50px}
+.olah-lesson .lab-widget button{border:1px solid #a1c9bd;background:white;color:#115f61;font-weight:750;border-radius:8px;padding:8px 15px;cursor:pointer;margin:4px 6px 4px 0}
+.olah-lesson .lab-widget button[aria-pressed=true]{background:#147f80;color:white}
+.olah-lesson .code-memo{font-size:.81rem;color:var(--muted)}
+.olah-lesson .source-links{padding-left:24px;word-break:break-word}
+.olah-body .olah-lesson .footer-nav{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;border-top:1px solid var(--line);margin-top:54px;padding-top:23px}
+.olah-body .olah-lesson .footer-nav a{background:#edf5f0;color:#146669;padding:9px 14px;border-radius:8px;font-size:.84rem}
+.olah-lesson .mini-note{font-size:.85rem;color:var(--muted)}
+.olah-body .mobile-chapters{display:none}
+@media(max-width:950px){
+ .olah-body .olah-grid{display:block}
+ .olah-body .olah-sidebar{display:none}
+ .olah-body .mobile-chapters{display:block;background:#e9f1ec;border-bottom:1px solid var(--line);padding:10px 20px}
+ .olah-body .mobile-chapters summary{cursor:pointer;color:#20545a;font-weight:750}
+ .olah-body .mobile-chapters a{display:block;font-size:.86rem;padding:5px}
+ .olah-body .olah-main{padding:34px 22px 65px}
+}
+@media(max-width:480px){
+ .olah-body .olah-main{padding:29px 17px 55px}
+ .olah-body .olah-lesson{font-size:16px}
+ .olah-body .olah-lesson .diagram{padding:8px}
+ .olah-body .olah-lesson pre{padding:14px;font-size:.76rem}
+ .olah-body .olah-lesson .reading-map{display:block}
+ .olah-body .olah-lesson .reading-map a{display:inline-block;margin:3px 7px 3px 0}
+}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+@media print{
+ .olah-body{background:white!important}
+ .olah-body .olah-sidebar,.olah-body .mobile-chapters,.skip-link,.lab-widget input,.lab-widget button{display:none!important}
+ .olah-body .olah-grid{display:block}
+ .olah-body .olah-main{padding:0!important}
+ .olah-body .olah-lesson{max-width:none!important}
+ .olah-body .olah-lesson .diagram{break-inside:avoid}
+ .olah-body .olah-lesson a{color:#13595e;text-decoration:underline}
+}

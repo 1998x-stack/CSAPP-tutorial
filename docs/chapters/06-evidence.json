@@ -1,0 +1,52 @@
+{
+  "chapter": "06",
+  "topic": "procedures, return addresses, ABI and recursion",
+  "scope": "System V AMD64 ABI as used on common Unix-like x86-64 systems; Windows x64 and special argument classes differ.",
+  "assumptions": [
+    "Typical near CALL/RET shown; exact stack frame allocation is compiler dependent",
+    "Factorial toy widget accepts n=0..6, so integer arithmetic does not overflow"
+  ],
+  "claims": [
+    {
+      "claim": "Six first integer/pointer arguments use rdi,rsi,rdx,rcx,r8,r9 in typical SysV AMD64 cases",
+      "sources": [
+        {
+          "url": "https://refspecs.linuxfoundation.org/elf/x86_64-SysV-psABI.pdf",
+          "locator": "Parameter Passing / Calling Sequence"
+        }
+      ]
+    },
+    {
+      "claim": "Caller stack aligns to 16 bytes at CALL boundary, callee enters with rsp+8 aligned",
+      "sources": [
+        {
+          "url": "https://refspecs.linuxfoundation.org/elf/x86_64-SysV-psABI.pdf",
+          "locator": "The Stack Frame"
+        }
+      ]
+    },
+    {
+      "claim": "Callee-saved registers include rbx,rbp,r12-r15",
+      "sources": [
+        {
+          "url": "https://refspecs.linuxfoundation.org/elf/x86_64-SysV-psABI.pdf",
+          "locator": "Registers and the Stack Frame"
+        }
+      ]
+    },
+    {
+      "claim": "Frame-pointer omission and optimizations are toolchain dependent",
+      "sources": [
+        {
+          "url": "https://gcc.gnu.org/onlinedocs/gcc/Code-Gen-Options.html",
+          "locator": "Code Generation Options"
+        }
+      ]
+    }
+  ],
+  "figures": [
+    "assets/chapters/06-call.svg",
+    "assets/chapters/06-stack.svg"
+  ],
+  "interaction": "factorial call chain for n 0 through 6; conceptual frames, not offsets"
+}
