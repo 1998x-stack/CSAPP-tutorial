@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 960 222" role="img" aria-labelledby="pipeline-title pipeline-desc" xmlns="http://www.w3.org/2000/svg">
+        <title id="pipeline-title">hello 程序构建链路</title>
+        <desc id="pipeline-desc">从 hello.c，依次经过预处理形成 hello.i、编译形成 hello.s、汇编形成 hello.o、链接形成 hello 可执行文件。</desc>
+        <defs><marker id="pipeline-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#597b77"/></marker></defs>
+        <g font-family="sans-serif" text-anchor="middle">
+          <rect x="10" y="54" width="164" height="94" rx="14" fill="#e2f0ea" stroke="#6eaa9e"/>
+          <text x="92" y="93" fill="#145f64" font-size="26" font-weight="750">hello.c</text><text x="92" y="122" fill="#45736d" font-size="15">源文件</text>
+          <g class="diagram-step" data-step-node="0"><rect x="208" y="54" width="164" height="94" rx="14" fill="#e2f0ea" stroke="#6eaa9e"/><text x="290" y="93" fill="#145f64" font-size="25" font-weight="750">hello.i</text><text x="290" y="122" fill="#45736d" font-size="15">预处理文本</text></g>
+          <g class="diagram-step" data-step-node="1"><rect x="406" y="54" width="164" height="94" rx="14" fill="#fff0e5" stroke="#d7aa8b"/><text x="488" y="93" fill="#ae5d38" font-size="25" font-weight="750">hello.s</text><text x="488" y="122" fill="#946149" font-size="15">汇编文本</text></g>
+          <g class="diagram-step" data-step-node="2"><rect x="604" y="54" width="164" height="94" rx="14" fill="#eeeaf7" stroke="#b3a7d4"/><text x="686" y="93" fill="#6556a2" font-size="25" font-weight="750">hello.o</text><text x="686" y="122" fill="#74689d" font-size="15">可重定位目标文件</text></g>
+          <g class="diagram-step" data-step-node="3"><rect x="802" y="54" width="148" height="94" rx="14" fill="#e2f0ea" stroke="#6eaa9e"/><text x="876" y="93" fill="#145f64" font-size="26" font-weight="750">hello</text><text x="876" y="122" fill="#45736d" font-size="15">可执行文件</text></g>
+          <g stroke="#597b77" stroke-width="2.8" marker-end="url(#pipeline-arrow)"><path d="M176 102 H200"/><path d="M374 102 H398"/><path d="M572 102 H596"/><path d="M770 102 H794"/></g>
+          <g fill="#5e7471" font-size="15"><text x="190" y="34">①</text><text x="388" y="34">②</text><text x="586" y="34">③</text><text x="784" y="34">④</text></g>
+        </g>
+        <text x="14" y="190" font-family="sans-serif" fill="#657b76" font-size="15">顺序示意：中间文件可用 gcc 的 -E / -S / -c 选项分别观察。</text>
+      </svg>
