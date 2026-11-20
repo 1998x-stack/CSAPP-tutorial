@@ -14,7 +14,7 @@ for (const [number, svgName, expectedHeads] of chapters) {
   test("chapter " + number + " keeps semantic narrative, standalone diagram and evidence", () => {
     const html = read("../../" + number + ".html");
     const asset = read("../../docs/chapters/assets/" + svgName);
-    const ledger = JSON.parse(read("../../docs/chapters/" + number + "-evidence.json"));
+    const ledger = JSON.parse(read("../../docs/evidence/" + number + ".json"));
     assert.equal((html.match(/<h1\b/g) || []).length, 1);
     assert.equal((html.match(/<h2\b/g) || []).length, expectedHeads);
     assert.match(html, /<html lang="zh-CN">/);

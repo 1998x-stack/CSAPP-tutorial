@@ -33,7 +33,7 @@ for (const n of ['05','06','07']) {
         assert.ok(svg.includes(tag), filename + ' missing ' + tag);
       }
     }
-    const evidence = JSON.parse(read('docs/chapters/' + n + '-evidence.json'));
+    const evidence = JSON.parse(read('docs/evidence/' + n + '.json'));
     assert.ok(evidence.claims.length >= 4);
     assert.equal(evidence.figures.length, 2);
     assert.ok(evidence.claims.every(x => x.claim && x.sources?.every(s => s.url && s.locator)));

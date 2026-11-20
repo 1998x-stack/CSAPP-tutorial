@@ -11,7 +11,7 @@ on:
       - 'chapter-assets/26-*'
       - 'chapter-assets/27-*'
       - 'chapter-assets/28-*'
-      - 'evidence/2[5-8].json'
+      - 'docs/evidence/2[5-8].json'
       - 'tests/content/chapters25-28.test.mjs'
       - 'scripts/browser-qa-ch25-28.py'
       - '.github/workflows/olah-ch25-28-browser.yml'

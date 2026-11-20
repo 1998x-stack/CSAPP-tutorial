@@ -57,7 +57,7 @@ def main():
         subprocess.run(["node", "--check", "-"], input=scripts[0], text=True, check=True)
         if chapter == 24:
             assert 'xmlns="http://www.w3.org/1998/Math/MathML"' in html
-        ledger = json.loads((ROOT / f"docs/chapters/{chapter:02}-evidence.json").read_text(encoding="utf-8"))
+        ledger = json.loads((ROOT / f"docs/evidence/{chapter:02}.json").read_text(encoding="utf-8"))
         assert len(ledger["claims"]) >= 7
         assert all(set(("id","claim","kind","source_url","locator","status","notes")) <= c.keys() for c in ledger["claims"])
         assert all(c["status"] in {"verified","derived","illustrative","unverified"} for c in ledger["claims"])

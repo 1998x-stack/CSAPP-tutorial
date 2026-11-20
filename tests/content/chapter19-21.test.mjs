@@ -29,7 +29,7 @@ test('chapter 19–21 reading structure, SVG and source ledger', () => {
       assert.match(read(asset), /<title[^>]*>/);
       assert.match(read(asset), /<desc[^>]*>/);
     }
-    assert.ok(JSON.parse(read('evidence/' + n + '.json')).claims.length >= 3);
+    assert.ok(JSON.parse(read('docs/evidence/' + n + '.json')).claims.length >= 3);
   }
 });
 test('standalone POSIX examples compile and execute', () => {

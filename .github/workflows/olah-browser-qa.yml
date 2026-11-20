@@ -11,6 +11,8 @@ on:
       - '18.html'
       - 'olah-chapters.css'
       - 'chapter-assets/**'
+      - 'docs/evidence/0[2-4].json'
+      - 'docs/evidence/1[6-8].json'
       - 'scripts/browser-qa-olah.py'
       - '.github/workflows/olah-browser-qa.yml'
   workflow_dispatch:
