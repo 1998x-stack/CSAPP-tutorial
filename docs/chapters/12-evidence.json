@@ -1,0 +1,79 @@
+{
+  "article": "12.html",
+  "scope": "经典 S/E/B 缓存模型与两种正确性实验，非任何真实微架构规格说明",
+  "learning_design": "从冲突问题引出地址位与互动，再连接到矩阵循环，原创图解",
+  "claims": [
+    {
+      "id": "ch12-config",
+      "claim": "S 组、每组 E 行、每行 B 字节时数据容量 C=S×E×B",
+      "kind": "cache-model",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 6 Cache Memories",
+      "status": "verified",
+      "notes": "不计 tag/valid/替换元数据"
+    },
+    {
+      "id": "ch12-address",
+      "claim": "16 位 0x1234 在 S=4 B=16 模型中 offset=4 set=3 tag=0x48",
+      "kind": "worked-example",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 6 addressing convention",
+      "status": "derived",
+      "notes": "按位拆分算式已做十六进制校核；原文 2 位 set 字段误写为 4 位"
+    },
+    {
+      "id": "ch12-fully-assoc",
+      "claim": "直接映射 E=1，全相联 S=1/E=C/B",
+      "kind": "definition",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 6 direct-mapped/set-associative/fully-associative",
+      "status": "verified",
+      "notes": "修正将 E 与 S 错等同的旧说法"
+    },
+    {
+      "id": "ch12-hit-sequence",
+      "claim": "S=4 B=16 访问 0x00 0x40 0x00，1 路为 MMM，2 路为 MMH",
+      "kind": "toy-model",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 6 set indexing and tags",
+      "status": "derived",
+      "notes": "空缓存、无其他访问、填充空行；可运行模型断言"
+    },
+    {
+      "id": "ch12-three-c",
+      "claim": "3C 的冷/容量/冲突分类依赖指定的缓存模型和访问历史",
+      "kind": "taxonomy",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 6 cache miss kinds",
+      "status": "verified",
+      "notes": "不是 perf 自动分解的计数"
+    },
+    {
+      "id": "ch12-matmul",
+      "claim": "行优先二维数组下，ijk 内层访问 B 为列步长，ikj 的内层 B/C 为按行访问且 C 须先初始化",
+      "kind": "algorithm",
+      "source_url": "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf",
+      "locator": "§6.5.2.1 arrays; mathematical matrix multiplication",
+      "status": "derived",
+      "notes": "不报告固定性能倍数"
+    },
+    {
+      "id": "ch12-block-boundary",
+      "claim": "N=7 TILE=3 的分块矩阵乘法须处理不满尾块，和参考三重循环结果相等",
+      "kind": "code-invariant",
+      "source_url": "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf",
+      "locator": "C11 loop and arithmetic semantics",
+      "status": "derived",
+      "notes": "测试使用小整数 double 可精确表示，不推广到一般浮点比较"
+    },
+    {
+      "id": "ch12-perf",
+      "claim": "perf stat 是用于测量事件计数的工具，计数器种类和事件含义依平台而异",
+      "kind": "tools",
+      "source_url": "https://man7.org/linux/man-pages/man1/perf-stat.1.html",
+      "locator": "DESCRIPTION and event selection",
+      "status": "verified",
+      "notes": "不由单一计数推断 3C miss 类型"
+    }
+  ]
+}
