@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Headless QA for the three progressive-disclosure lessons.
+"""Headless QA for all illustrated progressive-disclosure lessons.
 
 Run: pip install playwright==1.65.2
      python -m playwright install chromium
@@ -13,7 +13,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parent.parent
 WIDTHS = (1440, 390, 360)
-CHAPTERS = (2, 3, 4)
+CHAPTERS = (2, 3, 4, 16, 17, 18)
 
 def verify(page, chapter: int, width: int) -> dict:
     errors: list[str] = []
@@ -45,11 +45,26 @@ def verify(page, chapter: int, width: int) -> dict:
         after = page.locator("#float-bits").inner_text()
         assert "0x3e4ccccd" in after, after
         assert page.locator('[data-f32="0.2"]').get_attribute("aria-pressed") == "true"
-    else:
+    elif chapter == 4:
         before = page.locator("#addr-result").inner_text()
         page.locator("#idx").evaluate("(el) => {el.value='12';el.dispatchEvent(new Event('input', {bubbles:true}));}")
         after = page.locator("#addr-result").inner_text()
         assert before != after and "0x1060" in after, (before, after)
+    elif chapter == 16:
+        page.locator('[data-sig-case="gap"]').click()
+        state = page.locator("#sig-schedule").inner_text()
+        assert "错过" in state, state
+        assert page.locator('[data-sig-case="gap"]').get_attribute("aria-pressed") == "true"
+    elif chapter == 17:
+        page.locator("#page-offset").evaluate(
+            "(el) => {el.value='4095'; el.dispatchEvent(new Event('input', {bubbles:true}));}")
+        state = page.locator("#page-result").inner_text()
+        assert "0x12345fff" in state and "0x2a7fff" in state, state
+    elif chapter == 18:
+        page.locator('[data-request="96"]').click()
+        state = page.locator("#fragment-result").inner_text()
+        assert "无法满足" in state, state
+        assert page.locator('[data-request="96"]').get_attribute("aria-pressed") == "true"
     assert not errors, f"{chapter} viewport {width} JS errors: {errors}"
     return {"chapter":chapter,"width":width,"overflow_px":overflow,
             "images_loaded":len(image_state),"math_regions":len(sizes),
