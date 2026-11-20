@@ -1,0 +1,46 @@
+name: Olah lessons 25–28 content and browser QA
+on:
+  pull_request:
+    paths:
+      - '25.html'
+      - '26.html'
+      - '27.html'
+      - '28.html'
+      - 'olah-chapters.css'
+      - 'chapter-assets/25-*'
+      - 'chapter-assets/26-*'
+      - 'chapter-assets/27-*'
+      - 'chapter-assets/28-*'
+      - 'evidence/2[5-8].json'
+      - 'tests/content/chapters25-28.test.mjs'
+      - 'scripts/browser-qa-ch25-28.py'
+      - '.github/workflows/olah-ch25-28-browser.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  chapter-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test chapter semantics and interactions
+        run: node --test tests/content/chapters25-28.test.mjs
+      - name: Install pinned Chromium automation
+        run: |
+          python -m pip install playwright==1.65.2
+          python -m playwright install --with-deps chromium
+      - name: Viewports, standalone SVG and live interactions
+        run: python scripts/browser-qa-ch25-28.py --output reports/olah-25-28
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: olah-ch25-28-browser-qa
+          path: reports/olah-25-28
+          if-no-files-found: ignore
