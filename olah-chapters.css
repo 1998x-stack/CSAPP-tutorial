@@ -1,0 +1,58 @@
+/* Olah-style reading layout: scoped to rewritten CSAPP chapters. */
+.olah-lesson{--paper:#fffdf9;--ink:#203035;--subtle:#53676d;--accent:#147f80;--transform:#c76646;--structure:#7461ba;background:#f5f2e9;color:var(--ink);padding:15px}
+.olah-lesson .double-border{max-width:1370px;border:1px solid #e5e0d6;border-radius:15px;box-shadow:0 18px 55px rgba(34,53,48,.08);overflow:visible;background:var(--paper)}
+.olah-lesson .container{grid-template-columns:240px minmax(0,1fr)}
+.olah-lesson .sidebar{position:sticky;top:12px;align-self:start;max-height:calc(100vh - 24px);overflow-y:auto;background:#f3f5ef;border-right:1px solid #e1e7df;padding:23px 13px;scrollbar-width:thin}
+.olah-lesson .sidebar h3{font-size:1.04rem;border-left:3px solid var(--accent);color:var(--ink);margin-bottom:12px;padding-left:10px}
+.olah-lesson .chapter-list{margin:0;padding:0}
+.olah-lesson .chapter-list li{margin:0}
+.olah-lesson .chapter-list a{font-size:.82rem;line-height:1.55;padding:6px 9px;border-radius:6px;color:#4a6467}
+.olah-lesson .chapter-list a.active{background:#e3f1eb;color:#09666b;box-shadow:none;font-weight:700}
+.olah-lesson .chapter-list a:hover{background:#e8ebe6;transform:none}
+.olah-lesson .main-content{min-width:0;padding:32px clamp(18px,4.8vw,70px) 36px;background:var(--paper)}
+.olah-lesson .reading-page{max-width:830px;margin:auto}
+.olah-lesson .chapter-hero{border-bottom:1px solid #dce8e1;padding:8px 0 25px;margin-bottom:18px}
+.olah-lesson .eyebrow{color:var(--accent);font-size:.79rem;font-weight:750;letter-spacing:.12em;margin-bottom:16px}
+.olah-lesson h1{font-family:Georgia,"Songti SC","STSong",serif;font-size:clamp(1.95rem,3vw,2.7rem);line-height:1.35;letter-spacing:-.025em;color:#233b38;margin:0 0 22px}
+.olah-lesson .lede{font-size:1.18rem;line-height:1.9;color:#324c4c;max-width:48em}
+.olah-lesson .chapter-scope{font-size:.88rem;color:#607475;margin:16px 0 0}
+.olah-lesson .reading-page p,.olah-lesson .reading-page li{font-size:1.035rem;line-height:1.94;color:#283d40}
+.olah-lesson .reading-page strong{color:#106d70}
+.olah-lesson .reading-page a{color:#0b7479;text-decoration-thickness:1px;text-underline-offset:3px}
+.olah-lesson .chapter-toc{display:flex;flex-wrap:wrap;gap:8px 13px;border-bottom:1px solid #e8eae2;padding:13px 0 19px;margin-bottom:25px;align-items:baseline}
+.olah-lesson .chapter-toc strong{font-size:.84rem;white-space:nowrap;color:#65746e;margin-right:7px}
+.olah-lesson .chapter-toc a{font-size:.85rem;text-decoration:none;border-bottom:1px solid #b2cbc7;padding:4px 0}
+.olah-lesson .reading-page section{padding-top:12px;margin-top:3.2rem;scroll-margin-top:20px}
+.olah-lesson .reading-page h2{font-family:Georgia,"Songti SC","STSong",serif;font-size:clamp(1.43rem,2vw,1.78rem);line-height:1.48;font-weight:700;border:none;padding:0;color:#213b38;margin:0 0 1.25rem}
+.olah-lesson .reading-page h3{font-size:1.09rem;color:#1a5d60;margin:10px 0}
+.olah-lesson .reading-page code{font-size:.85em;overflow-wrap:anywhere;color:#875034;background:#f6f0e8;padding:1px 4px;border-radius:4px}
+.olah-lesson .reading-page pre{font-size:.88rem;line-height:1.7;background:#243837;border-radius:9px;overflow-x:auto;max-width:100%;padding:20px;margin:18px 0 21px;tab-size:4}
+.olah-lesson .reading-page pre code{font-size:inherit;background:none;color:#eef7ed;padding:0;white-space:pre;overflow-wrap:normal}
+.olah-lesson .lesson-figure{margin:26px 0 28px;padding:15px;background:#f8f9f4;border:1px solid #e3e9df;border-radius:11px}
+.olah-lesson .lesson-figure img{display:block;max-width:100%;height:auto;margin:auto}
+.olah-lesson .lesson-figure figcaption{font-size:.88rem;line-height:1.7;margin-top:9px;color:#5e7373}
+.olah-lesson .reading-page table{font-size:.91rem;margin:19px 0 23px;border-collapse:collapse;width:100%;display:block;overflow-x:auto;background:none}
+.olah-lesson .reading-page th,.olah-lesson .reading-page td{padding:11px 12px;border:1px solid #e0e7e1;vertical-align:top;min-width:93px}
+.olah-lesson .reading-page th{background:#edf3eb;color:#284e4e}
+.olah-lesson .math-scroll{overflow-x:auto;margin:18px 0;background:#f4f8f4;border:1px solid #dbe5dc;border-radius:8px;padding:14px 12px;text-align:center}
+.olah-lesson .math-scroll math{font-size:1.3rem;min-width:max-content}
+.olah-lesson .micro-lab,.olah-lesson .exercise,.olah-lesson .insight{background:#f0f5f0;border-left:4px solid var(--accent);border-radius:8px;padding:16px 20px;margin:24px 0}
+.olah-lesson .exercise{background:#fff7e7;border-left-color:#ac822c}
+.olah-lesson .insight{background:#f1effa;border-left-color:#7461ba}
+.olah-lesson .micro-lab input[type=range]{width:100%;accent-color:var(--accent);margin:13px 0 10px}
+.olah-lesson .micro-lab label{font-size:.93rem;color:#2c5553;display:block}
+.olah-lesson output{display:block;font-size:1.04rem;line-height:1.7;font-weight:700;color:#12656a;overflow-wrap:anywhere}
+.olah-lesson .small-note{font-size:.87rem!important;color:#607879!important;margin-bottom:0}
+.olah-lesson .seg-buttons{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.olah-lesson .seg-buttons button{font:inherit;cursor:pointer;padding:6px 16px;border:1px solid #90b2aa;border-radius:6px;background:#fff;color:#275c58}
+.olah-lesson .seg-buttons button[aria-pressed=true]{background:#147f80;color:white}
+.olah-lesson details summary{cursor:pointer;color:#1b676a;font-weight:700}
+.olah-lesson .reading-page :focus-visible,.olah-lesson .chapter-list :focus-visible,.olah-lesson .footer-nav :focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.olah-lesson .footer-nav{max-width:830px;margin:42px auto 0;display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between}
+.olah-lesson .footer-nav a{border-radius:6px;padding:8px 12px;background:#edf4ef;color:#236468;font-size:.9rem}
+.skip-link{position:absolute;left:-9999px;top:10px;padding:10px;background:white;color:#084c4f;z-index:1000}
+.skip-link:focus{left:14px}
+@media(max-width:900px){.olah-lesson .container{grid-template-columns:1fr}.olah-lesson .sidebar{position:static;max-height:175px;overflow-y:auto;border-right:0;border-bottom:1px solid #e1e7df;padding:11px 16px}.olah-lesson .sidebar h3{margin:0 0 5px}.olah-lesson .chapter-list{columns:2;column-gap:15px}.olah-lesson .chapter-list li{break-inside:avoid}.olah-lesson .main-content{padding:24px 25px}}
+@media(max-width:480px){body.olah-lesson{padding:0}.olah-lesson .double-border{border:0;border-radius:0;box-shadow:none}.olah-lesson .sidebar{max-height:130px;padding:12px 16px}.olah-lesson .chapter-list{columns:1}.olah-lesson .main-content{padding:25px 16px}.olah-lesson .lede{font-size:1.05rem}.olah-lesson .reading-page p,.olah-lesson .reading-page li{font-size:.98rem}.olah-lesson .lesson-figure{padding:8px}.olah-lesson .reading-page pre{font-size:.8rem}.olah-lesson .reading-page th,.olah-lesson .reading-page td{min-width:120px}.olah-lesson .chapter-toc{gap:7px 11px}}
+@media(prefers-reduced-motion:reduce){.olah-lesson *, .olah-lesson *::before, .olah-lesson *::after{transition:none!important;scroll-behavior:auto!important}}
+@media print{body.olah-lesson{padding:0;background:white}.olah-lesson .double-border{border:0;box-shadow:none}.olah-lesson .sidebar,.olah-lesson .chapter-toc,.olah-lesson .footer-nav,.olah-lesson .micro-lab input,.olah-lesson .seg-buttons,.skip-link{display:none!important}.olah-lesson .container{display:block}.olah-lesson .main-content{padding:0}.olah-lesson .reading-page{max-width:none}.olah-lesson .reading-page section{break-inside:avoid}.olah-lesson .lesson-figure{break-inside:avoid}.olah-lesson .reading-page pre{white-space:pre-wrap;color:#111;background:#f3f3f3}.olah-lesson .reading-page pre code{color:#111}}

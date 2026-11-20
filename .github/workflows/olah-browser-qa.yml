@@ -1,0 +1,38 @@
+name: Illustrated chapter browser QA
+
+on:
+  pull_request:
+    paths:
+      - '02.html'
+      - '03.html'
+      - '04.html'
+      - 'olah-chapters.css'
+      - 'chapter-assets/**'
+      - 'scripts/browser-qa-olah.py'
+      - '.github/workflows/olah-browser-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install reproducible browser tooling
+        run: |
+          python -m pip install playwright==1.65.2
+          python -m playwright install --with-deps chromium
+      - name: Inspect three chapters at 1440, 390 and 360px
+        run: python scripts/browser-qa-olah.py --output reports/olah
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: illustrated-chapter-browser-qa
+          path: reports/olah
+          if-no-files-found: ignore

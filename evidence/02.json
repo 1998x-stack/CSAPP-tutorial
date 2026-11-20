@@ -1,0 +1,41 @@
+{
+  "chapter": 2,
+  "claims": [
+    {
+      "id": "c2-endian",
+      "claim": "x86-64 is little-endian; cross-system formats must specify byte order",
+      "kind": "technical",
+      "source_url": "https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html",
+      "locator": "Volume 1, byte ordering",
+      "status": "verified",
+      "notes": "Original figure; architecture configuration differs"
+    },
+    {
+      "id": "c2-twos",
+      "claim": "w-bit two's complement has a negative high-bit weight",
+      "kind": "derived",
+      "source_url": "https://csapp.cs.cmu.edu/3e/students.html",
+      "locator": "Chapter 2, integer representations",
+      "status": "verified",
+      "notes": "8-bit numbers are illustrative"
+    },
+    {
+      "id": "c2-conversions",
+      "claim": "Usual arithmetic conversions govern signed/unsigned mixed expressions",
+      "kind": "technical",
+      "source_url": "https://en.cppreference.com/w/c/language/conversion",
+      "locator": "Usual arithmetic conversions",
+      "status": "verified",
+      "notes": "Dependent on rank and representable range"
+    },
+    {
+      "id": "c2-overflow",
+      "claim": "Unsigned wrapping is defined, signed overflow undefined in C",
+      "kind": "technical",
+      "source_url": "https://en.cppreference.com/w/c/language/operator_arithmetic",
+      "locator": "Overflows",
+      "status": "verified",
+      "notes": "8-bit signed demonstration is an abstract model"
+    }
+  ]
+}

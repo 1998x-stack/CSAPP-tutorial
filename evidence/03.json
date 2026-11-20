@@ -1,0 +1,41 @@
+{
+  "chapter": 3,
+  "claims": [
+    {
+      "id": "c3-format",
+      "claim": "binary32: 1/8/23 fields and 24 bits precision; binary64: 1/11/52 and 53 bits precision",
+      "kind": "standard",
+      "source_url": "https://dlmf.nist.gov/3.1",
+      "locator": "§3.1 numerical arithmetic",
+      "status": "verified",
+      "notes": "Illustration is original"
+    },
+    {
+      "id": "c3-special",
+      "claim": "binary32 minimum positive normal is 2^-126, subnormal 2^-149",
+      "kind": "standard",
+      "source_url": "https://dlmf.nist.gov/3.1",
+      "locator": "§3.1 floating-point formats",
+      "status": "verified",
+      "notes": "Signed zeros and NaNs distinguish special encodings"
+    },
+    {
+      "id": "c3-round",
+      "claim": "Common nearest-even rounding; IEEE 754 defines directional modes",
+      "kind": "standard",
+      "source_url": "https://www.intel.com/content/www/us/en/docs/dpcpp-cpp-compiler/developer-guide-reference/2026-2/intel-ieee-754-2008-binary-float-conform-lib-use.html",
+      "locator": "Rounding direction attributes",
+      "status": "verified",
+      "notes": "Integer-grid graphic is illustrative"
+    },
+    {
+      "id": "c3-comparison",
+      "claim": "Usually float 0.1f+0.2f == 0.3f but double 0.1+0.2 != 0.3",
+      "kind": "derived",
+      "source_url": "https://csapp.cs.cmu.edu/3e/students.html",
+      "locator": "Chapter 2 floating-point representations",
+      "status": "derived",
+      "notes": "Reproducible C11 smoke example; subject to evaluation mode"
+    }
+  ]
+}
