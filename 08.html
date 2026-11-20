@@ -1,327 +1,295 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>第8章 处理器体系结构——ISA设计 — 深入理解计算机系统（CSAPP）</title>
-    <link rel="stylesheet" href="theme.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="从一段 hello.c 出发，理解字节、编译与链接、CPU、存储层次、操作系统抽象和 Amdahl 定律。">
+<title>第 8 章 · CPU 如何读懂一串字节？ | CSAPP</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+:root{--paper:#fffdf9;--ink:#203035;--muted:#56686e;--accent:#147f80;--transform:#bf6343;--structure:#6b5da5;--edge:#d9e1dd;--wash:#f1f6f3}
+html{scroll-behavior:smooth;scroll-padding-top:1rem}
+body{padding:0;margin:0;background:#edf2ef;color:var(--ink);font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:17px;line-height:1.85}
+a{color:#096c70;text-underline-offset:.18em}a:hover{color:#a75337}
+a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.skip-link{position:absolute;top:-100px;left:12px;z-index:99;background:white;padding:8px 14px}.skip-link:focus{top:12px}
+.book-layout{display:grid;grid-template-columns:minmax(210px,254px) minmax(0,1fr);max-width:1420px;margin:auto;min-height:100vh;background:var(--paper);box-shadow:0 12px 70px #20303512}
+.book-sidebar{border-right:1px solid var(--edge);background:#f6f8f5;padding:24px 16px;position:relative}
+.sticky{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto}
+.brand{display:block;font-size:1.07rem;font-weight:800;color:var(--ink);text-decoration:none;padding:0 10px 12px;letter-spacing:-.02em}
+.brand small{display:block;font-size:.72rem;font-weight:550;color:var(--muted);letter-spacing:.1em}
+.chapter-nav{font-size:.8rem;line-height:1.5}
+.chapter-nav h2{font-size:.73rem;letter-spacing:.16em;color:var(--muted);border:0;padding:0;margin:8px 10px 12px}
+.chapter-nav ul{list-style:none;padding:0;margin:0}.chapter-nav li{margin:0}
+.chapter-nav a{display:flex;gap:9px;align-items:baseline;padding:8px 10px;color:#465960;border-radius:8px;text-decoration:none;font-weight:450}
+.chapter-nav a:hover{background:#e8f0ed;transform:none}
+.chapter-nav a span{font-size:.69rem;color:#7e928e;font-variant-numeric:tabular-nums}
+.chapter-nav a[aria-current]{background:#deece6;color:#085c5e;font-weight:750}
+.mobile-chapters{display:none}
+.essay{width:100%;min-width:0;padding:70px clamp(20px,6vw,96px) 80px}
+.article-body{max-width:850px;margin:0 auto}
+.eyebrow{color:var(--accent);font-size:.77rem;letter-spacing:.15em;text-transform:uppercase;font-weight:800}
+.essay h1{font-size:clamp(2.25rem,5vw,4.25rem);font-weight:800;letter-spacing:-.055em;line-height:1.2;margin:16px 0 23px;color:#182d30}
+.essay .dek{font-size:clamp(1.1rem,2vw,1.38rem);line-height:1.8;color:#435d60;max-width:40em}
+.essay p{margin:17px 0;color:var(--ink);line-height:1.9}
+.essay h2{font-size:clamp(1.55rem,3vw,2.12rem);margin:0 0 22px;padding:0;border:0;color:#1a3537;letter-spacing:-.035em;line-height:1.35}
+.essay h3{font-size:1.17rem;margin:29px 0 13px;color:#27454a}
+.essay section{margin-top:84px;scroll-margin-top:22px}
+.essay strong{color:#123c3f}
+.essay ul,.essay ol{padding-left:1.2rem;margin:18px 0}
+.essay li{padding-left:4px;margin:7px 0}
+.essay pre{border-radius:12px;background:#172a2e;color:#edf9f5;line-height:1.65;padding:20px;overflow-x:auto;font-size:.87rem;margin:22px 0;white-space:pre}
+.essay pre code{color:inherit;background:none;padding:0;font-size:inherit}
+.essay code{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-size:.84em;background:#eaf1ec;border-radius:4px;padding:2px 5px;overflow-wrap:anywhere}
+.essay figure{margin:30px 0 12px}
+.essay figcaption{font-size:.86rem;line-height:1.7;color:var(--muted);margin-top:10px}
+.essay svg{display:block;width:100%;height:auto}
+.section-no{display:block;font-size:.73rem;font-weight:800;letter-spacing:.17em;color:var(--accent);margin-bottom:11px}
+.lede-line{height:3px;width:66px;background:var(--accent);margin:28px 0}
+.inline-toc{display:flex;gap:8px;flex-wrap:wrap;margin:30px 0 0}
+.inline-toc a{font-size:.8rem;background:#eaf3ee;border:1px solid #cee3d8;border-radius:999px;padding:4px 11px;text-decoration:none;color:#21585a}
+.quote{border-left:3px solid var(--accent);padding:8px 0 8px 22px;font-size:1.09rem;color:#33595c;line-height:1.8;margin:30px 0}
+.figure-card{border:1px solid var(--edge);border-radius:18px;background:#fbfdfb;padding:clamp(12px,2.5vw,24px);box-shadow:0 12px 25px #102b2410}
+.pill{display:inline-block;font-size:.72rem;letter-spacing:.06em;font-weight:750;border-radius:5px;padding:2px 8px;background:#e9f3ec;color:#176f68}
+.trace-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:22px 0 12px}
+.step-button{cursor:pointer;border:1px solid #c7d8d0;border-radius:10px;padding:13px 8px;background:white;color:#31545a;text-align:center;font-weight:700;font:inherit;font-size:.85rem;line-height:1.4}
+.step-button[aria-pressed=true]{background:#176f70;color:white;border-color:#176f70}
+.step-button span{display:block;font-size:.68rem;opacity:.75;margin-bottom:2px}
+.step-detail{border-left:4px solid var(--accent);background:#eef5ef;padding:16px 20px;border-radius:0 10px 10px 0;min-height:104px}
+.step-detail p{margin:7px 0;font-size:.96rem}
+.diagram-step{transition:opacity .2s,filter .2s}
+[data-step-active="0"] .diagram-step:not([data-step-node="0"]),[data-step-active="1"] .diagram-step:not([data-step-node="1"]),[data-step-active="2"] .diagram-step:not([data-step-node="2"]),[data-step-active="3"] .diagram-step:not([data-step-node="3"]){opacity:.55}
+.callout{background:#f0f5f1;border-left:4px solid var(--accent);padding:15px 20px;border-radius:0 12px 12px 0;margin:25px 0}
+.callout p{margin:4px 0}
+.caution{background:#fff6ea;border-left-color:#ba7b32}
+.check-list{display:grid;gap:10px;margin:22px 0}
+.check-list div{border-top:1px solid var(--edge);padding:12px 0}
+.check-list b{display:block;color:var(--accent);font-size:.76rem;letter-spacing:.08em}
+.memory-bars{display:grid;gap:8px;margin:24px 0}
+.memory-row{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:center}
+.memory-row b{font-size:.88rem}
+.memory-track{height:40px;display:flex;align-items:center;border-radius:8px;background:#e8efeb;overflow:hidden}
+.memory-fill{height:100%;display:flex;align-items:center;padding-left:12px;color:white;font-size:.79rem;font-weight:750;min-width:104px}
+.memory-fill.level1{width:28%;background:#147f80}.memory-fill.level2{width:46%;background:#427eaa}.memory-fill.level3{width:72%;background:#7767a9}.memory-fill.level4{width:100%;background:#b46c4d}
+.small-note{font-size:.83rem!important;color:var(--muted)!important}
+.triad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:24px 0}
+.triad>div{border:1px solid var(--edge);border-radius:12px;padding:18px 16px;background:#fafbf8}
+.triad h3{margin:0 0 6px;color:#215c5e;font-size:1.08rem}
+.triad p{font-size:.9rem;margin:0;line-height:1.7}
+.math-panel{border-radius:14px;border:1px solid #d8e4dc;background:#f5f8f4;padding:16px 20px;margin:23px 0}
+.math-scroll{overflow-x:auto;max-width:100%;min-width:0;padding:8px 0}
+.math-scroll math[display=block]{width:max-content;min-width:100%;font-size:1.35rem;color:#1b4140}
+.math-label{font-size:.79rem;color:var(--muted);text-align:right}
+.widget{border:1px solid #cee0d9;border-radius:16px;padding:24px;margin:25px 0;background:#f5faf6}
+.widget h3{margin:0 0 8px}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:20px 0}
+.controls label{display:block;font-size:.91rem;font-weight:700}
+.controls input{width:100%;accent-color:var(--accent);margin:12px 0 0;cursor:pointer}
+.widget-output{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;border-top:1px solid #d2e3d9;padding-top:16px}
+.widget-output output{font-size:2.3rem;line-height:1.2;font-weight:800;color:#0d6c70;font-variant-numeric:tabular-nums}
+.widget-output p{margin:2px 0;font-size:.86rem}
+.table-wrap{max-width:100%;overflow-x:auto}
+.essay table{min-width:570px;font-size:.9rem;margin:16px 0;border-collapse:collapse}
+.essay th,.essay td{padding:10px 12px;border:1px solid #d6e1da;vertical-align:top}
+.essay th{background:#e8f1eb;color:#285354}
+.references{font-size:.88rem}
+.references li{overflow-wrap:anywhere}
+.footer-nav{margin-top:65px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--edge);padding:22px 0}
+.footer-nav a{background:#eaf2ee;padding:8px 16px;border-radius:999px;text-decoration:none}
+@media(max-width:900px){.book-layout{display:block}.book-sidebar{padding:9px 18px;border:0;border-bottom:1px solid var(--edge)}.sticky{position:static;max-height:none;overflow:visible}.brand{padding:5px 2px;font-size:.92rem}.brand small{display:inline;margin-left:8px}.chapter-nav{display:none}.mobile-chapters{display:block;font-size:.86rem;padding:6px 2px}.mobile-chapters summary{cursor:pointer;color:#315d5d;font-weight:700}.mobile-chapters ul{max-height:185px;overflow-y:auto;list-style:none;padding:0;margin:8px 0}.mobile-chapters li{margin:0}.mobile-chapters a{display:block;padding:5px}.essay{padding:42px 22px 60px}}
+@media(max-width:580px){.figure-card figure{max-width:100%;overflow-x:auto}.essay .figure-card svg{min-width:660px}.essay{padding:36px 16px 60px}.essay section{margin-top:62px}.trace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.controls,.triad{grid-template-columns:1fr}.memory-row{grid-template-columns:72px minmax(0,1fr);gap:7px}.memory-row b{font-size:.76rem}.figure-card{padding:10px}.essay pre{font-size:.75rem;padding:14px}.essay h1{letter-spacing:-.035em}.essay svg{min-width:0}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important}}
+@media print{body{background:white;font-size:11pt}.book-layout{display:block;box-shadow:none}.book-sidebar,.inline-toc,.trace-grid,.controls,.skip-link{display:none!important}.essay{padding:0}.article-body{max-width:none}.essay section{margin-top:24pt;break-inside:auto}.figure-card,.math-panel,.widget{break-inside:avoid;box-shadow:none}.math-scroll{overflow:visible}.math-scroll math[display=block]{font-size:1.15rem}.references a::after{content:" (" attr(href) ")";font-size:.75em}}
+.essay .figure-card svg{max-width:100%;height:auto}.essay .step-button:focus-visible{outline:3px solid #147f80;outline-offset:3px}.essay .step-button{min-height:45px}.essay .figure-card{overflow-x:auto}@media(max-width:580px){.essay .figure-card figure{min-width:640px}.essay .figure-card svg{min-width:0}}@media print{.essay .widget .trace-grid{display:none}}</style>
 </head>
 <body>
-<div class="double-border">
-<div class="container">
-    <div class="sidebar">
-        <h3>💻 课程目录</h3>
-        <ul class="chapter-list">
-            <li><a href="01.html">第1章 计算机系统漫游</a></li>
-            <li><a href="02.html">第2章 信息的表示与处理——整数</a></li>
-            <li><a href="03.html">第3章 信息的表示与处理——浮点数</a></li>
-            <li><a href="04.html">第4章 程序的机器级表示——基础</a></li>
-            <li><a href="05.html">第5章 程序的机器级表示——控制流</a></li>
-            <li><a href="06.html">第6章 程序的机器级表示——过程与栈</a></li>
-            <li><a href="07.html">第7章 程序的机器级表示——数据与进阶</a></li>
-            <li><a href="08.html" class="active">第8章 处理器体系结构——ISA设计</a></li>
-            <li><a href="09.html">第9章 处理器体系结构——流水线</a></li>
-            <li><a href="10.html">第10章 优化程序性能</a></li>
-            <li><a href="11.html">第11章 存储器层次结构——技术</a></li>
-            <li><a href="12.html">第12章 存储器层次结构——Cache</a></li>
-            <li><a href="13.html">第13章 链接——静态链接</a></li>
-            <li><a href="14.html">第14章 链接——动态链接</a></li>
-            <li><a href="15.html">第15章 异常控制流——异常与进程</a></li>
-            <li><a href="16.html">第16章 异常控制流——信号</a></li>
-            <li><a href="17.html">第17章 虚拟内存——地址翻译</a></li>
-            <li><a href="18.html">第18章 虚拟内存——内存分配</a></li>
-            <li><a href="19.html">第19章 系统级I/O</a></li>
-            <li><a href="20.html">第20章 网络编程——基础</a></li>
-            <li><a href="21.html">第21章 网络编程——进阶</a></li>
-            <li><a href="22.html">第22章 并发编程——线程基础</a></li>
-            <li><a href="23.html">第23章 并发编程——高阶模式</a></li>
-            <li><a href="24.html">第24章 经典Lab实战(I)——Data/Bomb/Attack</a></li>
-            <li><a href="25.html">第25章 经典Lab实战(II)——Cache/Shell/Malloc</a></li>
-            <li><a href="26.html">第26章 经典Lab实战(III)——Proxy Lab</a></li>
-            <li><a href="27.html">第27章 现代系统新趋势</a></li>
-            <li><a href="28.html">第28章 综合项目：手写高性能Web服务器</a></li>
-        </ul>
-    </div>
-    <div class="main-content">
-        <h2>第八章：处理器体系结构——ISA设计</h2>
+<a class="skip-link" href="#content">跳转到正文</a>
+<div class="book-layout">
+<aside class="book-sidebar">
+  <div class="sticky">
+    <a class="brand" href="index.html">CSAPP · 系统漫游<small>COMPUTER SYSTEMS</small></a>
+    <nav class="chapter-nav" aria-label="课程章节目录">
+      <h2>课程 · 28 讲</h2><ul><li><a href="01.html"><span>01</span>计算机系统漫游</a></li>
+<li><a href="02.html"><span>02</span>信息的表示与处理——整数</a></li>
+<li><a href="03.html"><span>03</span>信息的表示与处理——浮点数</a></li>
+<li><a href="04.html"><span>04</span>程序的机器级表示——基础</a></li>
+<li><a href="05.html"><span>05</span>程序的机器级表示——控制流</a></li>
+<li><a href="06.html"><span>06</span>程序的机器级表示——过程与栈</a></li>
+<li><a href="07.html"><span>07</span>程序的机器级表示——数据与进阶</a></li>
+<li><a aria-current="page" href="08.html"><span>08</span>处理器体系结构——ISA设计</a></li>
+<li><a href="09.html"><span>09</span>处理器体系结构——流水线</a></li>
+<li><a href="10.html"><span>10</span>优化程序性能</a></li>
+<li><a href="11.html"><span>11</span>存储器层次结构——技术</a></li>
+<li><a href="12.html"><span>12</span>存储器层次结构——Cache</a></li>
+<li><a href="13.html"><span>13</span>链接——静态链接</a></li>
+<li><a href="14.html"><span>14</span>链接——动态链接</a></li>
+<li><a href="15.html"><span>15</span>异常控制流——异常与进程</a></li>
+<li><a href="16.html"><span>16</span>异常控制流——信号</a></li>
+<li><a href="17.html"><span>17</span>虚拟内存——地址翻译</a></li>
+<li><a href="18.html"><span>18</span>虚拟内存——内存分配</a></li>
+<li><a href="19.html"><span>19</span>系统级I/O</a></li>
+<li><a href="20.html"><span>20</span>网络编程——基础</a></li>
+<li><a href="21.html"><span>21</span>网络编程——进阶</a></li>
+<li><a href="22.html"><span>22</span>并发编程——线程基础</a></li>
+<li><a href="23.html"><span>23</span>并发编程——高阶模式</a></li>
+<li><a href="24.html"><span>24</span>经典Lab实战(I)</a></li>
+<li><a href="25.html"><span>25</span>经典Lab实战(II)</a></li>
+<li><a href="26.html"><span>26</span>经典Lab实战(III)——Proxy Lab</a></li>
+<li><a href="27.html"><span>27</span>现代系统新趋势</a></li>
+<li><a href="28.html"><span>28</span>综合项目：手写高性能Web服务器</a></li></ul>
+    </nav>
+    <details class="mobile-chapters"><summary>浏览全部 28 章</summary><ul><li><a href="01.html"><span>01</span>计算机系统漫游</a></li>
+<li><a href="02.html"><span>02</span>信息的表示与处理——整数</a></li>
+<li><a href="03.html"><span>03</span>信息的表示与处理——浮点数</a></li>
+<li><a href="04.html"><span>04</span>程序的机器级表示——基础</a></li>
+<li><a href="05.html"><span>05</span>程序的机器级表示——控制流</a></li>
+<li><a href="06.html"><span>06</span>程序的机器级表示——过程与栈</a></li>
+<li><a href="07.html"><span>07</span>程序的机器级表示——数据与进阶</a></li>
+<li><a aria-current="page" href="08.html"><span>08</span>处理器体系结构——ISA设计</a></li>
+<li><a href="09.html"><span>09</span>处理器体系结构——流水线</a></li>
+<li><a href="10.html"><span>10</span>优化程序性能</a></li>
+<li><a href="11.html"><span>11</span>存储器层次结构——技术</a></li>
+<li><a href="12.html"><span>12</span>存储器层次结构——Cache</a></li>
+<li><a href="13.html"><span>13</span>链接——静态链接</a></li>
+<li><a href="14.html"><span>14</span>链接——动态链接</a></li>
+<li><a href="15.html"><span>15</span>异常控制流——异常与进程</a></li>
+<li><a href="16.html"><span>16</span>异常控制流——信号</a></li>
+<li><a href="17.html"><span>17</span>虚拟内存——地址翻译</a></li>
+<li><a href="18.html"><span>18</span>虚拟内存——内存分配</a></li>
+<li><a href="19.html"><span>19</span>系统级I/O</a></li>
+<li><a href="20.html"><span>20</span>网络编程——基础</a></li>
+<li><a href="21.html"><span>21</span>网络编程——进阶</a></li>
+<li><a href="22.html"><span>22</span>并发编程——线程基础</a></li>
+<li><a href="23.html"><span>23</span>并发编程——高阶模式</a></li>
+<li><a href="24.html"><span>24</span>经典Lab实战(I)</a></li>
+<li><a href="25.html"><span>25</span>经典Lab实战(II)</a></li>
+<li><a href="26.html"><span>26</span>经典Lab实战(III)——Proxy Lab</a></li>
+<li><a href="27.html"><span>27</span>现代系统新趋势</a></li>
+<li><a href="28.html"><span>28</span>综合项目：手写高性能Web服务器</a></li></ul></details>
+  </div>
+</aside>
+<main class="essay" id="content"><article class="article-body">
 
-        <p>前几章我们学习了 x86-64 的机器级表示——你看到了 C 代码如何翻译成汇编指令，如何在寄存器里做运算，如何通过栈帧管理函数调用。但你可能产生了一个疑问：这些指令到底是怎么被 CPU "理解"和"执行"的？CPU 内部究竟长什么样？</p>
-
-        <p>有人跟我说过一句印象深刻的话："如果你能设计一个简单的处理器，那你就真正理解了计算机系统。" 这话一点不假。这一章和下一章，我们要做一件很酷的事情——亲手设计一个完整的处理器。当然不是真去流片，而是基于 CSAPP 经典的 Y86-64 指令集，从 ISA（指令集体系结构）到 SEQ（顺序处理器），再到下一章的流水线实现，完整地走一遍处理器设计的全过程。这将是你深入理解计算机系统底层最重要的一步。</p>
-
-        <h3>8.1 Y86-64 指令集体系结构</h3>
-
-        <p>Y86-64 是 CSAPP 为了教学目的设计的一个简化指令集。它继承了 x86-64 的基本风格，但砍掉了大量冗余和复杂指令。打个比方：如果说 x86-64 是一个拥有 1000+ 条指令的瑞士军刀，那么 Y86-64 就是一把只有 11 种功能但足够锋利的折刀。它保留了核心功能，丢掉了历史包袱。</p>
-
-        <p><strong>程序员可见的状态：</strong></p>
-        <ul>
-            <li><strong>8 个程序寄存器</strong>：%rax, %rcx, %rdx, %rbx, %rsp, %rbp, %rsi, %rdi。每个 64 位。注意没有 %r8-%r15，比 x86-64 少了一半。%rsp 被 call/ret/push/pop 隐式使用。</li>
-            <li><strong>条件码（Condition Codes）</strong>：ZF（零标志）、SF（符号标志）、OF（溢出标志）。只有算术指令会修改。</li>
-            <li><strong>程序计数器（PC）</strong>：指向当前正在执行的指令地址。</li>
-            <li><strong>内存（Memory）</strong>：字节寻址，大端存储。</li>
-            <li><strong>状态码（Stat）</strong>：指示程序执行状态（正常/异常）。</li>
-        </ul>
-
-        <p>Y86-64 共有 11 种指令（实际上算上变体共 18 种编码）。下面是完整的指令集表格：</p>
-
-        <table>
-            <tr>
-                <th>指令</th>
-                <th>格式</th>
-                <th>字节编码</th>
-                <th>功能描述</th>
-            </tr>
-            <tr>
-                <td>halt</td>
-                <td>0</td>
-                <td>00</td>
-                <td>停止处理器执行</td>
-            </tr>
-            <tr>
-                <td>nop</td>
-                <td>1</td>
-                <td>10</td>
-                <td>空操作，PC 加 1</td>
-            </tr>
-            <tr>
-                <td>rrmovq</td>
-                <td>2: rA, rB</td>
-                <td>20 rArB</td>
-                <td>rA → rB（寄存器间传送）</td>
-            </tr>
-            <tr>
-                <td>irmovq</td>
-                <td>3: V, rB</td>
-                <td>30 F rB V</td>
-                <td>立即数 V → rB（rA 字段为 F）</td>
-            </tr>
-            <tr>
-                <td>rmmovq</td>
-                <td>4: rA, D(rB)</td>
-                <td>40 rA rB D</td>
-                <td>rA → 内存地址 D(rB)</td>
-            </tr>
-            <tr>
-                <td>mrmovq</td>
-                <td>5: D(rB), rA</td>
-                <td>50 rA rB D</td>
-                <td>内存地址 D(rB) → rA</td>
-            </tr>
-            <tr>
-                <td>OPq (addq/subq/andq/xorq)</td>
-                <td>6: fn, rA, rB</td>
-                <td>6fn rA rB</td>
-                <td>rA OP rB → rB，修改条件码</td>
-            </tr>
-            <tr>
-                <td>jXX (jmp/jle/jl/je/jne/jge/jg)</td>
-                <td>7: fn, Dest</td>
-                <td>7fn Dest</td>
-                <td>根据条件码跳转</td>
-            </tr>
-            <tr>
-                <td>call</td>
-                <td>8: Dest</td>
-                <td>80 Dest</td>
-                <td>将返回地址压栈，跳转</td>
-            </tr>
-            <tr>
-                <td>ret</td>
-                <td>9</td>
-                <td>90</td>
-                <td>从栈中弹出返回地址并跳转</td>
-            </tr>
-            <tr>
-                <td>pushq</td>
-                <td>A: rA</td>
-                <td>A0 rA 8</td>
-                <td>将 rA 压栈（rB 固定为 8）</td>
-            </tr>
-            <tr>
-                <td>popq</td>
-                <td>B: rA</td>
-                <td>B0 rA 8</td>
-                <td>从栈中弹出值到 rA</td>
-            </tr>
-        </table>
-
-        <div class="tip">
-            <p><strong>编码细节</strong>：注意寄存器的编码是 4 位（0-7 对应 %rax-%rdi，F 表示"无寄存器"）。条件码分支的子功能码 fn 的编码为：jmp=0, jle=1, jl=2, je=3, jne=4, jge=5, jg=6。算术运算子功能码：addq=0, subq=1, andq=2, xorq=3。</p>
-        </div>
-
-        <p>来看一个具体的 Y86-64 汇编段，以及它在内存中的字节表示：</p>
-
-        <pre><code># Y86-64 汇编代码               # 字节编码（十六进制）
-irmovq $100, %rbx               # 30 F 3 64 00 00 00 00 00 00 00 00
-irmovq $200, %rcx               # 30 F 1 C8 00 00 00 00 00 00 00 00
-addq %rbx, %rcx                 # 60 3 1
-rmmovq %rcx, 0(%rbx)            # 40 1 3 00 00 00 00 00 00 00 00
-halt                            # 00</code></pre>
-
-        <p>这个程序把两个立即数 100 和 200 分别加载到 %rbx 和 %rcx，然后相加（结果在 %rcx），最后把和存入内存。你留意到没有——立即数在 Y86-64 的编码中固定占 8 字节，所以 irmovq 是最长的指令（10 字节）。</p>
-
-        <h3>8.2 HCL 硬件控制语言入门</h3>
-
-        <p>要描述一个处理器，我们需要一种方式来表达"当某个条件成立时，选择这个信号；否则选择那个信号"。CSAPP 使用了一种叫 HCL（Hardware Control Language）的语言来描述处理器的控制逻辑。它并不是真实的硬件描述语言（HDL），而是一种简洁的教学语言。</p>
-
-        <p>HCL 的核心概念只有几个：</p>
-        <ul>
-            <li><strong>布尔表达式</strong>：用逻辑与（&&）、或（||）、非（!）组合信号</li>
-            <li><strong>字级组合逻辑</strong>：对多比特数据做运算</li>
-            <li><strong>多路复用器（MUX）</strong>：根据条件选择多个输入中的一个输出</li>
-        </ul>
-
-        <p>下面是一个在 SEQ 处理器中使用的 HCL 代码片段，它描述了指令解码阶段如何选择源寄存器和目标寄存器：</p>
-
-        <pre><code># HCL 中的 MUX —— 根据指令类型选择源寄存器
-# icode 是指令操作码
-int srcA = [
-    icode == IRRMOVQ || icode == IRMMOVQ ||
-    icode == IOPQ     || icode == IPUSHQ : rA;
-    icode == IPOPQ    || icode == IRET     : RRSP;
-    1 : RNONE;  # 默认值：无寄存器
-];
-
-int srcB = [
-    icode == IOPQ     || icode == IRMMOVQ ||
-    icode == IMRMOVQ  : rB;
-    icode == IPUSHQ   || icode == IPOPQ ||
-    icode == ICALL    || icode == IRET   : RRSP;
-    1 : RNONE;
+<header>
+<div class="eyebrow">Chapter 08 · Instruction Set Architecture</div>
+<h1>CPU 如何读懂<br>一串字节？</h1>
+<p class="dek">先定义机器“能看见什么”，再顺着一条 <code>irmovq</code> 指令走过编码、控制信号与 SEQ 数据通路。</p>
+<div class="lede-line" aria-hidden="true"></div>
+<p>程序员看到的是 <code>irmovq $0x1122334455667788, %r8</code>。硬件收到的却只有十个字节。<strong>指令集体系结构（ISA）是一份双方都必须遵守的契约：</strong>怎样编码、读写哪些状态、执行后必须得到什么结果。它没有规定内部必须使用多少流水级。</p>
+<nav class="inline-toc" aria-label="本章阅读路径"><a href="#contract">ISA 契约</a><a href="#encoding">编码拆解</a><a href="#hcl">控制信号</a><a href="#seq">SEQ 单周期</a><a href="#compare">CISC / RISC</a><a href="#lab">动手检验</a></nav>
+</header>
+<section id="contract" aria-labelledby="contract-title"><span class="section-no">01 / CONTRACT</span>
+<h2 id="contract-title">先划清边界：哪些是“程序员可见状态”？</h2>
+<p>Y86-64 是 CS:APP 第三版第 4 章使用的教学 ISA，并非真实 x86-64 的子集实现。它保留了寄存器传送、算术、跳转、栈和内存读写等主要概念，但编码更规整。</p>
+<div class="triad">
+<div><h3>15 个寄存器</h3><p>寄存器编号 0–E：<code>%rax</code> 至 <code>%r14</code>；<code>0xF</code> 表示 RNONE（无寄存器），不是 <code>%r15</code>。</p></div>
+<div><h3>状态与标志</h3><p><code>PC</code>、条件码 <code>ZF/SF/OF</code> 与 <code>Stat</code>（AOK、HLT、ADR、INS）参与执行语义。</p></div>
+<div><h3>小端内存</h3><p>内存按字节寻址，64 位立即数与内存中的八字节整数按小端顺序保存，低有效字节位于低地址。</p></div>
+</div>
+<p>基础指令家族包括 <code>halt</code>、<code>nop</code>、条件传送 <code>cmovXX</code>、<code>irmovq</code>、<code>rmmovq</code>、<code>mrmovq</code>、<code>OPq</code>、<code>jXX</code>、<code>call</code>、<code>ret</code>、<code>pushq</code> 和 <code>popq</code>，共 <strong>12 类</strong>。条件传送、条件跳转及算术指令各有功能码变体。<code>rmmovq</code> 把寄存器写到内存；<code>mrmovq</code> 方向相反。</p>
+</section>
+<section id="encoding" aria-labelledby="encoding-title"><span class="section-no">02 / REPRESENTATION</span>
+<h2 id="encoding-title">把一条指令剖成三个字段</h2>
+<p><code>irmovq</code> 的第一个字节是 <code>icode:ifun</code>，第二个字节是 <code>rA:rB</code>，后面跟 8 字节立即数。选择 <code>%r8</code> 作为目的寄存器时，寄存器字节为 <code>f8</code>。</p>
+<div class="figure-card"><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 252" role="img" aria-labelledby="isa-svg-title isa-svg-desc">
+<title id="isa-svg-title">Y86-64 irmovq 的十字节编码</title>
+<desc id="isa-svg-desc">第一个字节 30 表示指令种类和功能码，第二个字节 f8 表示无源寄存器和目的寄存器 r8，后八个字节为小端立即数，从 88 到 11。</desc>
+<g font-family="system-ui,sans-serif">
+<rect x="16" y="26" width="135" height="115" rx="13" fill="#e3f1ec" stroke="#8bbbae"/>
+<rect x="163" y="26" width="133" height="115" rx="13" fill="#fff0e4" stroke="#d5a991"/>
+<rect x="310" y="26" width="495" height="115" rx="13" fill="#ede9f7" stroke="#ac9bd1"/>
+<g text-anchor="middle" font-family="ui-monospace,monospace" font-size="28" font-weight="700" fill="#244b4d">
+<text x="84" y="93">30</text><text x="229" y="93" fill="#a25839">f8</text>
+<text x="557" y="88" font-size="23" fill="#5a4b8a">88 77 66 55 44 33 22 11</text></g>
+<g text-anchor="middle" fill="#405e5e" font-size="15">
+<text x="84" y="119">icode : ifun</text><text x="229" y="119">rA : rB</text><text x="557" y="119">valC · 8 字节</text>
+<text x="84" y="170">0x3 : 0x0</text><text x="229" y="170">0xF : 0x8</text><text x="557" y="170">0x1122334455667788（64 位整数）</text>
+</g><text x="16" y="218" font-size="17" fill="#3c6263">地址从左到右递增：最低有效字节 88 先出现</text>
+</g>
+</svg><figcaption>图 1 · <code>irmovq $0x1122334455667788, %r8</code> 的教学编码。每两个十六进制字符为一个字节；字节地址从左向右递增。</figcaption></figure></div>
+<pre><code>irmovq $0x1122334455667788, %r8
+# 30 f8 88 77 66 55 44 33 22 11
+# 10 字节：1 opcode + 1 register + 8 immediate
+addq %r8, %rax
+# 60 80  (rA=8, rB=0；结果写入 %rax)</code></pre>
+<p>若将立即数误写成从 <code>11</code> 到 <code>88</code>，处理器解码出的数会不同。<strong>小端是每个多字节数值内部的字节顺序</strong>，不是说指令的操作码要倒着存放。</p>
+</section>
+<section id="hcl" aria-labelledby="hcl-title"><span class="section-no">03 / CONTROL</span>
+<h2 id="hcl-title">“读哪个寄存器”可以写成一个电路选择器</h2>
+<p>硬件控制语言 HCL 的方括号不是按时间依次执行的 <code>if</code>。它在描述多路复用器（MUX）：所有输入同时存在，满足条件的分支决定输出信号。以 <code>srcA</code> 为例：</p>
+<pre><code>int srcA = [
+    icode in { IRRMOVQ, IRMMOVQ, IOPQ, IPUSHQ } : rA;
+    icode in { IPOPQ, IRET }                  : RRSP;
+    1                                         : RNONE;
 ];</code></pre>
-
-        <p>这段代码的意思是：对于不同的指令，我们需要从不同的寄存器读取数据。srcA 用于读取第一个源操作数——rrmovq、rmmovq 和 OPq 使用 rA 字段编码的寄存器，而 pushq 和 ret 需要读取 %rsp。最后的 <code>1 : RNONE</code> 是默认分支（类似于 switch 的 default），表示其他指令不需要读取源寄存器。这种"case 表达式"风格就是 HCL 最显著的特征。</p>
-
-        <div class="highlight">
-            <p><strong>理解 HCL 的关键</strong>：HCL 中的赋值不是"顺序执行"的——它描述的是组合逻辑电路，所有信号是<strong>同时</strong>计算出来的。这和我们写程序时的"从上到下依次执行"是完全不同的思维模式。如果你把 HCL 当成 C 代码来理解，就会陷入混乱。把它想象成一张电路图——所有导线上的信号是同时存在的。</p>
-        </div>
-
-        <h3>8.3 SEQ 顺序处理器</h3>
-
-        <p>SEQ（Sequential）处理器是 Y86-64 指令集最直观的实现方式：每条指令的执行被划分为 6 个阶段，一个阶段接一个阶段地执行。虽然效率低（每条指令要多个时钟周期），但逻辑清晰。</p>
-
-        <p>下面是 SEQ 的 6 个阶段：</p>
-
-        <table>
-            <tr>
-                <th>阶段</th>
-                <th>英文名称</th>
-                <th>任务描述</th>
-            </tr>
-            <tr>
-                <td>取指</td>
-                <td>Fetch</td>
-                <td>从 PC 指向的内存地址读取指令字节，解析出 icode、ifun、rA、rB、立即数 D 和 Dest</td>
-            </tr>
-            <tr>
-                <td>译码</td>
-                <td>Decode</td>
-                <td>从寄存器文件读取源操作数（srcA/sr cB → valA/valB），或者使用立即数</td>
-            </tr>
-            <tr>
-                <td>执行</td>
-                <td>Execute</td>
-                <td>ALU 执行算术/逻辑运算，检查条件码，计算内存地址或跳转目标</td>
-            </tr>
-            <tr>
-                <td>访存</td>
-                <td>Memory</td>
-                <td>读/写内存数据（rmmovq/mrmovq/pushq/popq/call/ret 需要）</td>
-            </tr>
-            <tr>
-                <td>写回</td>
-                <td>Write Back</td>
-                <td>将结果写回寄存器文件（dstE/dstM）</td>
-            </tr>
-            <tr>
-                <td>PC 更新</td>
-                <td>PC Update</td>
-                <td>根据指令类型设置下一条指令的 PC 值</td>
-            </tr>
-        </table>
-
-        <p>让我们以 <code>addq %rbx, %rcx</code> 这条指令为例，看它如何走过这 6 个阶段：</p>
-
-        <ol>
-            <li><strong>Fetch</strong>：PC 指向该指令的起始地址，读取字节 <code>60 31</code>（icode=6, ifun=0 → addq, rA=3 → %rbx, rB=1 → %rcx）。PC 增加 2。</li>
-            <li><strong>Decode</strong>：从寄存器文件读取 valA = %rbx 的值，valB = %rcx 的值。</li>
-            <li><strong>Execute</strong>：ALU 计算 valB + valA，结果为 valE，同时更新条件码 ZF/SF/OF。</li>
-            <li><strong>Memory</strong>：addq 不需要访存，此阶段无操作。</li>
-            <li><strong>Write Back</strong>：valE（计算结果）写入目标寄存器 dstE = %rcx。</li>
-            <li><strong>PC Update</strong>：PC 设为 PC+2（顺序下一条指令）。</li>
-        </ol>
-
-        <p>你有没有发现一个有趣的事？addq 的 6 个阶段中，实际在做"有用工作"的只有 Fetch、Decode、Execute、Write Back 四个阶段。Memory 阶段完全是空闲的。这就是 SEQ 的低效所在——每个阶段占一个时钟周期，但有些阶段对特定指令来说就是空转。</p>
-
-        <p>不过这种"浪费"给流水线处理器的设计留出了优化空间——这正是下一章的主题。</p>
-
-        <div class="warning">
-            <p><strong>新手陷阱</strong>：在写 Y86-64 汇编时，最常见的 bug 是 pushq 和 popq 的行为——你可能会误以为它们先修改 %rsp 再存取数据。实际上，SEQ 的实现中 pushq 先把 %rsp 减 8，然后把寄存器的值写入新的栈顶；popq 先从当前 %rsp 读数据到目标寄存器，然后 %rsp 加 8。你在写涉及栈操作的 Y86-64 代码时，一定要记住这个顺序。</p>
-        </div>
-
-        <h3>8.4 从 CISC 到 RISC 的设计哲学</h3>
-
-        <p>学完了 Y86-64 和 SEQ 处理器，你可能会思考一个问题：真实的 x86 处理器也这么简单吗？答案是——当然不。x86 是一个典型 CISC（Complex Instruction Set Computer）架构，指令数量超过一千条，每条指令的长度从 1 到 15 字节不等，寻址模式极其丰富。这样的复杂性给处理器实现带来了巨大的挑战。</p>
-
-        <p>与之相对的是 RISC（Reduced Instruction Set Computer）设计哲学，其代表包括 ARM、RISC-V、MIPS。RISC 的核心信条是：指令越简单，硬件越容易提速。每条指令做一件简单的事，固定长度（通常 32 位或 16 位），规整的编码格式，让流水线设计变得干净利落。</p>
-
-        <p>Y86-64 虽然不是纯正的 RISC（它继承了 x86 的一些特性如可变指令长度），但它的设计思路明显偏向 RISC 的简洁性。</p>
-
-        <p>来对比一下 CISC 和 RISC 的关键差异：</p>
-
-        <table>
-            <tr>
-                <th>特性</th>
-                <th>CISC（x86）</th>
-                <th>RISC（ARM/RISC-V）</th>
-            </tr>
-            <tr>
-                <td>指令数量</td>
-                <td>1000+ 条</td>
-                <td>几十到上百条</td>
-            </tr>
-            <tr>
-                <td>指令长度</td>
-                <td>1-15 字节可变</td>
-                <td>固定（32 位或 16 位）</td>
-            </tr>
-            <tr>
-                <td>寻址模式</td>
-                <td>多种复杂模式</td>
-                <td>少量简单模式（通常只有 base+offset）</td>
-            </tr>
-            <tr>
-                <td>寄存器</td>
-                <td>通用少，专用多（历史原因）</td>
-                <td>大量通用寄存器（通常 16-32 个）</td>
-            </tr>
-            <tr>
-                <td>内存操作</td>
-                <td>算术指令可访问内存</td>
-                <td>只有 load/store 访问内存</td>
-            </tr>
-            <tr>
-                <td>流水线设计</td>
-                <td>复杂，需大量硬件优化</td>
-                <td>简洁规整，容易高效流水</td>
-            </tr>
-        </table>
-
-        <div class="highlight">
-            <p><strong>RISC-V 的故事</strong>：为什么 RISC-V 近年来如此火爆？因为它不仅是 RISC，更是<strong>开放</strong>的 RISC。x86 和 ARM 都受专利保护，而 RISC-V 的指令集规范是开放免费的。2017 年，RISC-V 基金会在瑞士成立，吸引了 Google、NVIDIA、Qualcomm 等巨头加入。今天，从嵌入式 MCU 到服务器 CPU，RISC-V 正在各个领域挑战 x86 和 ARM 的地位。这正是处理器设计思想从"复杂"回归"简洁"的生动例证。</p>
-        </div>
-
-        <p>那么问题来了：既然 RISC 这么好，为什么 x86 还没被淘汰？因为兼容性。x86 从 1978 年的 Intel 8086 一路演进到今天，积累了海量的软件生态。现代 x86 处理器内部其实是一个"披着 CISC 外衣的 RISC 核心"——它们在硬件层把 x86 指令翻译成内部的微操作（micro-ops），然后用一个高效 RISC 流水线来执行。这个设计思路被称为"CISC 前端 + RISC 后端"，是目前主流 x86 处理器的标准做法。</p>
-
-        <p>好，这一章我们完成了处理器设计的"纸上谈兵"——学习了 Y86-64 指令集、HCL 控制语言、SEQ 顺序处理器的 6 阶段设计，以及 CISC 与 RISC 的设计哲学。下一章，我们将把这些知识升级为真正的流水线处理器，体验吞吐率翻倍的快感。</p>
-
-        <div class="footer-nav">
-            <a href="07.html">← 上一章</a>
-            <a href="index.html">📖 返回目录</a>
-            <a href="09.html">下一章 →</a>
-        </div>
-    </div>
+<div class="callout"><p><strong>逐项追问：</strong><code>addq</code> 需要读取 <code>rA</code>，<code>ret</code> 需要读取 <code>%rsp</code>，<code>halt</code> 无需从寄存器读取操作数。<code>1 : RNONE</code> 是兜底输入，不是“先把某个寄存器清零”。</p></div>
+</section>
+<section id="seq" aria-labelledby="seq-title"><span class="section-no">04 / DATAPATH</span>
+<h2 id="seq-title">SEQ 的“六个阶段”为什么不是六个时钟周期？</h2>
+<p>在 CS:APP 的 <strong>SEQ</strong> 设计中，一条指令沿 <strong>Fetch → Decode → Execute → Memory → Write Back → PC Update</strong> 的组合逻辑传播，<strong>一次时钟边沿完成本条指令的状态更新</strong>。六个名称是推导数据通路的逻辑分段，并不表示每个分段占一个独立周期。代价是时钟周期要容纳较长的关键路径。</p>
+<div class="figure-card"><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 242" role="img" aria-labelledby="seq-svg-title seq-svg-desc">
+<title id="seq-svg-title">SEQ 的六段组合逻辑和一个时钟边界</title>
+<desc id="seq-svg-desc">指令在单个较长的时钟周期里，沿取指、译码、执行、访存、写回、PC 选择的组合路径传递，在时钟边沿提交状态。</desc>
+<g font-family="system-ui,sans-serif" text-anchor="middle">
+<rect x="12" y="54" width="126" height="70" rx="12" fill="#e4f1ed" stroke="#83b4a7"/><text x="75" y="94" font-size="18" font-weight="700" fill="#25494c">取指 F</text><rect x="160" y="54" width="126" height="70" rx="12" fill="#fff0e5" stroke="#d7aa8b"/><text x="223" y="94" font-size="18" font-weight="700" fill="#25494c">译码 D</text><rect x="308" y="54" width="126" height="70" rx="12" fill="#e4f1ed" stroke="#83b4a7"/><text x="371" y="94" font-size="18" font-weight="700" fill="#25494c">执行 E</text><rect x="456" y="54" width="126" height="70" rx="12" fill="#fff0e5" stroke="#d7aa8b"/><text x="519" y="94" font-size="18" font-weight="700" fill="#25494c">访存 M</text><rect x="604" y="54" width="126" height="70" rx="12" fill="#e4f1ed" stroke="#83b4a7"/><text x="667" y="94" font-size="18" font-weight="700" fill="#25494c">写回 W</text><rect x="752" y="54" width="126" height="70" rx="12" fill="#fff0e5" stroke="#d7aa8b"/><text x="815" y="94" font-size="18" font-weight="700" fill="#25494c">更新 PC</text>
+<path d="M138 89 H158" stroke="#467c79" stroke-width="3"/><path d="M156 84 l7 5 -7 5" fill="none" stroke="#467c79" stroke-width="2"/><path d="M286 89 H306" stroke="#467c79" stroke-width="3"/><path d="M304 84 l7 5 -7 5" fill="none" stroke="#467c79" stroke-width="2"/><path d="M434 89 H454" stroke="#467c79" stroke-width="3"/><path d="M452 84 l7 5 -7 5" fill="none" stroke="#467c79" stroke-width="2"/><path d="M582 89 H602" stroke="#467c79" stroke-width="3"/><path d="M600 84 l7 5 -7 5" fill="none" stroke="#467c79" stroke-width="2"/><path d="M730 89 H750" stroke="#467c79" stroke-width="3"/><path d="M748 84 l7 5 -7 5" fill="none" stroke="#467c79" stroke-width="2"/>
+<path d="M20 166 H882" stroke="#7364ac" stroke-width="3" stroke-dasharray="9 7"/>
+<text x="450" y="191" font-size="16" fill="#65558a">同一时钟周期内传播组合逻辑；沿关键路径决定最小时钟周期</text>
+<rect x="295" y="205" width="310" height="29" rx="8" fill="#e6eee8"/><text x="450" y="225" font-size="15" fill="#236a63">时钟边沿 → PC / 寄存器 / 状态更新</text>
+</g>
+</svg><figcaption>图 2 · 六段功能在同一周期内串接；图中的阶段不是六个流水级。下一章把长路径切分到不同周期、让不同指令重叠执行。</figcaption></figure></div>
+<p>例如 <code>addq %rbx, %rcx</code>：Fetch 取出 <code>60 31</code>；Decode 读取 <code>%rbx</code> 和 <code>%rcx</code>；Execute 做 <code>valB + valA</code> 并更新条件码；Memory 不访问数据存储器；Write Back 把 <code>valE</code> 写入 <code>%rcx</code>；PC Update 选择 <code>valP</code>。这些信号都沿当前指令的组合路径传播。</p>
+<div class="widget" aria-labelledby="isa-widget-title">
+<h3 id="isa-widget-title">交互 · 看一条指令如何选寄存器</h3>
+<p>点选指令，观察同一 <code>srcA</code> MUX 输出如何变化。该小模型仅演示读取端口 A，不是完整模拟器。</p>
+<div class="trace-grid" id="isa-choices">
+<button class="step-button" data-isa="0" aria-pressed="true">addq</button>
+<button class="step-button" data-isa="1" aria-pressed="false">pushq</button>
+<button class="step-button" data-isa="2" aria-pressed="false">ret</button>
+<button class="step-button" data-isa="3" aria-pressed="false">halt</button>
 </div>
+<div class="step-detail" aria-live="polite"><strong id="isa-choice">srcA = rA</strong><p id="isa-explain">addq 读取 rA 作为第一源操作数；还会读取 rB 作为第二源操作数。</p></div>
 </div>
-</body>
-</html>
+</section>
+<section id="compare" aria-labelledby="compare-title"><span class="section-no">05 / BOUNDARY</span>
+<h2 id="compare-title">CISC 与 RISC 是 ISA 风格，不是速度标签</h2>
+<p>x86-64 支持可变长指令与丰富的寻址方式；RISC-V 基础整数指令通常有规整的固定宽度编码，并提供可选压缩指令扩展。两者的区别不能化约为“哪个一定更快”。现代高性能 x86 处理器通常将外部指令解码为内部微操作，但内部设计细节因厂商和微架构而异。</p>
+<p>Y86-64 保留了可变长编码、栈操作与条件码，因此更适合看作<strong>简化了的教学 ISA</strong>，而非某一真实 RISC 芯片的规格书。</p>
+</section>
+<section id="lab" aria-labelledby="lab-title"><span class="section-no">06 / REPRODUCE</span>
+<h2 id="lab-title">自检：不用模拟器，也能核对编码</h2>
+<p>把第一个例子的立即数按 8 字节小端顺序手工写出，再反向拼回一个 64 位数。下面这段 Python 3 标准库代码会验证结果；它检验<strong>编码规则</strong>，不假装运行了完整的 SEQ 硬件。</p>
+<pre><code>value = 0x1122334455667788
+encoded = bytes([0x30, 0xF8]) + value.to_bytes(8, "little")
+assert encoded.hex(" ") == "30 f8 88 77 66 55 44 33 22 11"
+assert int.from_bytes(encoded[2:], "little") == value
+print(encoded.hex(" "))</code></pre>
+<p class="small-note">理解迁移：第 8 章解释“一条指令必须做什么”；<a href="09.html">第 9 章</a>解释“怎么让多条指令重叠执行”。</p>
+</section>
+<section id="references" class="references" aria-labelledby="references-title"><span class="section-no">REFERENCES</span><h2 id="references-title">参考与边界</h2>
+<ol>
+<li>R. Bryant、D. O'Hallaron，《<a href="https://csapp.cs.cmu.edu/3e/">Computer Systems: A Programmer's Perspective</a>》第 3 版，第 4 章“Processor Architecture”。</li>
+<li>CS:APP 官方<a href="https://csapp.cs.cmu.edu/3e/figures.html">章节图目录</a>，图 4.3（Y86-64）、图 4.22（SEQ）等可供交叉核对。</li>
+<li><a href="https://riscv.org/specifications/ratified/">RISC-V 已批准规范</a>；本章仅对 ISA 设计原则作定性比较。</li>
+</ol><p class="small-note">本章中的编码与 SEQ 图是自绘简化教学模型；不表示门级电路、路径实测延迟或芯片指标。</p></section>
+<nav class="footer-nav" aria-label="章节导航"><a href="07.html">← 第 7 章</a><a href="index.html">课程目录</a><a href="09.html">第 9 章：流水线 →</a></nav>
+</article></main></div>
+<script>
+(function(){
+"use strict";
+const states=[
+["srcA = rA","addq 读取 rA 作为第一源操作数；还会读取 rB 作为第二源操作数。"],
+["srcA = rA","pushq 读取待压栈的 rA；另一个源端口会读取 %rsp 计算新的栈顶。"],
+["srcA = %rsp","ret 从 %rsp 指向的栈位置取得返回地址；没有显式寄存器操作数。"],
+["srcA = RNONE","halt 不需要源寄存器，读取端口 A 选择无寄存器编码。"]
+];
+const buttons=Array.from(document.querySelectorAll("button[data-isa]"));
+buttons.forEach(button=>button.addEventListener("click",()=>{
+const i=Number(button.getAttribute("data-isa"));if(!Number.isInteger(i)||!states[i])return;
+buttons.forEach(b=>b.setAttribute("aria-pressed",String(b===button)));
+document.getElementById("isa-choice").textContent=states[i][0];
+document.getElementById("isa-explain").textContent=states[i][1];
+}));
+})();
+</script>
+</body></html>
