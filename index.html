@@ -1,384 +1,308 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>课程目录</title>
-    <link rel="stylesheet" href="theme.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background: linear-gradient(145deg, #f9fcf5 0%, #e8f3e8 100%);
-            font-family: 'Segoe UI', 'PingFang SC', Roboto, 'Helvetica Neue', system-ui, -apple-system, sans-serif;
-            padding: 2rem 1.5rem 1rem;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .container {
-            display: block;
-            max-width: 1400px;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.70);
-            backdrop-filter: blur(2px);
-            border-radius: 48px 48px 32px 32px;
-            padding: 2rem 2rem 1.5rem;
-            box-shadow: 0 20px 40px rgba(90, 140, 100, 0.15), 0 8px 20px rgba(0, 30, 20, 0.08);
-            border: 1px solid rgba(255, 245, 200, 0.5);
-        }
-
-        .header {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: baseline;
-            justify-content: space-between;
-            margin-bottom: 2rem;
-            border-bottom: 4px solid #f7d44a;
-            padding-bottom: 0.75rem;
-        }
-
-        .header h1 {
-            font-size: 2.4rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            background: linear-gradient(135deg, #2b7a4b, #3f9e6b);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            text-shadow: 0 2px 8px rgba(60, 140, 80, 0.12);
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .header h1 .emoji {
-            font-size: 2.2rem;
-            filter: drop-shadow(0 2px 4px rgba(255, 200, 50, 0.3));
-        }
-
-        .header .sub {
-            font-size: 1rem;
-            background: #fef7e0;
-            padding: 0.3rem 1.2rem;
-            border-radius: 40px;
-            color: #3f6b4a;
-            font-weight: 600;
-            border: 1px solid #f3d98a;
-            box-shadow: 0 2px 6px rgba(200, 160, 50, 0.1);
-            white-space: nowrap;
-        }
-
-        .course-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1.2rem;
-            margin: 1.8rem 0 1.2rem;
-        }
-
-        .card {
-            background: #ffffff;
-            border-radius: 28px;
-            padding: 1rem 1.2rem 1rem 1.2rem;
-            box-shadow: 0 6px 14px rgba(70, 120, 80, 0.08), 0 2px 6px rgba(0, 0, 0, 0.02);
-            transition: all 0.2s ease;
-            border: 1px solid rgba(210, 230, 200, 0.5);
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            backdrop-filter: blur(2px);
-        }
-
-        .card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 14px 24px rgba(70, 140, 90, 0.15), 0 4px 12px rgba(40, 100, 60, 0.05);
-            border-color: #b8d9b0;
-            background: #fefefc;
-        }
-
-        .card-header {
-            display: flex;
-            align-items: baseline;
-            gap: 0.4rem;
-            margin-bottom: 0.4rem;
-            flex-wrap: wrap;
-        }
-
-        .chapter-num {
-            font-size: 1.1rem;
-            font-weight: 700;
-            background: #f5d142;
-            color: #2a5a3a;
-            padding: 0 0.6rem;
-            border-radius: 40px;
-            line-height: 1.6;
-            display: inline-block;
-            box-shadow: inset 0 -2px 0 #dbb42c;
-            letter-spacing: 0.3px;
-            min-width: 2.2rem;
-            text-align: center;
-        }
-
-        .card-title {
-            font-size: 1.2rem;
-            font-weight: 650;
-            color: #1f4d33;
-            letter-spacing: -0.3px;
-            line-height: 1.3;
-            flex: 1;
-        }
-
-        .topic-list {
-            list-style: none;
-            margin-top: 0.3rem;
-            padding-left: 0.2rem;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.2rem 0.6rem;
-        }
-
-        .topic-list li {
-            font-size: 0.8rem;
-            color: #2d543a;
-            background: #f1f9ee;
-            padding: 0.1rem 0.7rem 0.2rem 1.2rem;
-            border-radius: 30px;
-            line-height: 1.6;
-            position: relative;
-            border: 1px solid #dcebd4;
-            box-shadow: inset 0 1px 2px white;
-        }
-
-        .topic-list li::before {
-            content: "⚡";
-            position: absolute;
-            left: 4px;
-            top: 0px;
-            font-size: 0.7rem;
-            color: #e5b13b;
-        }
-
-        .card-footer {
-            margin-top: 0.6rem;
-            display: flex;
-            justify-content: flex-end;
-            border-top: 1px dashed #d4e8d0;
-            padding-top: 0.5rem;
-        }
-
-        .card-footer a {
-            background: #b7d8b0;
-            color: #1f452b;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.85rem;
-            padding: 0.2rem 1.2rem;
-            border-radius: 40px;
-            transition: 0.15s;
-            border: 1px solid #8fb88a;
-            box-shadow: 0 2px 4px rgba(60, 120, 60, 0.1);
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .card-footer a::after {
-            content: "→";
-            font-size: 1rem;
-            transition: transform 0.1s;
-        }
-
-        .card-footer a:hover {
-            background: #f7d44a;
-            border-color: #dbb42c;
-            color: #1f3d28;
-            box-shadow: 0 4px 8px rgba(200, 160, 40, 0.2);
-            transform: scale(1.02);
-        }
-
-        .card-footer a:active {
-            transform: scale(0.96);
-        }
-
-        .footer {
-            margin-top: 2.5rem;
-            text-align: center;
-            font-size: 1rem;
-            color: #3b6b47;
-            background: #f2fcee;
-            padding: 0.8rem 2rem;
-            border-radius: 60px;
-            display: inline-block;
-            border: 1px solid #c6dfbe;
-            box-shadow: 0 2px 8px rgba(80, 130, 70, 0.08);
-            font-weight: 500;
-            letter-spacing: 0.3px;
-            backdrop-filter: blur(2px);
-        }
-
-        .footer span {
-            background: #f9eec1;
-            padding: 0.1rem 0.8rem;
-            border-radius: 30px;
-            margin: 0 4px;
-        }
-
-        .footer .wechat {
-            font-weight: 700;
-            color: #1f5a33;
-        }
-
-        @media (max-width: 640px) {
-            body { padding: 1rem 0.8rem; }
-            .container { padding: 1.2rem 1rem; border-radius: 32px; }
-            .header h1 { font-size: 1.8rem; }
-            .header .sub { font-size: 0.75rem; padding: 0.2rem 0.8rem; }
-            .course-grid { grid-template-columns: 1fr; gap: 1rem; }
-            .card-title { font-size: 1.05rem; }
-            .topic-list li { font-size: 0.7rem; }
-        }
-
-        @media (min-width: 768px) and (max-width: 1024px) {
-            .course-grid { grid-template-columns: repeat(2, 1fr); }
-        }
-
-        .container::before {
-            content: "";
-            display: block;
-            height: 6px;
-            width: 120px;
-            background: linear-gradient(90deg, #f7d44a, #7fc47c, #4aa0b0, #f7b07a);
-            border-radius: 10px;
-            margin-bottom: 0.2rem;
-        }
-
-        /* Alternate chapter badge colors */
-        .card:nth-child(6n+1) .chapter-num { background: #f7b07a; color: #3d2e1a; }
-        .card:nth-child(6n+2) .chapter-num { background: #a7d4a0; color: #1f452b; }
-        .card:nth-child(6n+3) .chapter-num { background: #f5d44a; color: #2f4d2a; }
-        .card:nth-child(6n+4) .chapter-num { background: #b3d9e8; color: #1a3f4a; }
-        .card:nth-child(6n+5) .chapter-num { background: #f7c6c6; color: #5a2e2e; }
-        .card:nth-child(6n) .chapter-num { background: #c4b3e0; color: #2f2a4a; }
-
-        .state-msg {
-            text-align: center;
-            padding: 3rem;
-            color: #5f7f66;
-            font-size: 1.1rem;
-        }
-        .state-msg.error {
-            color: #b91c1c;
-            background: #fef2f2;
-            border-radius: 20px;
-            margin: 1rem 0;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="深入理解计算机系统（CSAPP）中文学习地图。28 章，从数据表示、机器指令、存储器到系统编程、并发与经典实验。按阶段探索、搜索知识点并直接阅读章节。">
+  <meta name="theme-color" content="#f8f7f2">
+  <title>CSAPP 中文学习地图 · 28 章系统课程</title>
+  <link rel="stylesheet" href="home.css">
 </head>
 <body>
-<div class="container">
-    <div class="header">
-        <h1><span class="emoji"></span><span class="title-text"></span></h1>
-        <div class="sub"></div>
+<a class="skip-link" href="#main-content">跳转到主要内容</a>
+<header class="site-top">
+  <div class="site-shell top-inner">
+    <a class="brand" href="index.html" aria-label="CSAPP 学习地图首页"><span class="brand-mark" aria-hidden="true">&gt;_</span><span>CSAPP</span><span class="brand-note">中文学习地图</span></a>
+    <nav class="top-nav" aria-label="首页导航">
+      <a href="#roadmap">学习路线</a><a href="#start-here">从哪里开始</a><a href="#catalog">全部章节</a>
+      <a class="repo-link" href="https://github.com/1998x-stack/CSAPP-tutorial" rel="noopener noreferrer">GitHub 仓库 ↗</a>
+    </nav>
+  </div>
+</header>
+<main id="main-content">
+  <section class="site-shell hero" aria-labelledby="hero-title">
+    <div>
+      <p class="eyebrow">Computer Systems · A Learning Journey</p>
+      <h1 id="hero-title">从一行 <em>hello</em>，走进计算机系统的内部。</h1>
+      <p class="hero-intro">程序为什么能运行？一次内存访问究竟发生了什么？服务器又如何处理许多同时到来的请求？沿着这些问题，循序理解数据、指令、硬件与操作系统之间的连接。</p>
+      <div class="hero-actions">
+        <a class="action primary" href="01.html">从第 01 章开始 <span aria-hidden="true">→</span></a>
+        <a class="action secondary" href="#catalog">探索 28 章目录 <span aria-hidden="true">↓</span></a>
+      </div>
+      <div class="hero-facts" aria-label="课程概览">
+        <span><strong>28</strong> 个课程章节</span><span><strong>07</strong> 个知识阶段</span><span><strong>01 → 28</strong> 连续学习路线</span>
+      </div>
     </div>
-
-    <main id="cardContainer" class="course-grid" aria-live="polite"></main>
-
-    <div style="text-align:center;">
-        <div class="footer"></div>
+    <aside class="diagram" aria-labelledby="diagram-title">
+      <p class="diagram-kicker">Follow the system</p>
+      <h2 id="diagram-title">一段程序的四次追问</h2>
+      <ol class="pipeline">
+        <li><div class="pipe-top"><strong>它表示什么？</strong><code>bits / float</code></div><p>数据如何编码，为什么相同的位会有不同解释？</p></li>
+        <li><div class="pipe-top"><strong>它如何执行？</strong><code>mov / call</code></div><p>指令、寄存器与栈如何把源码变成动作？</p></li>
+        <li><div class="pipe-top"><strong>它存在哪里？</strong><code>cache / VM</code></div><p>缓存、地址翻译和进程如何管理有限的资源？</p></li>
+        <li><div class="pipe-top"><strong>它如何连接世界？</strong><code>I/O / threads</code></div><p>文件、网络和并发如何让程序成为服务？</p></li>
+      </ol>
+      <p class="diagram-note">从问题出发，逐层揭开机制，再用代码验证直觉。</p>
+    </aside>
+  </section>
+  <section class="roadmap section" id="roadmap" aria-labelledby="roadmap-heading">
+    <div class="site-shell">
+      <div class="section-heading">
+        <div><p class="section-kicker">01 · Learning path</p><h2 id="roadmap-heading">先建立地图，再深入细节。</h2>
+          <p class="section-desc">下面七段按照课程内知识依赖整理；它们是本站的学习分组，不等同于《CS:APP》原书目录。点击阶段即可定位对应章节。</p></div>
+        <a class="path-link" href="#catalog">跳转完整目录 ↗</a>
+      </div>
+      <div class="stage-grid"><a class="stage" href="#catalog" data-route="foundation">
+  <small>STAGE 01 · 01—03</small>
+  <h3>看见整个系统</h3><p>从 hello 程序到整数、浮点数，建立表示与运行的起点。</p>
+  <span class="go">查看章节 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="stage" href="#catalog" data-route="machine">
+  <small>STAGE 02 · 04—07</small>
+  <h3>读懂机器语言</h3><p>沿着寄存器、分支、调用栈，理解 C 代码如何执行。</p>
+  <span class="go">查看章节 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="stage" href="#catalog" data-route="cpu">
+  <small>STAGE 03 · 08—10</small>
+  <h3>理解处理器</h3><p>从指令集走向流水线，再讨论优化为何有效。</p>
+  <span class="go">查看章节 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="stage" href="#catalog" data-route="memory">
+  <small>STAGE 04 · 11—12</small>
+  <h3>追踪一次访存</h3><p>局部性和 Cache，把硬件速度差异变得可解释。</p>
+  <span class="go">查看章节 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="stage" href="#catalog" data-route="runtime">
+  <small>STAGE 05 · 13—18</small>
+  <h3>连接到操作系统</h3><p>链接、进程、信号和虚拟内存，共同支撑程序。</p>
+  <span class="go">查看章节 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="stage" href="#catalog" data-route="network">
+  <small>STAGE 06 · 19—23</small>
+  <h3>走进系统编程</h3><p>I/O、套接字、并发与同步，解释真实服务的行为。</p>
+  <span class="go">查看章节 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="stage" href="#catalog" data-route="practice">
+  <small>STAGE 07 · 24—28</small>
+  <h3>用实验收尾</h3><p>通过经典 Lab、现代技术和综合项目巩固知识。</p>
+  <span class="go">查看章节 <span aria-hidden="true">↗</span></span>
+</a></div>
     </div>
-</div>
-
+  </section>
+  <section class="site-shell section featured" id="start-here" aria-labelledby="featured-heading">
+    <div class="section-heading">
+      <div><p class="section-kicker">02 · Where to begin</p><h2 id="featured-heading">按你的问题，选一个入口。</h2>
+      <p class="section-desc">可以从头顺序阅读，也可以先找到眼下最想解释的系统现象。</p></div>
+    </div>
+    <div class="featured-grid">
+      <a class="featured-card" href="01.html"><span class="tag">第一次系统学习 · 01</span><strong>程序究竟怎样跑起来？</strong><p>沿着 hello 程序的一生，先认识编译、硬件和操作系统之间的关系。</p><span class="go">进入第 01 章 ↗</span></a>
+      <a class="featured-card" href="12.html"><span class="tag">性能与底层直觉 · 12</span><strong>为什么同一段代码快慢不同？</strong><p>从 Cache 映射和局部性出发，把访存开销变成可以推导的过程。</p><span class="go">进入第 12 章 ↗</span></a>
+      <a class="featured-card" href="24.html"><span class="tag">喜欢动手验证 · 24</span><strong>把理论放进经典 Lab。</strong><p>从 Data、Bomb 到 Attack Lab，学习由现象追溯到位与指令的证据链。</p><span class="go">进入第 24 章 ↗</span></a>
+    </div>
+  </section>
+  <section class="catalog section" id="catalog" aria-labelledby="catalog-heading">
+    <div class="site-shell">
+      <div class="section-heading">
+        <div><p class="section-kicker">03 · All chapters</p><h2 id="catalog-heading">所有知识，终将连成一张网。</h2>
+        <p class="section-desc">28 章原有入口全部保留；按阶段或关键词缩小范围，点击即可阅读正文。</p></div>
+      </div>
+      <div class="catalog-tools" id="catalog-tools" hidden>
+        <div><label class="search-label" for="chapter-search">搜索章节与知识点</label>
+          <div class="search-field"><input id="chapter-search" type="search" autocomplete="off" placeholder="例如：虚拟内存、GDB、Cache" aria-controls="chapter-grid"></div>
+        </div>
+        <p class="catalog-count" id="chapter-count" role="status" aria-live="polite">显示 28 / 28 章</p>
+      </div>
+      <div class="filters" id="chapter-filters" role="group" aria-label="按学习阶段筛选章节" hidden><button type="button" data-filter="all" aria-pressed="true">全部 28 章</button>
+<button type="button" data-filter="foundation" aria-pressed="false">看见整个系统</button>
+<button type="button" data-filter="machine" aria-pressed="false">读懂机器语言</button>
+<button type="button" data-filter="cpu" aria-pressed="false">理解处理器</button>
+<button type="button" data-filter="memory" aria-pressed="false">追踪一次访存</button>
+<button type="button" data-filter="runtime" aria-pressed="false">连接到操作系统</button>
+<button type="button" data-filter="network" aria-pressed="false">走进系统编程</button>
+<button type="button" data-filter="practice" aria-pressed="false">用实验收尾</button></div>
+      <div class="chapter-grid" id="chapter-grid">
+<a class="chapter-card" href="01.html" data-stage="foundation" data-search="01 计算机系统漫游 hello程序的一生 硬件组成与存储层次 操作系统三大抽象 Amdahl定律" aria-label="第 01 章：计算机系统漫游">
+  <div class="chapter-card-top"><span class="chapter-id">01</span><h3>计算机系统漫游</h3></div>
+  <ul class="chapter-topics"><li>hello程序的一生</li><li>硬件组成与存储层次</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="02.html" data-stage="foundation" data-search="02 信息的表示与处理——整数 大小端字节序 补码编码 有符号/无符号转换 整数溢出与安全" aria-label="第 02 章：信息的表示与处理——整数">
+  <div class="chapter-card-top"><span class="chapter-id">02</span><h3>信息的表示与处理——整数</h3></div>
+  <ul class="chapter-topics"><li>大小端字节序</li><li>补码编码</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="03.html" data-stage="foundation" data-search="03 信息的表示与处理——浮点数 IEEE 754格式 规格化与非规格化 舍入策略 0.1+0.2≠0.3揭秘" aria-label="第 03 章：信息的表示与处理——浮点数">
+  <div class="chapter-card-top"><span class="chapter-id">03</span><h3>信息的表示与处理——浮点数</h3></div>
+  <ul class="chapter-topics"><li>IEEE 754格式</li><li>规格化与非规格化</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="04.html" data-stage="machine" data-search="04 程序的机器级表示——基础 x86-64寄存器全景 数据传送与算术指令 lea指令妙用 寻址模式详解" aria-label="第 04 章：程序的机器级表示——基础">
+  <div class="chapter-card-top"><span class="chapter-id">04</span><h3>程序的机器级表示——基础</h3></div>
+  <ul class="chapter-topics"><li>x86-64寄存器全景</li><li>数据传送与算术指令</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="05.html" data-stage="machine" data-search="05 程序的机器级表示——控制流 条件码寄存器 条件跳转与CMP/TEST if-else/switch实现 循环的三种汇编模式" aria-label="第 05 章：程序的机器级表示——控制流">
+  <div class="chapter-card-top"><span class="chapter-id">05</span><h3>程序的机器级表示——控制流</h3></div>
+  <ul class="chapter-topics"><li>条件码寄存器</li><li>条件跳转与CMP/TEST</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="06.html" data-stage="machine" data-search="06 程序的机器级表示——过程与栈 栈帧结构详解 call/ret微操作 x86-64调用惯例 递归的栈行为" aria-label="第 06 章：程序的机器级表示——过程与栈">
+  <div class="chapter-card-top"><span class="chapter-id">06</span><h3>程序的机器级表示——过程与栈</h3></div>
+  <ul class="chapter-topics"><li>栈帧结构详解</li><li>call/ret微操作</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="07.html" data-stage="machine" data-search="07 程序的机器级表示——数据与进阶 数组与指针的汇编 结构体对齐与填充 缓冲区溢出原理 栈金丝雀与ROP防御" aria-label="第 07 章：程序的机器级表示——数据与进阶">
+  <div class="chapter-card-top"><span class="chapter-id">07</span><h3>程序的机器级表示——数据与进阶</h3></div>
+  <ul class="chapter-topics"><li>数组与指针的汇编</li><li>结构体对齐与填充</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="08.html" data-stage="cpu" data-search="08 处理器体系结构——ISA设计 Y86-64指令集 HCL硬件控制语言 SEQ顺序处理器 CISC vs RISC设计哲学" aria-label="第 08 章：处理器体系结构——ISA设计">
+  <div class="chapter-card-top"><span class="chapter-id">08</span><h3>处理器体系结构——ISA设计</h3></div>
+  <ul class="chapter-topics"><li>Y86-64指令集</li><li>HCL硬件控制语言</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="09.html" data-stage="cpu" data-search="09 处理器体系结构——流水线 流水线原理与性能 数据冒险与转发 控制冒险与分支预测 Spectre/Meltdown背景" aria-label="第 09 章：处理器体系结构——流水线">
+  <div class="chapter-card-top"><span class="chapter-id">09</span><h3>处理器体系结构——流水线</h3></div>
+  <ul class="chapter-topics"><li>流水线原理与性能</li><li>数据冒险与转发</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="10.html" data-stage="cpu" data-search="10 优化程序性能 CPE性能度量 编译器优化与局限 代码移动与循环展开 指令级并行利用" aria-label="第 10 章：优化程序性能">
+  <div class="chapter-card-top"><span class="chapter-id">10</span><h3>优化程序性能</h3></div>
+  <ul class="chapter-topics"><li>CPE性能度量</li><li>编译器优化与局限</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="11.html" data-stage="memory" data-search="11 存储器层次结构——技术 SRAM/DRAM/SSD对比 时间与空间局部性 存储山实验 SSD写放大陷阱" aria-label="第 11 章：存储器层次结构——技术">
+  <div class="chapter-card-top"><span class="chapter-id">11</span><h3>存储器层次结构——技术</h3></div>
+  <ul class="chapter-topics"><li>SRAM/DRAM/SSD对比</li><li>时间与空间局部性</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="12.html" data-stage="memory" data-search="12 存储器层次结构——Cache 缓存组织结构(S/E/B) 直接映射/组相联 缓存未命中三类型 分块矩阵乘法优化" aria-label="第 12 章：存储器层次结构——Cache">
+  <div class="chapter-card-top"><span class="chapter-id">12</span><h3>存储器层次结构——Cache</h3></div>
+  <ul class="chapter-topics"><li>缓存组织结构(S/E/B)</li><li>直接映射/组相联</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="13.html" data-stage="runtime" data-search="13 链接——静态链接 ELF目标文件格式 符号与符号表 静态库与ar工具 强符号与弱符号陷阱" aria-label="第 13 章：链接——静态链接">
+  <div class="chapter-card-top"><span class="chapter-id">13</span><h3>链接——静态链接</h3></div>
+  <ul class="chapter-topics"><li>ELF目标文件格式</li><li>符号与符号表</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="14.html" data-stage="runtime" data-search="14 链接——动态链接 共享库(.so)机制 GOT与PLT延迟绑定 位置无关代码(PIC) LD_PRELOAD插桩技术" aria-label="第 14 章：链接——动态链接">
+  <div class="chapter-card-top"><span class="chapter-id">14</span><h3>链接——动态链接</h3></div>
+  <ul class="chapter-topics"><li>共享库(.so)机制</li><li>GOT与PLT延迟绑定</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="15.html" data-stage="runtime" data-search="15 异常控制流——异常与进程 异常四种分类 fork写时复制 execve加载程序 孤儿与僵尸进程" aria-label="第 15 章：异常控制流——异常与进程">
+  <div class="chapter-card-top"><span class="chapter-id">15</span><h3>异常控制流——异常与进程</h3></div>
+  <ul class="chapter-topics"><li>异常四种分类</li><li>fork写时复制</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="16.html" data-stage="runtime" data-search="16 异常控制流——信号 信号发送与接收 信号处理函数安全写法 sigaction与信号阻塞 setjmp/longjmp跳转" aria-label="第 16 章：异常控制流——信号">
+  <div class="chapter-card-top"><span class="chapter-id">16</span><h3>异常控制流——信号</h3></div>
+  <ul class="chapter-topics"><li>信号发送与接收</li><li>信号处理函数安全写法</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="17.html" data-stage="runtime" data-search="17 虚拟内存——地址翻译 虚拟寻址的动机 多级页表结构 TLB翻译后备缓冲 缺页与Demand Paging" aria-label="第 17 章：虚拟内存——地址翻译">
+  <div class="chapter-card-top"><span class="chapter-id">17</span><h3>虚拟内存——地址翻译</h3></div>
+  <ul class="chapter-topics"><li>虚拟寻址的动机</li><li>多级页表结构</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="18.html" data-stage="runtime" data-search="18 虚拟内存——内存分配 mmap与munmap 显式分配器设计策略 碎片问题与合并 GC标记清除算法" aria-label="第 18 章：虚拟内存——内存分配">
+  <div class="chapter-card-top"><span class="chapter-id">18</span><h3>虚拟内存——内存分配</h3></div>
+  <ul class="chapter-topics"><li>mmap与munmap</li><li>显式分配器设计策略</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="19.html" data-stage="network" data-search="19 系统级I/O Unix I/O模型与FD open/read/write调用 I/O重定向(dup2) RIO鲁棒I/O包设计" aria-label="第 19 章：系统级I/O">
+  <div class="chapter-card-top"><span class="chapter-id">19</span><h3>系统级I/O</h3></div>
+  <ul class="chapter-topics"><li>Unix I/O模型与FD</li><li>open/read/write调用</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="20.html" data-stage="network" data-search="20 网络编程——基础 TCP/IP协议栈 套接字接口详解 HTTP请求响应格式 getaddrinfo协议编程" aria-label="第 20 章：网络编程——基础">
+  <div class="chapter-card-top"><span class="chapter-id">20</span><h3>网络编程——基础</h3></div>
+  <ul class="chapter-topics"><li>TCP/IP协议栈</li><li>套接字接口详解</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="21.html" data-stage="network" data-search="21 网络编程——进阶 迭代/并发服务器模型 CGI动态内容生成 select I/O多路复用 网络调试工具链" aria-label="第 21 章：网络编程——进阶">
+  <div class="chapter-card-top"><span class="chapter-id">21</span><h3>网络编程——进阶</h3></div>
+  <ul class="chapter-topics"><li>迭代/并发服务器模型</li><li>CGI动态内容生成</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="22.html" data-stage="network" data-search="22 并发编程——线程基础 线程vs进程对比 Pthreads API 竞态条件与互斥锁 条件变量与生产者消费者" aria-label="第 22 章：并发编程——线程基础">
+  <div class="chapter-card-top"><span class="chapter-id">22</span><h3>并发编程——线程基础</h3></div>
+  <ul class="chapter-topics"><li>线程vs进程对比</li><li>Pthreads API</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="23.html" data-stage="network" data-search="23 并发编程——高阶模式 读写锁(rwlock) 线程池设计与实现 死锁预防与诊断 Helgrind/TSan调试" aria-label="第 23 章：并发编程——高阶模式">
+  <div class="chapter-card-top"><span class="chapter-id">23</span><h3>并发编程——高阶模式</h3></div>
+  <ul class="chapter-topics"><li>读写锁(rwlock)</li><li>线程池设计与实现</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="24.html" data-stage="practice" data-search="24 经典Lab实战(I) Data Lab位运算挑战 Bomb Lab GDB拆弹 Attack Lab缓冲区攻击" aria-label="第 24 章：经典Lab实战(I)">
+  <div class="chapter-card-top"><span class="chapter-id">24</span><h3>经典Lab实战(I)</h3></div>
+  <ul class="chapter-topics"><li>Data Lab位运算挑战</li><li>Bomb Lab GDB拆弹</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="25.html" data-stage="practice" data-search="25 经典Lab实战(II) Cache Lab缓存模拟 Shell Lab进程管理 Malloc Lab分配器" aria-label="第 25 章：经典Lab实战(II)">
+  <div class="chapter-card-top"><span class="chapter-id">25</span><h3>经典Lab实战(II)</h3></div>
+  <ul class="chapter-topics"><li>Cache Lab缓存模拟</li><li>Shell Lab进程管理</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="26.html" data-stage="practice" data-search="26 经典Lab实战(III)——Proxy Lab 并发Web代理架构 生产者消费者模型 HTTP缓存层实现 ab压测性能调优" aria-label="第 26 章：经典Lab实战(III)——Proxy Lab">
+  <div class="chapter-card-top"><span class="chapter-id">26</span><h3>经典Lab实战(III)——Proxy Lab</h3></div>
+  <ul class="chapter-topics"><li>并发Web代理架构</li><li>生产者消费者模型</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="27.html" data-stage="practice" data-search="27 现代系统新趋势 RISC-V开放指令集 GPU异构计算CUDA eBPF内核可编程 CXL新型互联技术" aria-label="第 27 章：现代系统新趋势">
+  <div class="chapter-card-top"><span class="chapter-id">27</span><h3>现代系统新趋势</h3></div>
+  <ul class="chapter-topics"><li>RISC-V开放指令集</li><li>GPU异构计算CUDA</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+<a class="chapter-card" href="28.html" data-stage="practice" data-search="28 综合项目：手写高性能Web服务器 epoll事件驱动架构 线程池+任务队列 HTTP Keep-Alive wrk压测与性能调优" aria-label="第 28 章：综合项目：手写高性能Web服务器">
+  <div class="chapter-card-top"><span class="chapter-id">28</span><h3>综合项目：手写高性能Web服务器</h3></div>
+  <ul class="chapter-topics"><li>epoll事件驱动架构</li><li>线程池+任务队列</li></ul><span class="chapter-cta">阅读这一章 <span aria-hidden="true">↗</span></span>
+</a>
+      </div>
+      <p class="empty-state" id="empty-state" hidden>暂未找到匹配章节。可清空关键词，或切换到“全部 28 章”。</p>
+      <noscript><p class="catalog-count">已列出全部 28 章。若启用 JavaScript，还可以搜索和按阶段筛选。</p></noscript>
+    </div>
+  </section>
+</main>
+<footer class="site-footer">
+  <div class="site-shell footer-inner">
+    <div><strong>理解系统，从理解一次运行开始。</strong>
+      <p>独立中文学习项目，与 CMU 和《Computer Systems: A Programmer's Perspective》官方无隶属关系。本站课程编号和原书章节不是一一对应关系。</p>
+    </div>
+    <div class="footer-links"><a href="https://github.com/1998x-stack/CSAPP-tutorial">项目源码</a><a href="https://github.com/1998x-stack/CSAPP-tutorial/blob/main/NOTICE.md">版权与来源</a></div>
+  </div>
+</footer>
 <script>
-    (function() {
-        var container = document.getElementById('cardContainer');
-        var emojiEl = document.querySelector('.header .emoji');
-        var titleEl = document.querySelector('.header .title-text');
-        var subEl = document.querySelector('.header .sub');
-        var footerEl = document.querySelector('.footer');
-
-        function showError(msg) {
-            container.replaceChildren();
-            var errorEl = document.createElement('div');
-            errorEl.className = 'state-msg error';
-            errorEl.textContent = msg;
-            container.appendChild(errorEl);
-        }
-
-        fetch('courses.json')
-            .then(function(res) {
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                return res.json();
-            })
-            .then(function(data) {
-                document.title = data.title + ' · 课程目录';
-                emojiEl.textContent = data.emoji;
-                titleEl.textContent = data.title;
-                subEl.textContent = data.subtitle;
-                footerEl.textContent = data.chapterCount + '章 实战体系 · 从入门到精通';
-
-                if (!data.chapters || data.chapters.length === 0) {
-                    showError('暂无课程数据');
-                    return;
-                }
-
-                container.innerHTML = '';
-                data.chapters.forEach(function(course) {
-                    var card = document.createElement('div');
-                    card.className = 'card';
-
-                    var headerDiv = document.createElement('div');
-                    headerDiv.className = 'card-header';
-
-                    var numSpan = document.createElement('span');
-                    numSpan.className = 'chapter-num';
-                    numSpan.textContent = course.num;
-
-                    var titleSpan = document.createElement('span');
-                    titleSpan.className = 'card-title';
-                    titleSpan.textContent = course.title;
-
-                    headerDiv.appendChild(numSpan);
-                    headerDiv.appendChild(titleSpan);
-                    card.appendChild(headerDiv);
-
-                    if (course.topics && course.topics.length > 0) {
-                        var topicUl = document.createElement('ul');
-                        topicUl.className = 'topic-list';
-                        course.topics.forEach(function(topic) {
-                            var li = document.createElement('li');
-                            li.textContent = topic;
-                            topicUl.appendChild(li);
-                        });
-                        card.appendChild(topicUl);
-                    }
-
-                    var footerDiv = document.createElement('div');
-                    footerDiv.className = 'card-footer';
-                    var link = document.createElement('a');
-                    link.href = course.file;
-                    link.textContent = '开始学习 ';
-                    footerDiv.appendChild(link);
-                    card.appendChild(footerDiv);
-
-                    container.appendChild(card);
-                });
-            })
-            .catch(function(err) {
-                showError('课程数据加载失败: ' + err.message + '。请刷新页面重试。');
-            });
-    })();
+(() => {
+  const cards = [...document.querySelectorAll('.chapter-card')];
+  const search = document.getElementById('chapter-search');
+  const controls = document.getElementById('catalog-tools');
+  const filters = document.getElementById('chapter-filters');
+  const buttons = [...filters.querySelectorAll('button[data-filter]')];
+  const count = document.getElementById('chapter-count');
+  const empty = document.getElementById('empty-state');
+  let active = 'all';
+  const normalize = text => text.normalize('NFKC').toLocaleLowerCase('zh-CN').trim();
+  function update() {
+    const query = normalize(search.value);
+    let shown = 0;
+    for (const card of cards) {
+      const inStage = active === 'all' || card.dataset.stage === active;
+      const matches = !query || normalize(card.dataset.search || card.textContent).includes(query);
+      card.hidden = !(inStage && matches);
+      if (!card.hidden) shown++;
+    }
+    count.textContent = '显示 ' + shown + ' / ' + cards.length + ' 章';
+    empty.hidden = shown !== 0;
+  }
+  function chooseStage(value) {
+    active = value;
+    for (const button of buttons) button.setAttribute('aria-pressed', String(button.dataset.filter === value));
+    update();
+  }
+  controls.hidden = false;
+  filters.hidden = false;
+  search.addEventListener('input', update);
+  search.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { search.value = ''; update(); }
+  });
+  for (const button of buttons) button.addEventListener('click', () => chooseStage(button.dataset.filter));
+  for (const route of document.querySelectorAll('a[data-route]')) {
+    route.addEventListener('click', event => {
+      event.preventDefault();
+      search.value = '';
+      chooseStage(route.dataset.route);
+      document.getElementById('catalog').scrollIntoView({behavior: 'auto'});
+      search.focus({preventScroll: true});
+    });
+  }
+  update();
+  // The static catalog remains navigable if fetch fails or JavaScript is disabled.
+  fetch('courses.json').then(res => {
+    if (!res.ok) throw new Error('course manifest unavailable');
+    return res.json();
+  }).then(data => {
+    if (Array.isArray(data.chapters) && data.chapters.length === cards.length) {
+      const consistent = data.chapters.every((chapter, i) => chapter.file === cards[i].getAttribute('href'));
+      if (consistent) document.documentElement.dataset.catalogVerified = 'true';
+    }
+  }).catch(() => {});
+})();
 </script>
-
-<noscript>
-    <div style="background:#fcf0d9; padding:1rem; border-radius:20px; text-align:center; color:#92400e;">
-        请启用 JavaScript 以浏览课程目录。
-    </div>
-</noscript>
 </body>
 </html>
