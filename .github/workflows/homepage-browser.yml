@@ -1,0 +1,48 @@
+name: Homepage learning-map browser QA
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'home.css'
+      - 'courses.json'
+      - 'tests/content/homepage.test.mjs'
+      - 'scripts/browser-qa-home.py'
+      - '.github/workflows/homepage-browser.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'home.css'
+permissions:
+  contents: read
+jobs:
+  homepage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test homepage HTML and progressive enhancement
+        run: node --test tests/content/homepage.test.mjs
+      - name: Confirm static build includes homepage styling
+        run: |
+          npm run build
+          test -f dist/home.css
+          test -f dist/index.html
+      - name: Install Chromium
+        run: |
+          python -m pip install playwright==1.65.2
+          python -m playwright install --with-deps chromium
+      - name: Check 1440/390/360px, interactions, and no-JS fallback
+        run: python scripts/browser-qa-home.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: homepage-browser-qa
+          path: reports/homepage
+          if-no-files-found: ignore
