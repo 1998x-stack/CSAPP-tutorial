@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第17章 虚拟内存——地址翻译 — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="olah-chapters.css">
 </head>
-<body>
+<body class="olah-lesson">
+<a href="#chapter-main" class="skip-link">跳转至正文</a>
 <div class="double-border">
 <div class="container">
     <div class="sidebar">
@@ -43,150 +45,89 @@
         </ul>
     </div>
     <div class="main-content">
-        <h2>第十七章：虚拟内存——地址翻译</h2>
 
-        <p>你有没有想过这样一个问题：你电脑只有 16GB 物理内存，但你可以同时打开一个 20GB 的游戏、一个 4GB 的 IDE、外加十多个浏览器标签页——每个标签页还在不断开着新页面。这些程序占用的"虚拟空间"加起来远超物理内存，为什么系统还能正常运转？答案是<strong>虚拟内存</strong>（Virtual Memory）。</p>
+<main id="chapter-main" class="reading-page"><article>
+<header class="chapter-hero"><p class="eyebrow">虚拟内存 / 17</p><h1>两个进程都访问 0x1000，为什么互不干扰？</h1>
+<p class="lede">虚拟地址不是“贴上标签的物理地址”。它是在<strong>当前进程地址空间</strong>中解释的一个位置：页表可以把相同虚拟页映射到不同物理页，也可以让不同进程共享同一物理页。页表提供隔离与共享，TLB 则让这种翻译可高效重复使用。</p>
+<p class="chapter-scope">主线采用 x86-64 的传统 48 位规范虚拟地址、4 KiB 基页、四级页表作教学示例。实际硬件还可能使用五级分页、2 MiB / 1 GiB 大页及其他体系结构的翻译方式。</p></header>
+<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c17-mapping">01 地址映射</a><a href="#c17-walk">02 页表遍历</a><a href="#c17-tlb">03 TLB 的角色</a><a href="#c17-fault">04 缺页是什么</a><a href="#c17-lab">05 地址分解实验</a></nav>
+<section id="c17-mapping"><h2>17.1 相同虚拟页，不代表相同物理页</h2>
+<p>想象进程 A 和 B 都读取虚拟地址 <code>0x1000</code>：页表 A 可以指向物理页框 42，页表 B 可以指向物理页框 91。除非内核显式安排共享映射，它们读到的未必是相同内容。内核还能把部分虚拟页设为不可访问，利用权限位保护内存。</p>
+<figure class="lesson-figure"><img src="chapter-assets/17-process-map.svg" alt="两个进程都使用虚拟页0x1，进程A映射到物理页42，进程B映射到物理页91；共享页通过两张页表映射到同一物理页。" width="880" height="305"><figcaption>图 17-1：地址的意义依赖于<strong>当前地址空间</strong>；需要共享时，两份页表可以故意指向同一物理页。</figcaption></figure>
+<p>虚拟内存主要提供<strong>地址隔离、权限控制、灵活映射和按需调页</strong>。它并不保证所有虚拟空间可以兑现为物理内存；操作系统的提交策略、资源限制、交换与 OOM 行为决定了超额申请之后会发生什么。低地址（如空指针附近）通常不映射，但 C 标准不承诺非法解引用一定变成 <code>SIGSEGV</code>。</p>
+</section>
+<section id="c17-walk"><h2>17.2 拆解地址：页号与页内偏移</h2>
+<p>以 4 KiB = 2¹² 字节的页面为例，虚拟地址最低 12 位是<strong>页内偏移</strong>，其余部分决定虚拟页号（VPN）。在传统 x86-64 48 位分页模式中，地址的规范形式需要高 16 位复制 bit 47 的符号位；有效的 48 位部分由四组 9 位索引和 12 位偏移构成。</p>
+<figure class="lesson-figure"><img src="chapter-assets/17-page-walk.svg" alt="48位虚拟地址从高到低分为9位PML4、9位PDPT、9位PD、9位PT和12位偏移；CR3指向顶级页表，层层索引到物理页框，偏移保持不变。" width="880" height="300"><figcaption>图 17-2：顶层起点由当前地址空间的页表根决定；每层索引选一个表项，最后的页框号与原偏移组合成物理地址。大页可能提前结束遍历。</figcaption></figure>
+<div class="math-scroll" tabindex="0" role="group" aria-label="虚拟地址到物理地址的公式">
+<math display="block" xmlns="http://www.w3.org/1998/Math/MathML" aria-label="在四KiB页面下物理地址等于物理页号乘2的12次方加页内偏移"><mrow><mi>PA</mi><mo>=</mo><mi>PPN</mi><mo>×</mo><msup><mn>2</mn><mn>12</mn></msup><mo>+</mo><mtext>offset</mtext></mrow></math></div>
+<p>举个固定的<strong>教学映射</strong>：虚拟地址 <code>0x12345678</code> 的 VPN 为 <code>0x12345</code>，偏移 <code>0x678</code>。如果其页表映射到物理页框 <code>0x2a7</code>，物理地址就为 <code>0x2a7678</code>。这只是自定义映射示例，普通用户态代码无法据此推断真实的物理页号。</p>
+<div class="micro-lab"><h3>交互：拖动偏移，页号会变化吗？</h3><label for="page-offset">页内偏移（0–4095）</label><input id="page-offset" type="range" min="0" max="4095" value="1656" step="1">
+<output id="page-result" for="page-offset" aria-live="polite">VA 0x12345678 → VPN 0x12345，offset 0x678 → PA 0x2a7678</output>
+<p class="small-note">固定 VPN = <code>0x12345</code>，假定 PPN = <code>0x2a7</code>；只有偏移随滑块改变。</p></div>
+<p>若虚拟空间足够稀疏，多级页表可以省去完全未使用的子树，而不是给全部虚拟页预先分配 PTE。四级是<strong>这个示例的模式</strong>，并非 x86-64 永久固定的规格。Linux 内核还使用统一的五层抽象，并在不需要的架构/模式下折叠层级。<a href="https://www.kernel.org/doc/html/latest/mm/page_tables.html">Linux kernel：Page Tables</a> 详细解释层级与缺页路径。</p>
+</section>
+<section id="c17-tlb"><h2>17.3 TLB miss 不等于 page fault</h2>
+<p>每次都遍历多级页表显然昂贵，因此处理器缓存近期翻译结果，这个硬件缓存叫 <strong>TLB</strong>。<strong>TLB 命中</strong>可省去页表遍历；<strong>TLB 未命中</strong>通常触发页表遍历。如果页表记录的映射有效且权限允许，遍历后填入 TLB 即可继续，<em>完全不需要内核处理缺页</em>。</p>
+<figure class="lesson-figure"><img src="chapter-assets/17-tlb-fault.svg" alt="虚拟地址先查TLB，命中直接翻译；未命中查页表，有有效映射则填入TLB，映射缺失或权限不符才可能触发缺页异常交内核处理。" width="880" height="310"><figcaption>图 17-3：<strong>TLB miss 是翻译缓存的事情；page fault 是页表状态或权限需要内核介入。</strong>两者不能按一个指标混为一谈。</figcaption></figure>
+<p>TLB 的效果还取决于工作集、局部性与页大小。例如 64 个独立 4 KiB 翻译最多覆盖 256 KiB；如果都对应 2 MiB 页面，理论覆盖可达 128 MiB。这仅是条目数与页大小的算术例子，<strong>不代表某款 CPU 真的用一组同样的 TLB 条目支持两类页面</strong>，也不能据此保证开启大页会提高某个程序的性能。</p>
+<p>也不要写“每次切换进程必须清空所有 TLB”：现代 x86 可用 PCID 等机制关联地址空间标识，部分条目可跨切换保留。修改映射或权限可能要求让相关 CPU 的旧翻译失效（TLB shootdown），但也不是“每一次上下文切换都会向所有核心广播 IPI”。</p>
+</section>
+<section id="c17-fault"><h2>17.4 缺页异常：不总是读磁盘，也不总是错误</h2>
+<p>当页表缺少所需的有效映射、或访问权限不满足时，CPU 可以触发 page fault。内核根据虚拟内存区域和访问类型决定：分配零填充匿名页、执行写时复制（COW）、从文件或交换区调入页、更新映射后重试，还是向进程报告非法访问（常见为 <code>SIGSEGV</code>，某些文件映射错误可能是 <code>SIGBUS</code>）。</p>
+<table><thead><tr><th>情况</th><th>可能的处理</th><th>是否一定发生磁盘读取？</th></tr></thead><tbody>
+<tr><td>首次读取匿名私有映射</td><td>可关联共享只读零页</td><td>否</td></tr>
+<tr><td>首次写入匿名私有映射</td><td>分配并清零页框、建立可写映射</td><td>否</td></tr>
+<tr><td>写入 COW 私有页</td><td>复制原页并更新映射</td><td>否</td></tr>
+<tr><td>文件映射不在页缓存</td><td>文件 I/O，可能是 major fault</td><td>可能</td></tr>
+<tr><td>地址未映射或权限不符</td><td>报告访问错误</td><td>不一定</td></tr></tbody></table>
+<p>Linux 的 <strong>minor fault</strong> 与 <strong>major fault</strong> 主要区分是否需要 I/O 才能完成缺页处理，而不是“minor=共享库、major=交换分区”的固定分类。缺页后“下一次一定 TLB 命中”也不成立，缓存内容受替换与并发事件影响。</p>
+<pre><code># Linux 上观察某次运行的页故障计数
+perf stat -e minor-faults,major-faults ./your_program
 
-        <p>虚拟内存是计算机系统中最伟大的抽象之一。它不仅让物理内存看起来比实际大得多，还为每个进程提供了独立的地址空间，让进程之间互相隔离。理解虚拟内存的地址翻译机制，是理解系统性能和安全性的关键。本章我们从动机说起，再深入到页表、TLB 和缺页处理的细节。</p>
+# 若工具或权限不可用，也可先查看进程运行时统计
+/usr/bin/time -v ./your_program</code></pre>
+<p>基准测试的 fault 数不能脱离缓存冷热、访问模式与系统状态比较；将一段匿名 <code>memset</code> 直接归因于“成百万次 major fault 导致磁盘读取”通常是错误的解释。</p>
+</section>
+<section id="c17-lab"><h2>17.5 最小实验：只计算页分解，不猜物理映射</h2>
+<pre><code>/* 纯算术，不触摸虚拟地址 0x12345678 */
+#include &lt;inttypes.h&gt;
+#include &lt;stdint.h&gt;
+#include &lt;stdio.h&gt;
 
-        <h3>17.1 虚拟寻址的动机</h3>
+int main(void) {
+    uint64_t va = UINT64_C(0x12345678);
+    uint64_t vpn = va &gt;&gt; 12;
+    uint64_t offset = va &amp; UINT64_C(0xfff);
+    uint64_t ppn_demo = UINT64_C(0x2a7);
+    uint64_t pa_demo = (ppn_demo &lt;&lt; 12) | offset;
+    printf("vpn=%" PRIx64 " offset=%" PRIx64
+           " toy-pa=%" PRIx64 "\n", vpn, offset, pa_demo);
+}</code></pre>
+<p>编译运行：<code>cc -std=c11 -Wall -Wextra -pedantic examples/olah-ch17-vm.c -o vm &amp;&amp; ./vm</code>。更进一步用 <code>sysconf(_SC_PAGESIZE)</code> 查询本机基础页大小，不要假设所有平台都是 4 KiB。</p>
+<div class="exercise"><h3>自测</h3><p>一个有效页表映射对应的虚拟页不在 TLB 中，处理器必须向内核发出 page fault 吗？</p><details><summary>查看答案</summary><p>不必。常见硬件页表遍历能找到有效 PTE 并填充 TLB，之后继续访问；只有映射或权限无法满足时才进入异常处理路径。</p></details></div></section>
+<section id="c17-close"><h2>归纳：分清翻译、缓存与缺页</h2><p>虚拟页定义“进程看到什么”，页表定义“它映射到哪里”，TLB 缓存“近期翻译结果”，缺页异常让内核处理“尚未建立或不允许的访问”。下一章把视角移到 <code>malloc</code> / <code>free</code>：用户态分配器怎样在这些虚拟映射之上管理对象。</p>
+<h3>延伸阅读</h3><p><a href="https://www.kernel.org/doc/html/latest/mm/page_tables.html">Linux Page Tables</a>、<a href="https://man7.org/linux/man-pages/man2/mmap.2.html">mmap(2)</a>、<a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel 软件开发手册</a>；上述教学例子采用四级分页与 4 KiB 基页。</p></section>
+</article></main>
+<script>
+(() => {
+  const input = document.getElementById('page-offset');
+  const output = document.getElementById('page-result');
+  if (!input || !output) return;
+  const hex = n => '0x' + n.toString(16);
+  function update() {
+    const offset = Number(input.value);
+    const va = 0x12345000 + offset;
+    const pa = 0x2a7000 + offset; /* deliberately invented teaching PPN */
+    output.textContent = 'VA ' + hex(va) + ' → VPN 0x12345，offset ' +
+      hex(offset) + ' → PA ' + hex(pa);
+  }
+  input.addEventListener('input', update);
+  update();
+})();
+</script>
 
-        <p>在没有虚拟内存的时代（或者在没有 MMU 的嵌入式系统上），程序直接访问物理地址。这种方式的问题显而易见——多个程序同时运行时，它们必须事先协商好内存分区，否则互相覆盖。虚拟寻址引入了一个间接层：CPU 发出的地址是虚拟地址，由内存管理单元（MMU）翻译成物理地址。</p>
-
-        <table>
-            <tr>
-                <th>特性</th>
-                <th>物理寻址</th>
-                <th>虚拟寻址</th>
-            </tr>
-            <tr>
-                <td>地址空间</td>
-                <td>共享，所有程序看到同一个物理地址</td>
-                <td>隔离，每个进程有独立的虚拟地址空间</td>
-            </tr>
-            <tr>
-                <td>内存保护</td>
-                <td>无硬件保护，程序可以读写任意内存</td>
-                <td>页级权限位（读/写/执行），访问违规触发段错误</td>
-            </tr>
-            <tr>
-                <td>链接与加载</td>
-                <td>需要预先指定加载地址，位置相关</td>
-                <td>可按进程独立映射；具体地址受可执行文件类型、加载器、ASLR 与操作系统影响</td>
-            </tr>
-            <tr>
-                <td>内存超分配</td>
-                <td>总使用不能超过物理内存</td>
-                <td>进程可以分配比物理内存更大的空间（利用磁盘交换）</td>
-            </tr>
-            <tr>
-                <td>共享内存</td>
-                <td>困难，需要程序协调</td>
-                <td>不同进程的虚拟页映射到同一个物理页（如共享库）</td>
-            </tr>
-        </table>
-
-        <p>换句话说，虚拟内存带来了四个核心好处：<strong>隔离</strong>（进程不会互相影响）、<strong>简化链接和加载</strong>（所有进程看到相同的地址布局）、<strong>共享</strong>（通过映射同一物理页实现）和<strong>交换</strong>（程序可以超出物理内存限制）。</p>
-
-        <div class="tip">
-            <p><strong>想一想</strong>：为什么常见 Linux 用户态程序解引用 NULL 往往触发段错误？操作系统通常不映射低地址页面，因此访问它会触发保护异常。但在 C 语言层面，解引用空指针属于未定义行为，标准并不保证一定以段错误结束。</p>
-        </div>
-
-        <h3>17.2 页表与多级页表</h3>
-
-        <p>虚拟地址到物理地址的翻译是通过<strong>页表</strong>（Page Table）完成的。页表是一个存储在物理内存中的数组，每个<strong>页表项（PTE）</strong>包含物理页号和一些标志位：</p>
-
-        <ul>
-            <li><strong>有效位（valid bit）</strong>：该虚拟页是否已映射到物理页</li>
-            <li><strong>权限位（read/write/execute）</strong>：该页的访问权限</li>
-            <li><strong>物理页号（Physical Page Number, PPN）</strong>：物理内存的页码</li>
-            <li><strong>其他标志</strong>：dirty bit（是否被写）、accessed bit（是否被访问）等</li>
-        </ul>
-
-        <p>最简单的情况是<strong>单级页表</strong>——每个虚拟页对应一个 PTE。在 64 位系统上，以 4KB 页大小计算，虚拟地址空间有 2^48 / 2^12 = 2^36 个页，每个 PTE 8 字节，单级页表需要 512GB——比整台服务器的内存还大，显然不现实。</p>
-
-        <p>这就是<strong>多级页表</strong>存在的理由。x86-64 使用四级页表，虚拟地址被分为以下部分：</p>
-
-        <pre><code>一个 48 位的虚拟地址在 x86-64 上被拆解为：
-
-63          48 47      39 38      30 29      21 20      12 11        0
-+------------+----------+----------+----------+----------+-----------+
-|  符号扩展   |  PML4   |  PDPT    |   PD     |    PT    | 页内偏移  |
-|  (16 bits) | (9 bits) | (9 bits) | (9 bits) | (9 bits) | (12 bits) |
-+------------+----------+----------+----------+----------+-----------+
-
-翻译过程（四级页表遍历）：
-1. CR3 寄存器 → PML4 页表基地址
-2. PML4[索引]   → PDPT 页表基地址
-3. PDPT[索引]   → PD 页表基地址
-4. PD[索引]     → PT 页表基地址
-5. PT[索引]     → 物理页号 (PPN)
-6. PPN + 偏移量 → 最终物理地址</code></pre>
-
-        <p>每个 9-bit 索引范围为 0-511，即每级页表有 512 个条目。关键的节省在于：如果某个 PML4 条目是"无效"的，那么它后面的整个子树都不需要分配。对于一个典型进程，大部分虚拟地址空间是未使用的，多级页表只在需要时分配中间节点——这使得页表占用的物理内存量从数百 GB 降到了数 MB。</p>
-
-        <div class="highlight">
-            <p><strong>核心要点</strong>：多级页表本质上是用"时间换空间"——每次地址翻译需要 4-5 次内存访问（每级查一次）。没有 TLB 的话，一次内存访问要慢 4-5 倍。这就是为什么 TLB 如此关键。</p>
-        </div>
-
-        <h3>17.3 TLB——翻译后备缓冲器</h3>
-
-        <p>TLB（Translation Lookaside Buffer）是 MMU 内部的一个小型硬件缓存，缓存了最近使用过的虚拟地址到物理地址的翻译结果。它的目标是让地址翻译的额外开销降到几乎为零。</p>
-
-        <p>每次 CPU 发出一个虚拟地址时，MMU 的流程大致是：</p>
-        <ol>
-            <li>检查 TLB——如果命中（TLB hit），直接得到物理地址，无需查页表。</li>
-            <li>TLB 未命中（TLB miss）——MMU 发起硬件页表遍历（hardware page table walk），从内存中读取 PTE，更新 TLB，再重试。</li>
-        </ol>
-
-        <p>现代 CPU 的 TLB 大约有 64-256 个条目，分为指令 TLB（iTLB）和数据 TLB（dTLB），通常还有 L2 TLB（更大的二级 TLB，约 512-2048 个条目）。TLB 覆盖率取决于<strong>工作集大小</strong>和<strong>页大小</strong>。</p>
-
-        <p><strong>TLB 刷新</strong>是上下文切换时不得不做的脏活——因为不同进程的虚拟地址到物理地址的映射不同，切换进程时必须使旧进程的 TLB 条目失效。在多核系统上，这需要通过处理器间中断（IPI）触发"TLB shootdown"——所有核心都收到中断，刷新自己的 TLB。频繁的上下文切换会带来大量的 TLB 刷新开销，这也是为什么线程（共享地址空间）比进程（独立地址空间）的切换成本低很多。</p>
-
-        <div class="highlight">
-            <p><strong>大页（Huge Pages）减少 TLB 压力</strong>：如果默认页大小是 4KB，一个 TLB 有 64 个条目，最多覆盖 256KB 的地址范围——这对于动辄几百 MB 的数据集来说杯水车薪。但 x86-64 支持 2MB 和 1GB 的大页。使用 2MB 大页时，同样 64 个 TLB 条目可以覆盖 128MB。对于数据库、大数据处理这类内存密集型应用，启用透明大页（Transparent Huge Pages, THP）或显式使用大页，可以显著降低 TLB miss 率，提升性能 10-30%。</p>
-        </div>
-
-        <h3>17.4 缺页故障与Demand Paging</h3>
-
-        <p>当程序访问一个 PTE 中有效位为 0 的虚拟页时，MMU 无法完成翻译——它触发一个<strong>缺页故障</strong>（page fault），将控制权交给内核的缺页处理函数。</p>
-
-        <p>缺页处理流程：</p>
-        <ol>
-            <li>CPU 触发缺页异常，保存触发地址（在 <code>%cr2</code> 寄存器中）</li>
-            <li>内核检查虚拟地址是否合法：如果是非法地址 → 发送 SIGSEGV</li>
-            <li>如果地址合法但页面不在内存中（被换出到磁盘了）：</li>
-            <li>内核找到一个空闲的物理页框（如果不够，先换出另一个页面）</li>
-            <li>从磁盘（swap 分区或文件）读入数据到该物理页</li>
-            <li>更新 PTE，设置有效位</li>
-            <li>返回用户态，重新执行触发缺页的那条指令——这次 TLB 命中</li>
-        </ol>
-
-        <p>这种方式称为<strong>Demand Paging</strong>（请求分页）——内核只在程序真正访问某页时才加载它，而不是在启动时把所有代码和数据都加载进内存。这意味着程序启动更快，物理内存的利用率也更高。</p>
-
-        <p>用 <code>perf</code> 工具跟踪缺页次数：</p>
-
-        <pre><code>$ # 跟踪程序的缺页次数
-$ perf stat -e page-faults,minor-faults,major-faults ./my_program
-
-   Performance counter stats for './my_program':
-            1,234      page-faults
-            1,200      minor-faults   # 缺页但页在内存中（如共享库懒加载）
-               34      major-faults   # 需要从磁盘读页
-
-$ # 也看缺页的代码位置
-$ perf record -e page-faults ./my_program
-$ perf report</code></pre>
-
-        <p>缺页分两种：<strong>minor fault</strong>（页面已存在，只是还没关联到当前进程的页表——典型情况是共享库的懒加载）和 <strong>major fault</strong>（页面确实在磁盘上，需要 I/O 读取）。major fault 是性能杀手——一次磁盘 I/O 是几毫秒，如果程序频繁触发 major fault，性能会急剧下降。这正是 <code>mmap</code> 惰性分配的底层机制。</p>
-
-        <div class="warning">
-            <p><strong>踩坑故事</strong>：我曾接手一个数据分析程序，处理 10GB 数据集需要 6 小时。直觉是算法问题，但 <code>perf stat</code> 显示 major fault 高达 200 万次。原因很简单：程序用 <code>mmap</code> 映射了整个数据集，然后 <code>memset</code> 预分配——但实际上，第一次写入会按 4KB 粒度触发缺页，200 万次 major fault 就是不断从磁盘按页读入数据。加上 <code>madvise(MADV_SEQUENTIAL)</code> 并增大 readahead 窗口后，时间降到了 40 分钟。理解缺页行为，就能读懂为什么你的程序会"卡"。</p>
-        </div>
-
-        <p>虚拟内存的地址翻译是计算机系统中最精妙的机制之一。它在硬件和软件的配合下，为每个进程提供了独立、安全、高效的内存抽象。下一章我们将深入学习虚拟内存的另一半——<strong>内存分配</strong>，看看当程序调用 <code>malloc</code> 时，内核是如何分配物理内存的。</p>
-
-        <div class="footer-nav">
+<div class="footer-nav">
             <a href="16.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="18.html">下一章 →</a>
