@@ -8,16 +8,25 @@ Run: python scripts/browser-qa-home.py
 from __future__ import annotations
 import json
 from pathlib import Path
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from threading import Thread
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "reports" / "homepage"
+BASE_URL = ""
+
+class SilentHandler(SimpleHTTPRequestHandler):
+    def log_message(self, format, *args):
+        pass
+
 
 def verify(page, width):
     errors = []
     page.on("pageerror", lambda err: errors.append(str(err)))
     page.on("console", lambda msg: errors.append(msg.text) if msg.type == "error" else None)
-    page.goto((ROOT / "index.html").as_uri(), wait_until="load")
+    page.goto(BASE_URL, wait_until="load")
     assert page.locator("h1").count() == 1
     assert page.locator(".chapter-card").count() == 28
     assert page.locator(".stage").count() == 7
@@ -46,6 +55,20 @@ def verify(page, width):
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     records = []
+    global BASE_URL
+    handler = partial(SilentHandler, directory=str(ROOT))
+    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    runner = Thread(target=server.serve_forever, daemon=True)
+    runner.start()
+    BASE_URL = f"http://127.0.0.1:{server.server_port}/index.html"
+    try:
+        run_browser(records)
+    finally:
+        server.shutdown()
+        server.server_close()
+    (OUT / "report.json").write_text(json.dumps({"results":records},ensure_ascii=False,indent=2)+"\\n",encoding="utf-8")
+
+def run_browser(records):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         for width in (1440, 390, 360):
@@ -60,7 +83,7 @@ def main():
             print("PASS homepage",width)
         nojs = browser.new_context(viewport={"width":390,"height":900}, java_script_enabled=False)
         page = nojs.new_page()
-        page.goto((ROOT / "index.html").as_uri(),wait_until="load")
+        page.goto(BASE_URL,wait_until="load")
         assert page.locator(".chapter-card:visible").count() == 28
         assert page.locator("#catalog-tools").is_hidden()
         assert page.locator(".chapter-card").first.get_attribute("href") == "01.html"
@@ -68,7 +91,6 @@ def main():
         records.append({"mode":"no-javascript","width":390,"chapter_links":28,"passed":True})
         nojs.close()
         browser.close()
-    (OUT / "report.json").write_text(json.dumps({"results":records},ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
 
 if __name__ == "__main__":
     main()
