@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Headless QA for the three progressive-disclosure lessons.
 
-Run: pip install playwright==1.55.0
+Run: pip install playwright==1.65.2
      python -m playwright install chromium
      python scripts/browser-qa-olah.py --output reports/olah
 """
