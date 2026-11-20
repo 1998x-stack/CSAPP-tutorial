@@ -8,7 +8,7 @@ const files = ['index.html', 'theme.css', 'olah-chapters.css', 'chapter-olah.css
 rmSync(destination, { recursive: true, force: true });
 mkdirSync(destination, { recursive: true });
 for (const file of files) {
-  if (!/^(?:index\.html|theme\.css|courses\.json|\d{2}\.html)$/.test(file)) {
+  if (!/^(?:index\.html|theme\.css|olah-chapters\.css|chapter-olah\.css|courses\.json|\d{2}\.html)$/.test(file)) {
     throw new Error('unexpected build input: ' + file);
   }
   if (!existsSync(resolve(root, file))) throw new Error('missing build input: ' + file);
