@@ -26,7 +26,7 @@ jobs:
           python-version: '3.12'
       - name: Install reproducible browser tooling
         run: |
-          python -m pip install playwright==1.55.0
+          python -m pip install playwright==1.65.2
           python -m playwright install --with-deps chromium
       - name: Inspect three chapters at 1440, 390 and 360px
         run: python scripts/browser-qa-olah.py --output reports/olah
