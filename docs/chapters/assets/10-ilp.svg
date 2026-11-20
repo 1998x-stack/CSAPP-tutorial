@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 870 302" role="img" aria-labelledby="ilp-svg-title ilp-svg-desc">
+<title id="ilp-svg-title">单一累加器与四个独立累加器的数据依赖图</title>
+<desc id="ilp-svg-desc">左边同一个累加值经过四次串联加法；右边四条独立累加链分别执行一次加法，并在循环结束后合并结果。多累加器可缩短关键依赖链，但浮点合并次序不同。</desc>
+<g font-family="system-ui,sans-serif" text-anchor="middle">
+<text x="180" y="28" font-size="18" font-weight="700" fill="#225f5c">串行：同一条依赖链</text>
+<text x="637" y="28" font-size="18" font-weight="700" fill="#225f5c">并行机会：4 条独立链</text>
+<rect x="115" y="43" width="134" height="43" rx="10" fill="#fff0e6" stroke="#d3ad96"/><text x="182" y="70" font-size="17" font-weight="700" fill="#31595b">acc += a[0]</text><rect x="115" y="98" width="134" height="43" rx="10" fill="#e5f1ed" stroke="#82b5a7"/><text x="182" y="125" font-size="17" font-weight="700" fill="#31595b">acc += a[1]</text><rect x="115" y="153" width="134" height="43" rx="10" fill="#fff0e6" stroke="#d3ad96"/><text x="182" y="180" font-size="17" font-weight="700" fill="#31595b">acc += a[2]</text><rect x="115" y="208" width="134" height="43" rx="10" fill="#e5f1ed" stroke="#82b5a7"/><text x="182" y="235" font-size="17" font-weight="700" fill="#31595b">acc += a[3]</text>
+<path d="M182 86 V98" stroke="#ad6144" stroke-width="3"/><path d="M175 94 l7 8 7 -8" fill="none" stroke="#ad6144" stroke-width="2"/><path d="M182 141 V153" stroke="#ad6144" stroke-width="3"/><path d="M175 149 l7 8 7 -8" fill="none" stroke="#ad6144" stroke-width="2"/><path d="M182 196 V208" stroke="#ad6144" stroke-width="3"/><path d="M175 204 l7 8 7 -8" fill="none" stroke="#ad6144" stroke-width="2"/>
+<rect x="430" y="87" width="101" height="72" rx="11" fill="#e2f1e9" stroke="#8cbcae"/><text x="480" y="114" font-size="17" font-weight="700" fill="#465b68">acc0</text><text x="480" y="139" font-size="15" fill="#465b68">+= a[0]</text><path d="M480 159 V211" stroke="#768d99" stroke-width="2"/><rect x="540" y="87" width="101" height="72" rx="11" fill="#ede8f7" stroke="#a798ce"/><text x="590" y="114" font-size="17" font-weight="700" fill="#465b68">acc1</text><text x="590" y="139" font-size="15" fill="#465b68">+= a[1]</text><path d="M590 159 V211" stroke="#768d99" stroke-width="2"/><rect x="650" y="87" width="101" height="72" rx="11" fill="#e2f1e9" stroke="#8cbcae"/><text x="700" y="114" font-size="17" font-weight="700" fill="#465b68">acc2</text><text x="700" y="139" font-size="15" fill="#465b68">+= a[2]</text><path d="M700 159 V211" stroke="#768d99" stroke-width="2"/><rect x="760" y="87" width="101" height="72" rx="11" fill="#ede8f7" stroke="#a798ce"/><text x="810" y="114" font-size="17" font-weight="700" fill="#465b68">acc3</text><text x="810" y="139" font-size="15" fill="#465b68">+= a[3]</text><path d="M810 159 V211" stroke="#768d99" stroke-width="2"/>
+<rect x="515" y="211" width="242" height="44" rx="11" fill="#f7eee2" stroke="#cea684"/>
+<text x="636" y="239" font-size="17" font-weight="700" fill="#925b3f">最后合并 acc0…acc3</text>
+<text x="180" y="285" font-size="15" fill="#647b77">四次加法形成连续依赖</text>
+<text x="638" y="285" font-size="15" fill="#647b77">减少链长 ≠ 保证四倍提速</text>
+</g></svg>
