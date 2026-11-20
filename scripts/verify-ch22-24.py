@@ -63,7 +63,6 @@ def main():
         assert all(c["status"] in {"verified","derived","illustrative","unverified"} for c in ledger["claims"])
         with tempfile.TemporaryDirectory(prefix=f"olah-{chapter}-") as folder:
             exe = Path(folder) / "exercise"
-            src = ROOT / f"examples/olah-ch{chapter:02}-" + ""
             # Explicit paths avoid depending on filename inference.
             names = {22: "olah-ch22-sync.c", 23: "olah-ch23-rwlock.c", 24: "olah-ch24-bitlogic.c"}
             src = ROOT / "examples" / names[chapter]
