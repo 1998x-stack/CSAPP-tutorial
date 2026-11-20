@@ -1,0 +1,42 @@
+{
+  "chapter": 26,
+  "scope": "Standalone Chinese teaching interpretation; not official lab answer or performance report",
+  "claims": [
+    {
+      "id": "c26-proxy",
+      "claim": "Proxy forwards request and response bytes; network reads and writes may be partial",
+      "kind": "technical",
+      "source_url": "https://csapp.cs.cmu.edu/3e/labs.html",
+      "locator": "Proxy Lab",
+      "status": "source-checked",
+      "notes": "HTTP/1.0 teaching subset, not complete forward proxy"
+    },
+    {
+      "id": "c26-queue",
+      "claim": "Bounded queue slots/items/mutex model separates capacity, availability and mutual exclusion",
+      "kind": "derived",
+      "source_url": "https://csapp.cs.cmu.edu/3e/students.html",
+      "locator": "Concurrent programming chapter",
+      "status": "derived",
+      "notes": "Pseudocode; not a compiled program"
+    },
+    {
+      "id": "c26-cache",
+      "claim": "Shared caches must respect private, no-store, freshness and Vary matching",
+      "kind": "standard",
+      "source_url": "https://www.rfc-editor.org/rfc/rfc9111",
+      "locator": "HTTP Caching, storage and reuse requirements",
+      "status": "source-checked",
+      "notes": "Interactive response cards assume GET/200/no authorization; incomplete RFC classifier"
+    },
+    {
+      "id": "c26-lifetime",
+      "claim": "A cache hit under lock requires copy/refcount before eviction can free an object",
+      "kind": "derived",
+      "source_url": "https://csapp.cs.cmu.edu/3e/labs.html",
+      "locator": "Proxy Lab cache concurrency",
+      "status": "derived",
+      "notes": "Engineering invariant, no performance claim"
+    }
+  ]
+}

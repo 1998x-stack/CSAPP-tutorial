@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 295" role="img" aria-labelledby="title26 desc26">
+<title id="title26">并发 HTTP 代理的请求与缓存分支</title><desc id="desc26">浏览器进入监听器，经过有界队列交给 Worker。Worker 查缓存：符合条件的命中走下方直接响应路径，其余请求源站并回传响应。</desc>
+<defs><marker id="arrow26" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0 0 L9 4 L0 8 Z" fill="#537477"/></marker></defs>
+<rect width="900" height="295" rx="17" fill="#f8faf7"/>
+<text x="26" y="40" fill="#2b4646" font-size="20" font-weight="700" font-family="sans-serif">一个 HTTP 请求经过哪些节点？</text>
+<g font-family="sans-serif" font-size="17" font-weight="700" text-anchor="middle">
+<rect x="27" y="90" width="125" height="67" rx="9" fill="#e7f1ee" stroke="#87ada4"/><text x="89" y="128" fill="#215d5b">Client</text>
+<rect x="192" y="90" width="125" height="67" rx="9" fill="#e7f1ee" stroke="#87ada4"/><text x="254" y="128" fill="#215d5b">Listener</text>
+<rect x="357" y="90" width="129" height="67" rx="9" fill="#f8ebdc" stroke="#c79f70"/><text x="421" y="118" fill="#985c31">有界</text><text x="421" y="140" fill="#985c31">队列</text>
+<rect x="526" y="90" width="125" height="67" rx="9" fill="#e9e5f5" stroke="#ad9fcd"/><text x="588" y="128" fill="#61538a">Worker</text>
+<rect x="692" y="90" width="175" height="67" rx="9" fill="#dff3e7" stroke="#7aa88c"/><text x="780" y="119" fill="#256646">缓存判定</text><text x="780" y="140" fill="#256646" font-size="14">是否允许复用？</text>
+<rect x="691" y="211" width="175" height="54" rx="9" fill="#fbece1" stroke="#c59d86"/><text x="778" y="242" fill="#8a4d35">Origin Server</text>
+<rect x="353" y="211" width="262" height="54" rx="9" fill="#eff5f2" stroke="#89aba7"/><text x="484" y="241" fill="#245c60">把响应传回 Client</text>
+</g>
+<g fill="none" stroke="#537477" stroke-width="2.6" marker-end="url(#arrow26)">
+<path d="M152 124 H189"/><path d="M317 124 H354"/><path d="M486 124 H523"/><path d="M651 124 H688"/><path d="M780 157 V207"/><path d="M691 238 H619"/>
+<path d="M692 147 L619 215"/>
+</g>
+<text x="657" y="184" font-family="sans-serif" fill="#46695f" font-size="14">命中且合格</text>
+<text x="797" y="185" font-family="sans-serif" fill="#996245" font-size="14">未命中</text>
+<text x="339" y="287" font-family="sans-serif" fill="#5e7470" font-size="14">缓存插入必须先校验策略、容量与生命周期</text>
+</svg>

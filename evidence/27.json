@@ -1,0 +1,42 @@
+{
+  "chapter": 27,
+  "scope": "Standalone Chinese teaching interpretation; not official lab answer or performance report",
+  "claims": [
+    {
+      "id": "c27-isa",
+      "claim": "RISC-V ISA is modular; RV64I and extensions define software-visible instructions",
+      "kind": "standard",
+      "source_url": "https://docs.riscv.org/reference/isa/unpriv/unpriv-index.html",
+      "locator": "Unprivileged ISA, extensions and naming",
+      "status": "source-checked",
+      "notes": "Open ISA does not imply all implementation RTL is open"
+    },
+    {
+      "id": "c27-gpu",
+      "claim": "CUDA host/device execution and memory movement affect speedup",
+      "kind": "technical",
+      "source_url": "https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html",
+      "locator": "Programming model",
+      "status": "source-checked",
+      "notes": "Roofline figure is a hypothetical arithmetic model, not hardware measurement"
+    },
+    {
+      "id": "c27-bpf",
+      "claim": "The eBPF verifier tracks types and bounds and imposes program constraints",
+      "kind": "technical",
+      "source_url": "https://docs.kernel.org/bpf/verifier.html",
+      "locator": "Verifier documentation",
+      "status": "source-checked",
+      "notes": "Bounded loops and available helper calls are kernel/version sensitive"
+    },
+    {
+      "id": "c27-cxl",
+      "claim": "CXL memory devices need driver, region and hotplug integration before appearing as System RAM",
+      "kind": "technical",
+      "source_url": "https://docs.kernel.org/driver-api/cxl/linux/cxl-driver.html",
+      "locator": "Driver initialization and memory configuration",
+      "status": "source-checked",
+      "notes": "Topology/performance depend on platform; not necessarily transparent"
+    }
+  ]
+}

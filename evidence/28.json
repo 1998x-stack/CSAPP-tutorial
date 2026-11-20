@@ -1,0 +1,42 @@
+{
+  "chapter": 28,
+  "scope": "Standalone Chinese teaching interpretation; not official lab answer or performance report",
+  "claims": [
+    {
+      "id": "c28-epoll",
+      "claim": "EPOLLET nonblocking readiness requires reading/writing until EAGAIN; ONESHOT requires rearm",
+      "kind": "technical",
+      "source_url": "https://man7.org/linux/man-pages/man7/epoll.7.html",
+      "locator": "Level-triggered/edge-triggered and EPOLLONESHOT",
+      "status": "source-checked",
+      "notes": "Chapter shows pseudocode, not a validated server implementation"
+    },
+    {
+      "id": "c28-http",
+      "claim": "HTTP/1.1 message framing and persistent-connection correctness require length and parsing rules",
+      "kind": "standard",
+      "source_url": "https://www.rfc-editor.org/rfc/rfc9112",
+      "locator": "HTTP/1.1 message format and connection management",
+      "status": "source-checked",
+      "notes": "Unsupported chunked/pipelining cases must be rejected or closed safely"
+    },
+    {
+      "id": "c28-semantics",
+      "claim": "HTTP error responses, methods and fields have defined semantics",
+      "kind": "standard",
+      "source_url": "https://www.rfc-editor.org/rfc/rfc9110",
+      "locator": "HTTP semantics",
+      "status": "source-checked",
+      "notes": "No full TLS/security compliance asserted"
+    },
+    {
+      "id": "c28-bench",
+      "claim": "Performance results must be measured under stated workload",
+      "kind": "methodology",
+      "source_url": "https://man7.org/linux/man-pages/man7/epoll.7.html",
+      "locator": "Event readiness behavior",
+      "status": "derived",
+      "notes": "No observed throughput or 100k-connection claim in this chapter"
+    }
+  ]
+}

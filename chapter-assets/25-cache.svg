@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 280" role="img" aria-labelledby="title25 desc25">
+<title id="title25">直接映射缓存：地址位与四次访问</title><desc id="desc25">上方是 tag、1 位组索引和 3 位块偏移；下方从左至右列出 0x00、0x08、0x00、0x10 的访问结果。</desc>
+<rect width="900" height="280" rx="18" fill="#f8faf7"/>
+<text x="28" y="39" fill="#273f41" font-size="20" font-weight="700" font-family="sans-serif">地址如何决定缓存行为？</text>
+<text x="28" y="67" fill="#536c70" font-size="15" font-family="sans-serif">教学参数：s=1 · E=1 · b=3（直接映射，2 组，每行 8 字节）</text>
+<rect x="35" y="88" width="430" height="61" rx="9" fill="#e7f0ed" stroke="#7baba4"/>
+<rect x="35" y="88" width="190" height="61" rx="9" fill="#e8e4f5"/>
+<rect x="225" y="88" width="95" height="61" fill="#d6efe9"/>
+<rect x="320" y="88" width="145" height="61" rx="9" fill="#fbe8d8"/>
+<text x="130" y="113" text-anchor="middle" font-size="18" font-weight="700" fill="#554f7f" font-family="sans-serif">Tag</text>
+<text x="130" y="134" text-anchor="middle" font-size="14" fill="#554f7f" font-family="sans-serif">高位</text>
+<text x="272" y="113" text-anchor="middle" font-size="17" font-weight="700" fill="#18685b" font-family="sans-serif">组索引</text>
+<text x="272" y="134" text-anchor="middle" font-size="14" fill="#18685b" font-family="sans-serif">1 bit</text>
+<text x="393" y="113" text-anchor="middle" font-size="17" font-weight="700" fill="#a75b35" font-family="sans-serif">块偏移</text>
+<text x="393" y="134" text-anchor="middle" font-size="14" fill="#a75b35" font-family="sans-serif">3 bits</text>
+<text x="500" y="105" fill="#314b50" font-size="16" font-family="sans-serif">Set = (addr &gt;&gt; 3) &amp; 1</text>
+<text x="500" y="134" fill="#314b50" font-size="16" font-family="sans-serif">Tag = addr &gt;&gt; 4</text>
+<g font-family="sans-serif" font-size="17" font-weight="700">
+<rect x="25" y="182" width="202" height="70" rx="10" fill="#eaf4f1" stroke="#8dbab0"/><text x="126" y="206" text-anchor="middle" fill="#215950">0x00 → 组 0</text><text x="126" y="231" text-anchor="middle" fill="#215950">miss · tag 0</text>
+<rect x="242" y="182" width="202" height="70" rx="10" fill="#eaf4f1" stroke="#8dbab0"/><text x="343" y="206" text-anchor="middle" fill="#215950">0x08 → 组 1</text><text x="343" y="231" text-anchor="middle" fill="#215950">miss · tag 0</text>
+<rect x="459" y="182" width="202" height="70" rx="10" fill="#dbefdf" stroke="#8aac92"/><text x="560" y="206" text-anchor="middle" fill="#27653c">0x00 → 组 0</text><text x="560" y="231" text-anchor="middle" fill="#27653c">hit · tag 0</text>
+<rect x="676" y="182" width="199" height="70" rx="10" fill="#fff0e3" stroke="#d1a57c"/><text x="775" y="206" text-anchor="middle" fill="#96522d">0x10 → 组 0</text><text x="775" y="231" text-anchor="middle" fill="#96522d">miss + eviction</text>
+</g></svg>

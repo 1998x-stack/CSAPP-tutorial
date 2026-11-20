@@ -1,0 +1,42 @@
+{
+  "chapter": 25,
+  "scope": "Standalone Chinese teaching interpretation; not official lab answer or performance report",
+  "claims": [
+    {
+      "id": "c25-cache",
+      "claim": "Group index and tag selection for a (s,E,b) cache; M is load plus store",
+      "kind": "derived",
+      "source_url": "https://csapp.cs.cmu.edu/3e/labs.html",
+      "locator": "Cache Lab handout",
+      "status": "derived",
+      "notes": "The four-step trace uses invented parameters and is calculated, not measured"
+    },
+    {
+      "id": "c25-shell",
+      "claim": "Blocking SIGCHLD across fork/addjob prevents premature child-status bookkeeping",
+      "kind": "technical",
+      "source_url": "https://man7.org/linux/man-pages/man2/sigprocmask.2.html",
+      "locator": "Blocking and restoring signal masks",
+      "status": "source-checked",
+      "notes": "Teaching snippet omits errors and signal-safe job bookkeeping"
+    },
+    {
+      "id": "c25-job",
+      "claim": "Job control signals target the foreground job's process group",
+      "kind": "technical",
+      "source_url": "https://man7.org/linux/man-pages/man2/setpgid.2.html",
+      "locator": "Process group and job-control description",
+      "status": "source-checked",
+      "notes": "Full interactive shell also requires terminal foreground control"
+    },
+    {
+      "id": "c25-malloc",
+      "claim": "Allocator block coalescing and realloc preservation depend on invariants",
+      "kind": "technical",
+      "source_url": "https://csapp.cs.cmu.edu/3e/students.html",
+      "locator": "Malloc/free/realloc and memory allocation",
+      "status": "source-checked",
+      "notes": "Free-list strategy and scoring depend on handout; no claimed benchmark"
+    }
+  ]
+}
