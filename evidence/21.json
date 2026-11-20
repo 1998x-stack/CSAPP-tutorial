@@ -1,0 +1,41 @@
+{
+  "chapter": 21,
+  "claims": [
+    {
+      "id": "c21-fork",
+      "claim": "fork inherits descriptor references and children need reaping",
+      "kind": "technical",
+      "source_url": "https://man7.org/linux/man-pages/man2/waitpid.2.html",
+      "locator": "DESCRIPTION",
+      "status": "verified",
+      "notes": "No fixed fork duration"
+    },
+    {
+      "id": "c21-cgi",
+      "claim": "CGI server interprets CGI output to form HTTP response",
+      "kind": "technical",
+      "source_url": "https://www.rfc-editor.org/rfc/rfc3875.html",
+      "locator": "Sections 4 and 6",
+      "status": "verified",
+      "notes": "CGI output not raw HTTP status line"
+    },
+    {
+      "id": "c21-select",
+      "claim": "select modifies fd sets and has FD_SETSIZE restriction",
+      "kind": "technical",
+      "source_url": "https://man7.org/linux/man-pages/man2/select.2.html",
+      "locator": "DESCRIPTION / BUGS",
+      "status": "verified",
+      "notes": "fd_set limits on Linux"
+    },
+    {
+      "id": "c21-timewait",
+      "claim": "SO_REUSEADDR does not unconditionally allow occupied port binds",
+      "kind": "technical",
+      "source_url": "https://man7.org/linux/man-pages/man7/socket.7.html",
+      "locator": "SO_REUSEADDR",
+      "status": "verified",
+      "notes": "Linux-specific condition"
+    }
+  ]
+}

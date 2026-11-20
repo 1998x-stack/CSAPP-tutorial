@@ -1,0 +1,32 @@
+{
+  "chapter": 19,
+  "claims": [
+    {
+      "id": "c19-fd-shared",
+      "claim": "dup shares an open file description and file offset",
+      "kind": "technical",
+      "source_url": "https://man7.org/linux/man-pages/man2/dup.2.html",
+      "locator": "DESCRIPTION",
+      "status": "verified",
+      "notes": "Ordinary seekable files illustrated"
+    },
+    {
+      "id": "c19-partial",
+      "claim": "read/write may return fewer bytes than requested",
+      "kind": "technical",
+      "source_url": "https://man7.org/linux/man-pages/man2/read.2.html",
+      "locator": "RETURN VALUE",
+      "status": "verified",
+      "notes": "Partial success is not an error"
+    },
+    {
+      "id": "c19-rio",
+      "claim": "readn can return fewer than n bytes at EOF",
+      "kind": "technical",
+      "source_url": "https://csapp.cs.cmu.edu/3e/students.html",
+      "locator": "Chapter 10 robust I/O",
+      "status": "verified",
+      "notes": "POSIX code intentionally constrained"
+    }
+  ]
+}

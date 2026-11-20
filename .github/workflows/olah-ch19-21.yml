@@ -1,0 +1,46 @@
+name: Olah chapters 19-21 browser and snippet QA
+on:
+  pull_request:
+    paths:
+      - '19.html'
+      - '20.html'
+      - '21.html'
+      - 'chapter-assets/**'
+      - 'scripts/browser-qa-19-21.py'
+      - 'tests/content/chapter19-21.test.mjs'
+      - 'scripts/build-static.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile examples and inspect diagrams
+        run: node --test tests/content/chapter19-21.test.mjs
+      - name: Check release assets
+        run: |
+          npm run build
+          test -f dist/olah-chapters.css
+          for n in 19 20 21; do test -f dist/$n.html; done
+          test -f dist/chapter-assets/21-select-loop.svg
+      - name: Install Chromium
+        run: |
+          python -m pip install playwright==1.65.2
+          python -m playwright install --with-deps chromium
+      - name: Browser QA at desktop and two mobile widths
+        run: python scripts/browser-qa-19-21.py --output reports/olah-19-21
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: olah-19-21-browser-qa
+          path: reports/olah-19-21
+          if-no-files-found: ignore

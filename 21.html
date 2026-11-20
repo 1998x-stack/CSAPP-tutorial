@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第21章 网络编程——进阶 — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="olah-chapters.css">
 </head>
-<body>
+<body class="olah-lesson">
+<a href="#chapter-main" class="skip-link">跳转至正文</a>
 <div class="double-border">
 <div class="container">
     <div class="sidebar">
@@ -43,226 +45,112 @@
         </ul>
     </div>
     <div class="main-content">
-        <h2>第二十一章：网络编程——进阶</h2>
-
-        <p>上一章我们手写了一个 echo 服务器，它能接收客户端的连接请求，读取数据并回写响应。但这个服务器有一个致命的弱点：<strong>它一次只能服务一个客户端</strong>。为什么？因为在 while 循环中，<code>accept()</code> 等待新连接是阻塞的，<code>read()</code> 读取客户端数据也是阻塞的。如果你正在读客户端 A 的数据，客户端 B 的连接请求就会排队等待——等 A 处理完了 B 才能得到响应。在真实的互联网上，用户成千上万，这样的"迭代服务器"毫无可用性。</p>
-
-        <p>如何让一个服务器同时服务成千上万的客户端？这就是本章要回答的核心问题。我们将从最基本的 fork-per-client 模型讲起，逐步引入更高效的 I/O 多路复用和事件驱动模型，还会介绍 CGI 等经典的 Web 后端技术——以及一个在面试和生产环境中反复出现的话题：<strong>并发服务器设计</strong>。</p>
-
-        <h3>21.1 从迭代到并发：三种服务器模型</h3>
-
-        <p>并发服务器的核心思想就是"不等待"。当服务器在处理一个客户端时，它不能阻塞其他客户端的连接。实现这一目标有多种策略：</p>
-
-        <table>
-            <tr>
-                <th>模型</th>
-                <th>工作原理</th>
-                <th>优点</th>
-                <th>缺点</th>
-                <th>适用场景</th>
-            </tr>
-            <tr>
-                <td><strong>迭代服务器</strong></td>
-                <td>单进程，依次处理每个客户端</td>
-                <td>实现简单，无竞态条件</td>
-                <td>一个慢客户端会阻塞所有人</td>
-                <td>开发调试、内部工具</td>
-            </tr>
-            <tr>
-                <td><strong>fork-per-client</strong></td>
-                <td>每个连接 fork 一个子进程处理</td>
-                <td>进程隔离，一个请求崩溃不影响其他</td>
-                <td>进程开销大，fork 成本高（毫秒级）</td>
-                <td>小型服务、CGI 程序</td>
-            </tr>
-            <tr>
-                <td><strong>预派生进程池</strong></td>
-                <td>启动时 fork 固定数量的子进程，共享 listen_fd</td>
-                <td>避免 fork 开销，控制并发度</td>
-                <td>进程数固定，负载高时可能不够</td>
-                <td>Apache 的 prefork 模式</td>
-            </tr>
-        </table>
-
-        <p>fork-per-client 是最容易理解的并发模型。下面是一个基本实现：</p>
-
-        <pre><code>int listen_fd = Open_listenfd(8080);
-
-while (1) {
-    struct sockaddr_in client_addr;
-    socklen_t addr_len = sizeof(client_addr);
-    int conn_fd = accept(listen_fd,
-                         (SA *)&amp;client_addr, &amp;addr_len);
-
-    if (fork() == 0) {
-        // 子进程：处理客户端请求后退出
-        close(listen_fd);  // 子进程不需要监听 fd
-        handle_client(conn_fd);
-        close(conn_fd);
-        exit(0);
+<main id="chapter-main" class="reading-page"><article>
+<header class="chapter-hero">
+<p class="eyebrow">计算机系统 · 网络与并发 / 21</p>
+<h1>一个慢连接，为什么能拖住整个服务器？</h1>
+<p class="lede">迭代服务器的问题不是“没有 while 循环”，而是等待一个客户端时不能及时处理另一个客户端。我们用进程隔离、CGI 标准接口和 I/O 就绪通知三种视角，拆开“并发”背后的成本与边界。</p>
+<p class="chapter-scope">示例以 Unix/Linux 与 HTTP/1.1 为语境；CGI 是历史上重要的接口，不应直接等同于当前的应用服务器部署规范。</p>
+</header>
+<nav class="chapter-toc" aria-label="本章导览"><strong>阅读路线</strong><a href="#c21-models">服务模型</a><a href="#c21-fork">进程回收</a><a href="#c21-cgi">CGI</a><a href="#c21-select">多路复用</a><a href="#c21-tools">排错工具</a><a href="#c21-lab">实验与自测</a></nav>
+<section id="c21-models"><h2>21.1 三种处理方式：让等待不再串行传播</h2>
+<p>迭代服务器在处理 A 的阻塞读取期间，通常无法及时服务 B；<code>fork-per-client</code> 为每个连接创建子进程，能够把处理逻辑隔离开；一个事件循环则在多个 fd 中等待<strong>就绪事件</strong>，只处理当前可推进的操作。并发不代表没有等待，而是等待的组织方式不同。</p>
+<figure class="lesson-figure"><img src="chapter-assets/21-server-models.svg" width="920" height="285" alt="迭代模型中 A 的等待挡住 B；多进程模型中 A、B 分别处理；事件循环在 A 等待时可处理 B 的就绪事件。"><figcaption>图 21-1：模型没有绝对优劣。连接数、工作负载、隔离要求、进程/线程成本决定选型。</figcaption></figure>
+<table><thead><tr><th>模型</th><th>并发单位</th><th>优势</th><th>需要付出的代价</th></tr></thead><tbody>
+<tr><td>迭代服务器</td><td>逐个连接</td><td>逻辑简单，便于验证</td><td>慢请求拖延后续请求</td></tr>
+<tr><td>每连接 fork</td><td>子进程</td><td>地址空间隔离，易理解</td><td>进程创建、内存与回收成本</td></tr>
+<tr><td>事件循环</td><td>就绪 fd / 状态机</td><td>一个线程可管理多条连接</td><td>状态与缓冲区管理更复杂</td></tr>
+</tbody></table>
+<p>“有上千连接”并不意味着始终有上千连接在消耗 CPU：大多数连接可能只是等待。另一方面，事件循环里执行一个耗时的 CPU 任务，同样会卡住其他连接，因此也可能需要工作线程或进程池。</p></section>
+<section id="c21-fork"><h2>21.2 fork-per-client：描述符继承容易，生命周期管理更难</h2>
+<p><code>fork()</code> 后子进程会继承描述符，它们指向继承自父进程的打开文件描述。典型做法是<strong>子进程关闭监听 fd</strong>、处理连接后关闭 connfd；<strong>父进程立即关闭 connfd</strong> 并继续接受连接。这里的 <code>close</code> 只减少引用，并不会直接关闭另一进程仍持有的副本。</p>
+<pre><code>/* fork-per-client 核心流程示意；省略完整监听创建 */
+for (;;) {
+    int connfd = accept(listenfd, NULL, NULL);
+    if (connfd &lt; 0) {
+        if (errno == EINTR) continue;
+        /* 记录错误并按策略处理；不要使用无效 fd */
+        break;
     }
-
-    // 父进程：关闭 conn_fd，继续 accept
-    close(conn_fd);
-}</code></pre>
-
-        <p>注意两个微妙但关键的地方。第一，父进程在 fork 后立即 <code>close(conn_fd)</code>——子进程持有 conn_fd 的副本，父进程不关闭就会泄漏文件描述符。第二，子进程 <code>close(listen_fd)</code>——监听套接字是父进程的职责，子进程不需要。fork 会复制进程的文件描述符表，所以父子进程共享所有打开的文件描述符。<strong>每个文件描述符都有一个引用计数</strong>，close 只是减少引用计数，真正关闭文件是在引用计数降为 0 的时候。</p>
-
-        <p>fork-per-client 的优点是简单、隔离性好。缺点是每个连接都要 fork——fork 本身开销很大（几十到几百微秒），而且子进程退出时会变成僵尸进程，需要父进程调用 <code>wait()</code>/<code>waitpid()</code> 来回收。</p>
-
-        <div class="warning">
-            <p><strong>真实踩坑故事</strong>：某次线上服务升级后，发现服务器响应越来越慢，最终完全无响应。排查后发现是 fork-per-client 模型没有正确处理 SIGCHLD 信号——子进程退出后变成僵尸，父进程没有 wait 回收。随着僵尸进程越积越多，系统进程表满了，fork() 返回 EAGAIN。修复方案就是注册 SIGCHLD 信号处理函数，在 handler 中循环调用 <code>waitpid(-1, NULL, WNOHANG)</code> 回收所有已退出的子进程。</p>
-        </div>
-
-        <h3>21.2 CGI——动态内容的经典方案</h3>
-
-        <p>早期的 Web 服务器只能返回静态文件——你把一个 <code>index.html</code> 放在服务器上，客户端请求什么文件就返回什么。但很快人们就不满足于此了：我们需要<strong>动态内容</strong>——根据用户的输入生成不同的页面。CGI（通用网关接口，Common Gateway Interface）应运而生。</p>
-
-        <p>CGI 的接口非常简单：服务器收到一个动态请求时，fork 一个子进程，通过环境变量将请求信息传递给 CGI 程序，并通过 <code>execve()</code> 执行 CGI 程序。CGI 程序的 stdout 被重定向到客户端的 socket，因此它只要 <code>printf()</code> 输出 HTML 内容即可。</p>
-
-        <p>具体来说，服务器设置了以下环境变量：</p>
-        <ul>
-            <li><code>QUERY_STRING</code>：URL 中 <code>?</code> 后面的部分（如 <code>name=alice&age=25</code>）</li>
-            <li><code>REQUEST_METHOD</code>：<code>GET</code> 或 <code>POST</code></li>
-            <li><code>CONTENT_LENGTH</code>：POST 请求的主体长度</li>
-            <li><code>GATEWAY_INTERFACE</code>：固定为 <code>CGI/1.1</code></li>
-        </ul>
-
-        <p>下面是一个 CGI handler 的伪代码：</p>
-
-        <pre><code>void handle_cgi_request(int conn_fd, const char *uri) {
-    char *query_pos = strchr(uri, '?');
-    char *cgi_path = "/usr/lib/cgi-bin/hello";
-
-    if (fork() == 0) {
-        // 子进程：设置环境变量并执行 CGI 程序
-
-        // 设置 QUERY_STRING
-        char query_buf[1024];
-        if (query_pos != NULL) {
-            snprintf(query_buf, sizeof(query_buf),
-                     "QUERY_STRING=%s", query_pos + 1);
-            putenv(query_buf);
-        }
-
-        // 将 stdout 重定向到客户端连接
-        dup2(conn_fd, STDOUT_FILENO);
-
-        // 执行 CGI 程序（替换子进程映像）
-        execl(cgi_path, cgi_path, NULL);
-
-        // 如果 execl 返回，说明出错了
-        printf("Content-Type: text/html\r\n\r\n");
-        printf("&lt;h1&gt;CGI Error&lt;/h1&gt;");
+    pid_t pid = fork();
+    if (pid == 0) {
+        close(listenfd);
+        serve_one_client(connfd);
+        close(connfd);
+        _exit(0);
     }
-    wait(NULL);  // 等待 CGI 进程结束
-}</code></pre>
-
-        <p>CGI 程序本身可以是用 C、Perl、Python 等任何语言编写的可执行文件。一个最简单的 CGI 程序（C 语言）：</p>
-
-        <pre><code>#include &lt;stdio.h&gt;
-#include &lt;stdlib.h&gt;
-
-int main() {
-    char *query = getenv("QUERY_STRING");
-    printf("Content-Type: text/html\r\n\r\n");
-    printf("&lt;html&gt;&lt;body&gt;");
-    printf("&lt;h1&gt;Hello from CGI!&lt;/h1&gt;");
-    printf("&lt;p&gt;Query: %s&lt;/p&gt;", query ? query : "(none)");
-    printf("&lt;/body&gt;&lt;/html&gt;");
+    close(connfd); /* 父进程必须关闭自己的副本 */
+    if (pid &lt; 0) { /* fork 失败需降载/记录 */ }
+}
+/* 父进程还必须安排子进程回收 */</code></pre>
+<p>成功退出但未被回收的子进程可能成为<strong>僵尸进程</strong>。父进程需要以 <code>waitpid()</code> 回收，典型方式包括主循环内处理子进程退出，或安全地配合 <code>SIGCHLD</code> 通知处理。信号处理例程应遵守异步信号安全规则；不要在其中随意调用 <code>printf()</code>、内存分配和复杂应用逻辑。</p>
+<div class="insight"><strong>不要记一个固定的 fork 耗时</strong><p>实际创建成本依内核、内存映射、页表、负载和缓存情况而变。为每个连接启动一个进程是否合适，要通过真实工作负载和资源限制验证，而不是宣称 fork 永远需要多少毫秒。</p></div></section>
+<section id="c21-cgi"><h2>21.3 CGI：Web 服务器与子程序之间的明确边界</h2>
+<p>CGI/1.1 规定：Web 服务器把请求有关的信息放进环境变量（如 <code>REQUEST_METHOD</code>、<code>QUERY_STRING</code>、<code>CONTENT_LENGTH</code>），必要时把请求正文通过标准输入提供给 CGI 程序；程序把<strong>CGI 响应头和正文</strong>写到标准输出。服务器再解释这些输出并负责形成面向客户端的 HTTP 响应。</p>
+<p>因此“把 CGI stdout 直接当成完整 HTTP 响应写进 socket”只可能是某些教学服务器特定的简化，不符合通用 CGI 接口的职责划分。CGI 输出通常以 <code>Content-Type</code> 等字段开始，不需要由脚本自行打印 HTTP 状态行。</p>
+<pre><code>#include &lt;stdio.h&gt;
+/* 最小 CGI 程序：输出固定 HTML；由 Web 服务器托管执行 */
+int main(void) {
+    puts("Content-Type: text/html; charset=UTF-8\r");
+    puts("");
+    puts("&lt;!doctype html&gt;&lt;html lang='en'&gt;&lt;body&gt;&lt;h1&gt;Hello CGI&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;");
     return 0;
 }</code></pre>
+<p>可以用 <code>cc -std=c11 -Wall -Wextra cgi.c -o cgi &amp;&amp; ./cgi</code> 检查原始输出，再由正确配置的 CGI 服务器运行。<strong>安全边界：</strong>不能把未经 HTML 转义的 <code>QUERY_STRING</code> 直接放到页面；需要限制环境变量与请求体大小、隔离执行权限、处理错误与超时。CGI 程序不是“用户发来什么命令就执行什么命令”。</p>
+</section>
+<section id="c21-select"><h2>21.4 <code>select()</code> 只告诉你“可以尝试”，不是“完整消息已到达”</h2>
+<p>使用 <code>select</code> 时，把要监控的 fd 放入 <code>fd_set</code>，传入最大 fd 加一作为 <code>nfds</code>。调用成功后，集合只标记当前就绪的 fd。<strong>每次调用前都需要重新准备</strong>集合；就绪只表示对某种 I/O 操作而言当前不会按通常方式阻塞，不保证一次读出完整应用消息，也不保证一次写完全部数据。</p>
+<figure class="lesson-figure"><img src="chapter-assets/21-select-loop.svg" width="920" height="275" alt="事件循环监视监听 fd 与客户端 A、B；当前只有 B 可读，select 返回后只处理 B，下一轮重新构造监听集合。"><figcaption>图 21-2：事件循环从“等待某个人”切换到“等待任何一个 fd 就绪”。可读后仍要管理短读、EOF、EAGAIN 与后续的写入队列。</figcaption></figure>
+<div class="micro-lab"><h3>动一动：连接多，并不代表都能读</h3><label for="c21-fds">假设事件循环监视的连接数量（1–8）</label><input type="range" id="c21-fds" min="1" max="8" step="1" value="5">
+<output id="c21-ready" for="c21-fds" aria-live="polite">监视 5 条连接，其中 1 条就绪；其余 4 条仍等待。</output>
+<p class="small-note">这是“就绪集合”的直觉练习，不是 QPS 性能模型；真实程序还需要关心 fd 的具体数值、可写事件及公平性。</p></div>
+<p>下面用<strong>两个匿名管道</strong>演示一次真实的 <code>select</code>；只向 B 写入一个字节，预期仅 B 的读端可读。程序可以独立编译，不需要打开网络端口。</p>
+<pre><code>#define _POSIX_C_SOURCE 200809L
+#include &lt;stdio.h&gt;
+#include &lt;sys/select.h&gt;
+#include &lt;unistd.h&gt;
 
-        <p>CGI 的最大问题就是效率——每个请求都要 fork 一个进程，开销极大。这就是后来 FastCGI、mod_perl、WSGI 等更高效方案出现的原因。但理解 CGI 仍然是理解 Web 后端技术发展脉络的关键一步。</p>
-
-        <h3>21.3 非阻塞 I/O 与 I/O 多路复用</h3>
-
-        <p>fork-per-client 解决了并发问题，但引入了新的问题：进程的开销。每个进程都有自己的地址空间、文件描述符表、信号处理等，开销很大。能不能在<strong>单进程</strong>内同时处理多个客户端？答案是使用 I/O 多路复用。</p>
-
-        <p>先来说说<strong>非阻塞 I/O</strong>。默认情况下，<code>read()</code> 从没有数据到达的 socket 上读取时会阻塞，直到有数据到来。如果我们将 socket 设置为非阻塞模式，<code>read()</code> 在没有数据时会立即返回 -1，<code>errno</code> 被设置为 <code>EAGAIN</code> 或 <code>EWOULDBLOCK</code>：</p>
-
-        <pre><code>#include &lt;fcntl.h&gt;
-
-int flags = fcntl(conn_fd, F_GETFL, 0);
-fcntl(conn_fd, F_SETFL, flags | O_NONBLOCK);</code></pre>
-
-        <p>但非阻塞 I/O 还不够——你怎么知道什么时候该读哪个 socket 呢？总不能在 while 循环里"轮询"所有 socket 吧？那样 CPU 会被白白浪费。这就是 <code>select()</code> 和 <code>poll()</code> 系统调用的由来。它们让你能够<strong>同时监视多个文件描述符</strong>，只有当某个 fd 就绪（可读/可写/异常）时才会返回。</p>
-
-        <p>来看一个基于 <code>select()</code> 的 echo 服务器核心逻辑：</p>
-
-        <pre><code>#include &lt;sys/select.h&gt;
-
-int main() {
-    int listen_fd = open_listenfd(8080);
-
-    fd_set read_set, ready_set;
-    FD_ZERO(&amp;read_set);
-    FD_SET(listen_fd, &amp;read_set);  // 监视 listen_fd
-
-    int max_fd = listen_fd;
-
-    while (1) {
-        ready_set = read_set;            // select 会修改这个集合
-        select(max_fd + 1, &amp;ready_set,   // 监视可读
-               NULL, NULL, NULL);        // 不监视可写和异常
-
-        // 检查哪些 fd 就绪了
-        for (int fd = 0; fd <= max_fd; fd++) {
-            if (FD_ISSET(fd, &amp;ready_set)) {
-                if (fd == listen_fd) {
-                    // 有新连接
-                    int conn_fd = accept(listen_fd, NULL, NULL);
-                    FD_SET(conn_fd, &amp;read_set);  // 加入监视
-                    if (conn_fd > max_fd)
-                        max_fd = conn_fd;
-                } else {
-                    // 现有客户端发来了数据
-                    char buf[1024];
-                    int n = read(fd, buf, sizeof(buf));
-                    if (n == 0) {
-                        close(fd);               // 客户端关闭
-                        FD_CLR(fd, &amp;read_set);
-                    } else {
-                        write(fd, buf, n);        // echo 回显
-                    }
-                }
-            }
-        }
-    }
+int main(void) {
+    int a[2], b[2];
+    if (pipe(a) &lt; 0) { perror("pipe a"); return 1; }
+    if (pipe(b) &lt; 0) { perror("pipe b"); return 1; }
+    if (write(b[1], "X", 1) != 1) { perror("write"); return 1; }
+    fd_set reads;
+    FD_ZERO(&amp;reads);
+    FD_SET(a[0], &amp;reads);
+    FD_SET(b[0], &amp;reads);
+    int high = a[0] &gt; b[0] ? a[0] : b[0];
+    int count = select(high + 1, &amp;reads, NULL, NULL, NULL);
+    if (count &lt; 0) { perror("select"); return 1; }
+    printf("a ready: %d, b ready: %d\n",
+           FD_ISSET(a[0], &amp;reads) != 0,
+           FD_ISSET(b[0], &amp;reads) != 0);
+    close(a[0]); close(a[1]); close(b[0]); close(b[1]);
+    return 0;
 }</code></pre>
-
-        <div class="highlight">
-            <p><strong>核心洞察</strong>：select 模型让一个单进程线程就能管理数百个并发连接。它的工作模式是"事件驱动"的——你告诉内核你关心哪些 fd 上的哪些 I/O 事件，内核在事件发生时通知你。这比"为每个连接开一个线程/进程"要高效得多。但 select 也有局限：监视的 fd 数量上限是 FD_SETSIZE（通常是 1024），而且每次调用都需要 O(n) 的遍历。现代高性能服务器（如 Nginx、Redis）使用的是 <code>epoll</code>（Linux）或 <code>kqueue</code>（macOS），它们的事件通知是 O(1) 的。</p>
-        </div>
-
-        <h3>21.4 实用网络调试工具集</h3>
-
-        <p>网络编程中，你迟早会遇到各种奇怪的问题：连接被拒绝、数据发不出去、端口被占用。掌握下面这几个工具，能让你在网络排错时事半功倍。</p>
-
-        <p><strong>netstat</strong>：查看网络连接状态的经典工具。</p>
-        <pre><code># 查看所有 TCP 连接及其状态
-$ netstat -tan
-Proto Recv-Q Send-Q Local Address    Foreign Address  State
-tcp   0      0      0.0.0.0:8080     0.0.0.0:*        LISTEN
-tcp   0      0      127.0.0.1:8080   127.0.0.1:54321  ESTABLISHED
-tcp   0      0      127.0.0.1:54321  127.0.0.1:8080   TIME_WAIT</code></pre>
-
-        <p><strong>tcpdump / Wireshark</strong>：抓包工具，可以让你看到线缆上传输的原始数据包。对于分析协议细节、排查 TCP 问题极其有用。</p>
-        <pre><code># 抓取 localhost:8080 上的所有包，显示详细内容
-$ sudo tcpdump -i lo -X port 8080</code></pre>
-
-        <p><strong>strace</strong>：追踪系统调用的终极武器。当一个网络程序行为异常（比如客户端连接不上）时，strace 可以告诉你程序到底做了哪些系统调用，哪个调用返回了错误。</p>
-        <pre><code># 追踪程序的系统调用，只看 socket 相关的
-$ strace -e trace=network ./my_server</code></pre>
-
-        <div class="highlight">
-            <p><strong>真实踩坑故事</strong>：有一次我在开发一个 HTTP 代理服务器时，重启后 bind 总是失败，返回"Address already in use"。用 <code>netstat -tan | grep 8080</code> 一看，发现大量处于 TIME_WAIT 状态的连接。TIME_WAIT 是 TCP 协议关闭连接时的正常状态，持续 2MSL（约 1-4 分钟）。在这期间，端口不能被重新 bind。根本原因是代码中没有设置 <code>SO_REUSEADDR</code> 套接字选项。加上 <code>setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, ...)</code> 之后，问题解决。后来我养成了习惯：每个 TCP 服务器代码中的前几行一定是设置 <code>SO_REUSEADDR</code>。</p>
-        </div>
-
-        <p>进阶的网络编程不仅是写代码，更是用工具和协议栈对话。当你看到 TIME_WAIT 时，你要知道这是 TCP 在保证最后一个 ACK 不丢失；当你看到 SYN_SENT 长时间不变成 ESTABLISHED，你要想到是不是防火墙拦截了 SYN 包。这些知识只能通过动手实践和"踩坑"来积累。</p>
-
-        <p>好了，网络编程的进阶之路我们走完了。从 fork-per-client 到 select 的事件驱动模型，从 CGI 到调测工具——你现在已经具备了编写一个真实并发 Web 服务器的理论基础。如果要做 Proxy Lab，这些知识就是你最重要的武器。下一章，我们将进入一个全新的主题——<strong>并发编程</strong>。线程、互斥锁、条件变量——这些概念是现代高性能服务器的基础，也是系统编程中最容易出错、最有挑战性的领域。</p>
-
+<p>运行 <code>cc -std=c11 -Wall -Wextra -pedantic select-demo.c -o select-demo &amp;&amp; ./select-demo</code>，预期输出 <code>a ready: 0, b ready: 1</code>。这个小实验不等于完整服务器：对非阻塞 socket，还必须处理 <code>EAGAIN</code>、部分写入、断开与状态机。</p>
+<p>在 Linux 的 <code>fd_set</code> 接口里，<code>FD_SETSIZE</code> 通常为 1024，监视超出范围的 fd 有未定义行为风险。<code>select</code> 每次复制/扫描集合；<code>poll</code> 与 Linux 的 <code>epoll</code> 可缓解部分限制，但“epoll 永远 O(1)”也是过度简化：处理就绪事件本身至少与事件数量相关，实际成本还取决于应用工作量。</p></section>
+<section id="c21-tools"><h2>21.5 用证据排查连接拒绝、卡住与端口占用</h2>
+<pre><code># Linux：观察监听端口和 TCP 连接
+ss -ltnp
+ss -tan state time-wait
+# 查看回环接口上 8080 端口的数据包
+sudo tcpdump -i lo -nn port 8080
+# 跟踪程序网络系统调用及其返回值
+strace -e trace=network ./server</code></pre>
+<p><code>ss</code> 查看套接字状态，<code>tcpdump</code> 观察线上包，<code>strace</code> 观察用户进程系统调用。别把三种视角混作一种证据：包到了网卡，不保证应用已 <code>read</code>；<code>connect</code> 失败也不能仅凭状态名推断防火墙是唯一原因。</p>
+<div class="insight"><strong>TIME_WAIT 与 SO_REUSEADDR</strong><p><code>TIME_WAIT</code> 是 TCP 连接关闭过程中的正常状态，但不能据此直接断定新监听失败必然由它引起。<code>SO_REUSEADDR</code> 对地址复用有条件限制，不能抢占仍在使用的任意地址/端口组合。调查 <code>EADDRINUSE</code> 时先检查当前监听者和绑定的地址范围。</p></div></section>
+<section id="c21-lab"><h2>21.6 自测：就绪是不是等于已完成？</h2>
+<div class="exercise"><p>对客户端 B 的 fd，<code>select</code> 返回“可读”。随后一次 <code>read</code> 返回 0。该把这次事件解释成收到一条空的业务消息，还是连接状态变化？对于 <code>read</code> 返回正数但消息未读完又怎么办？</p><details><summary>查看推导</summary><p>流式 TCP 上 <code>read</code> 返回 0 一般表示对端已进行有序关闭；应按协议与状态机处理并释放资源，而非自动构造空消息。正数短读则累计数据，等待其余部分满足分帧条件后再交给解析器。</p></details></div>
+<h3>资料与边界</h3><p><a href="https://www.rfc-editor.org/rfc/rfc3875.html">RFC 3875（CGI/1.1）</a> 规定服务器/脚本的职责；<a href="https://man7.org/linux/man-pages/man2/select.2.html">select(2)</a> 与 <a href="https://man7.org/linux/man-pages/man7/epoll.7.html">epoll(7)</a> 描述事件通知；<a href="https://man7.org/linux/man-pages/man2/waitpid.2.html">waitpid(2)</a> 解释子进程回收。下一章将把共享状态与线程同步加入并发模型。</p>
+</section></article></main>
+<script>
+(() => {
+ const input=document.getElementById('c21-fds'), out=document.getElementById('c21-ready');
+ function update(){const n=Number(input.value);out.textContent='监视 '+n+' 条连接，其中 1 条就绪；其余 '+(n-1)+' 条仍等待。';}
+ input.addEventListener('input',update);update();
+})();
+</script>
         <div class="footer-nav">
             <a href="20.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
