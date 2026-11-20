@@ -1,0 +1,88 @@
+{
+  "article": "24.html",
+  "scope": "课程第24章：CMU CS:APP 3e Data/Bomb/Attack Lab 课程路线，带防御导向的练习。",
+  "learning_design": "按官方 handout 区分版本；独立图示和可测试的无符号布尔等价式。",
+  "claims": [
+    {
+      "id": "24-official-labs",
+      "claim": "CS:APP 3e 官方提供 Data Lab、Bomb Lab 和 Attack Lab",
+      "kind": "primary",
+      "source_url": "https://csapp.cs.cmu.edu/3e/labs.html",
+      "locator": "Lab inventory",
+      "status": "verified",
+      "notes": "实验和课程章节编号不同。"
+    },
+    {
+      "id": "24-data-restrictions",
+      "claim": "Data Lab 以受限运算符与有限操作次数锻炼数据表示推理",
+      "kind": "primary",
+      "source_url": "https://csapp.cs.cmu.edu/3e/labs.html",
+      "locator": "Data Lab / writeup",
+      "status": "derived",
+      "notes": "各课程发放版本的具体规则可能不同。"
+    },
+    {
+      "id": "24-xor-identity",
+      "claim": "无符号整数的 XOR 等价于只使用逐位 NOT 与 AND 的德摩根形式",
+      "kind": "derived",
+      "source_url": "https://en.cppreference.com/w/c/language/operator_arithmetic",
+      "locator": "Bitwise logic operators",
+      "status": "derived",
+      "notes": "examples/olah-ch24-bitlogic.c 用边界与 PRNG 样本校验，不是穷举证明。"
+    },
+    {
+      "id": "24-signed-shift",
+      "claim": "把有符号正数左移进符号位不可视为通用可移植 C 构造",
+      "kind": "language",
+      "source_url": "https://en.cppreference.com/w/c/language/operator_arithmetic",
+      "locator": "Shift operators",
+      "status": "verified",
+      "notes": "Lab 的固定字宽补码抽象与 ISO C 语义必须分开。"
+    },
+    {
+      "id": "24-bomb",
+      "claim": "Bomb Lab 以二进制分析和调试训练机器级推理，实例内容可能不同",
+      "kind": "primary",
+      "source_url": "https://csapp.cs.cmu.edu/3e/labs.html",
+      "locator": "Bomb Lab listing",
+      "status": "derived",
+      "notes": "不提供通用答案或特定个人实例常量。"
+    },
+    {
+      "id": "24-attack-phases",
+      "claim": "Attack Lab 官方五阶段中，ctarget 负责 1-3，rtarget 负责 4-5",
+      "kind": "primary",
+      "source_url": "https://csapp.cs.cmu.edu/3e/attacklab.pdf",
+      "locator": "Figure 1, page 5",
+      "status": "verified",
+      "notes": "纠正原课程中误写成三个阶段的映射。"
+    },
+    {
+      "id": "24-targets",
+      "claim": "ctarget 具有注入教学条件，rtarget 模拟不可执行栈与地址随机化背景",
+      "kind": "primary",
+      "source_url": "https://csapp.cs.cmu.edu/3e/attacklab.pdf",
+      "locator": "Part I and Part II",
+      "status": "verified",
+      "notes": "这是特制教学环境，不能推广为真实系统默认。"
+    },
+    {
+      "id": "24-bounds",
+      "claim": "不约束写入长度相对于目标容量会造成缓冲区越界",
+      "kind": "security",
+      "source_url": "https://csapp.cs.cmu.edu/3e/attacklab.pdf",
+      "locator": "Target Programs, getbuf / Gets",
+      "status": "verified",
+      "notes": "图示不提供任何具体攻击载荷。"
+    },
+    {
+      "id": "24-defenses",
+      "claim": "NX、ASLR 与控制流防护是不同防御层，具体支持和启用依赖目标环境",
+      "kind": "security",
+      "source_url": "https://csapp.cs.cmu.edu/3e/attacklab.pdf",
+      "locator": "Part II mitigations",
+      "status": "derived",
+      "notes": "未声称 CET 或其他防御可完全消除 ROP。"
+    }
+  ]
+}
