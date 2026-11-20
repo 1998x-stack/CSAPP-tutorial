@@ -7,7 +7,7 @@
     "check:content": "node scripts/validate-content.mjs",
     "check:links": "node scripts/check-links.mjs",
     "check:snippets": "python3 scripts/verify-snippets.py",
-    "test": "npm run check:content && npm run check:links && npm run check:snippets && node --test tests/content/chapter01.test.mjs",
+    "test": "npm run check:content && npm run check:links && npm run check:snippets && node --test tests/content/chapter01.test.mjs && node --test tests/content/chapters08-10.test.mjs",
     "build": "node scripts/build-static.mjs"
   }
 }
