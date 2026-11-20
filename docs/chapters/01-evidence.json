@@ -1,0 +1,79 @@
+{
+  "article": "01.html",
+  "scope": "CSAPP 第 1 章独立中文教学内容；图示与文字原创，不复制原书素材",
+  "learning_design": "采用逐层揭示与注释式可复现实验的教学方法；参考 https://colah.github.io/posts/2015-08-Understanding-LSTMs/ 与 https://nlp.seas.harvard.edu/annotated-transformer/ 的表达思路，不重用其图文或代码",
+  "claims": [
+    {
+      "id": "ch01-book-scope",
+      "claim": "CS:APP 第三版第 1 章为 A Tour of Computer Systems，涵盖计算机系统全景",
+      "kind": "book-structure",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "official third edition book overview, Chapter 1",
+      "status": "verified",
+      "notes": "本教程是独立中文解读，非官方翻译"
+    },
+    {
+      "id": "ch01-ascii-h",
+      "claim": "在 ASCII 兼容编码里，H 的码值为十进制 72，即二进制 01001000",
+      "kind": "encoding-example",
+      "source_url": "https://www.rfc-editor.org/rfc/rfc20",
+      "locator": "ASCII alphabetic uppercase H; 0x48",
+      "status": "derived",
+      "notes": "由 ASCII 码表的十六进制 0x48 换算，图 1 是教学示例"
+    },
+    {
+      "id": "ch01-gcc-phases",
+      "claim": "GCC 支持 -E、-S、-c 分别在预处理、编译、汇编后停止",
+      "kind": "toolchain",
+      "source_url": "https://gcc.gnu.org/onlinedocs/gcc/Overall-Options.html",
+      "locator": "Overall Options, options -E, -S, -c",
+      "status": "verified",
+      "notes": "产出依 GCC 版本和目标平台变化"
+    },
+    {
+      "id": "ch01-elf-runtime",
+      "claim": "execve 替换进程映像，动态链接 ELF 可由内核安排解释器参与装载",
+      "kind": "operating-system",
+      "source_url": "https://man7.org/linux/man-pages/man2/execve.2.html",
+      "locator": "DESCRIPTION; interpreter scripts and ELF interpreters",
+      "status": "verified",
+      "notes": "Linux/ELF 特定描述；用户空间启动例程再调用 C main"
+    },
+    {
+      "id": "ch01-memory-hierarchy",
+      "claim": "缓存、主存及持久存储构成容量与访问代价存在差异的层次",
+      "kind": "conceptual-model",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 1 memory hierarchy; further chapters memory hierarchy",
+      "status": "illustrative",
+      "notes": "图示宽度不映射延迟、容量或价格；未列固定时延数值"
+    },
+    {
+      "id": "ch01-os-abstractions",
+      "claim": "进程、虚拟内存、文件是理解程序运行的三种核心抽象",
+      "kind": "system-model",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 1 overview and operating system abstractions",
+      "status": "verified",
+      "notes": "内容作教学性概括；不声称所有设备严格等价于文件"
+    },
+    {
+      "id": "ch01-amdahl",
+      "claim": "固定工作量、可加速比例 alpha、局部加速 k 时 S=1/((1-alpha)+alpha/k)",
+      "kind": "mathematical-model",
+      "source_url": "https://doi.org/10.1145/1465482.1465560",
+      "locator": "Amdahl (1967), fixed-size speedup argument",
+      "status": "derived",
+      "notes": "忽略额外开销、任务划分与测量误差；alpha=0.6,k=10 得到 1/0.46≈2.1739，k→∞ 上限 2.5"
+    },
+    {
+      "id": "ch01-lab",
+      "claim": "文中 GCC、readelf、file、strace 为本地观测示例，不保证所有系统上输出一致",
+      "kind": "exercise",
+      "source_url": "https://gcc.gnu.org/onlinedocs/gcc/Overall-Options.html",
+      "locator": "GCC overall options",
+      "status": "illustrative",
+      "notes": "没有把模拟或人工编造的输出当成实验结果"
+    }
+  ]
+}
