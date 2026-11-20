@@ -91,7 +91,8 @@ int main(int argc, char **argv) {
         for (ssize_t off = 0; off &lt; n;) {
             ssize_t w = write(out, buf + off, (size_t)(n - off));
             if (w &lt; 0 &amp;&amp; errno == EINTR) continue;
-            if (w &lt;= 0) { perror("write"); goto done; }
+            if (w == 0) { fputs("write returned zero\\n", stderr); goto done; }
+            if (w &lt; 0) { perror("write"); goto done; }
             off += w;
         }
     }

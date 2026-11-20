@@ -1,0 +1,41 @@
+{
+  "chapter": 20,
+  "claims": [
+    {
+      "id": "c20-sockets",
+      "claim": "accept returns a connected fd distinct from listening fd",
+      "kind": "technical",
+      "source_url": "https://man7.org/linux/man-pages/man2/accept.2.html",
+      "locator": "DESCRIPTION",
+      "status": "verified",
+      "notes": "Listening socket stays open"
+    },
+    {
+      "id": "c20-stream",
+      "claim": "TCP offers a byte stream without message boundaries",
+      "kind": "technical",
+      "source_url": "https://www.rfc-editor.org/rfc/rfc9293.html",
+      "locator": "Section 3.1",
+      "status": "verified",
+      "notes": "Diagram partition illustrative"
+    },
+    {
+      "id": "c20-http",
+      "claim": "HTTP/1.1 message framing requires start-line headers and body handling",
+      "kind": "technical",
+      "source_url": "https://www.rfc-editor.org/rfc/rfc9112.html",
+      "locator": "Sections 2 and 6",
+      "status": "verified",
+      "notes": "No TLS or HTTP/3 claimed"
+    },
+    {
+      "id": "c20-addr",
+      "claim": "getaddrinfo returns candidate addresses; AI_PASSIVE for wildcard bind",
+      "kind": "technical",
+      "source_url": "https://man7.org/linux/man-pages/man3/getaddrinfo.3.html",
+      "locator": "DESCRIPTION",
+      "status": "verified",
+      "notes": "Order platform-dependent"
+    }
+  ]
+}

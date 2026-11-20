@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
     int rc = getaddrinfo(argv[1], "80", &amp;hints, &amp;head);
     if (rc != 0) { fprintf(stderr, "%s\n", gai_strerror(rc)); return 1; }
     for (const struct addrinfo *p = head; p; p = p-&gt;ai_next) {
-        char host[NI_MAXHOST], service[NI_MAXSERV];
+        char host[128], service[32];
         int n = getnameinfo(p-&gt;ai_addr, p-&gt;ai_addrlen,
                             host, sizeof host, service, sizeof service,
                             NI_NUMERICHOST | NI_NUMERICSERV);
