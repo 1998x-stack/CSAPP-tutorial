@@ -1,0 +1,70 @@
+{
+  "article": "10.html",
+  "scope": "独立中文 CSAPP 教学改写；内容与全部 SVG 为本项目原创，未经原书插图复用",
+  "learning_design": "依据 1998x-stack/Olah-style-posts 的逐层叙述、图示+机制+可验证示例、证据记录与离线可读原则",
+  "claims": [
+    {
+      "id": "ch10-cpe",
+      "claim": "CPE 是每元素周期，使用多种规模拟合总周期斜率是合理的估计方法",
+      "kind": "performance",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 5, cycles per element and cycle counts",
+      "status": "derived",
+      "notes": "T(n)≈C+n·CPE 仅为指定范围内经验模型"
+    },
+    {
+      "id": "ch10-measurement",
+      "claim": "perf stat 可能观察硬件 cycles/instructions 事件",
+      "kind": "tool",
+      "source_url": "https://man7.org/linux/man-pages/man1/perf-stat.1.html",
+      "locator": "OPTIONS, hardware counters",
+      "status": "verified",
+      "notes": "需系统授权和硬件支持；无实际测量主张"
+    },
+    {
+      "id": "ch10-alias",
+      "claim": "当 xp==yp 且初值5，twiddle1 得20、twiddle2 得15",
+      "kind": "semantics",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 5 §5.3, memory aliasing",
+      "status": "derived",
+      "notes": "无整数溢出的示例；表达式不能无条件替换"
+    },
+    {
+      "id": "ch10-strlen",
+      "claim": "如果循环不改变字符串长度，可将 strlen 的重复长度计算提前",
+      "kind": "optimization",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 5, code motion example",
+      "status": "verified",
+      "notes": "具体编译器可能自己执行此优化"
+    },
+    {
+      "id": "ch10-associativity",
+      "claim": "多累加器重排浮点求和可能改变舍入结果",
+      "kind": "semantics",
+      "source_url": "https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html",
+      "locator": "Floating-point optimization flags and reassociation",
+      "status": "verified",
+      "notes": "不承诺逐位相同，强调验证数值要求"
+    },
+    {
+      "id": "ch10-throughput",
+      "claim": "简化 k 条依赖链模型的 CPE 下界 max(L/k,1/r)",
+      "kind": "model",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 5, data flow and operation latency/throughput bounds",
+      "status": "derived",
+      "notes": "仅限每元素一个等价操作、忽略访存等条件"
+    },
+    {
+      "id": "ch10-c-example",
+      "claim": "随文 C11 示例分别实现单路与四路 double 求和并打印防止死代码删除",
+      "kind": "exercise",
+      "source_url": "https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html",
+      "locator": "Optimization and code generation reference",
+      "status": "illustrative",
+      "notes": "不声称运行或测得性能；需 CI 编译/运行验证"
+    }
+  ]
+}
