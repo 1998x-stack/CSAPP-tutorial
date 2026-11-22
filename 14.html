@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="CSAPP 中文实践教程第 14 章 · 链接——动态链接。从「第十四章：链接——动态链接」出发，理解原理、图解、实验及适用边界。">
+    <meta name="description" content="解释 ELF 共享库的装载基址、R_X86_64_RELATIVE 的 B+A 重定位与 GOT/PLT 函数绑定、RELRO/NOW 边界。">
 <link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/14.html">
 <title>第14章 链接——动态链接 — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="chapter-olah.css">
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-systems.css">
 </head>
 <body class="chapter-refined">
 <a class="skip-link" href="#content">跳转至正文</a>
@@ -52,7 +53,7 @@
 <p>假设一个程序引用共享库里的 <code>puts</code>，系统启动程序时未必知道库最终映射到哪个虚拟地址。位置无关代码、动态重定位与 GOT/PLT 机制使链接时的引用能够在装载或调用阶段得到解析。</p><p>需要区分三件事：<strong>目标文件里的未解析引用</strong>、<strong>运行时加载器的重定位</strong>，以及某些符号绑定策略下的<strong>延迟绑定</strong>。不同架构、链接器选项与安全配置可能改变实际流程；以下以 Linux x86-64 ELF 为主要模型。</p>
 <p class="chapter-eyebrow">共享库 · GOT/PLT · 位置无关代码</p>
 <p class="dek">同一个 <code>puts</code>，编译时不知道它会被映射到哪里，调用却能成功。这背后是「独立确定代码位置」与「晚一点解析符号」的分工。</p>
-<nav class="chapter-map" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c14-motive">为什么共享</a><a href="#c14-plt">GOT / PLT</a><a href="#c14-pic">PIC</a><a href="#c14-preload">插桩</a><a href="#c14-practice">动手验证</a></nav>
+<nav class="chapter-map" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c14-motive">为什么共享</a><a href="#c14-plt">GOT / PLT</a><a href="#c14-pic">PIC</a><a href="#c14-preload">插桩</a><a href="#c14-practice">动手验证</a><a href="#deep-14">逐步推导</a></nav>
 <div class="concept-steps" id="ch14-state" data-stage="a">
 <figure><div class="diagram-scroll" tabindex="0" aria-label="可水平滚动查看动态链接路径"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c14-title c14-desc" viewBox="0 0 760 250">
 <title id="c14-title">调用共享库函数：PLT、GOT 与动态链接器</title>
@@ -208,6 +209,18 @@ $ LD_PRELOAD=./libtraceputs.so ./hello_puts
 <h3>参考与边界</h3>
 <p>以下以 ELF/GNU/Linux 动态链接为主：<a href="https://man7.org/linux/man-pages/man8/ld.so.8.html">ld.so(8)</a>、<a href="https://man7.org/linux/man-pages/man3/dlsym.3.html">dlsym(3)</a>、<a href="https://sourceware.org/binutils/docs/ld.html">GNU ld（-z now、RELRO）</a>。其他系统的运行时装载器并不保证相同机制。</p>
 </section>
+<section class="deep-study" id="deep-14" aria-labelledby="deep-14-title"><p class="deep-kicker">推导校验 · 14 / REASONING</p><h2 id="deep-14-title">库的装载基址变了，哪些地址必须跟着变？</h2><figure class="deep-figure" tabindex="0" role="group" aria-label="独立可横向查看的图解"><img src="chapter-assets/14-deep.svg" width="960" height="264" loading="lazy" alt="同一个内部指针基于库装载基址和固定加数修复，例如从 0x70001230 移到 0x72001230；导入外部函数的符号绑定是另一条路径。"><figcaption>明确假设下的示意推导；可以对照下方公式、命令与官方参考资料。</figcaption></figure>
+<p>共享对象可被映射到不同的虚拟基址，因此<strong>指向库内部对象的指针</strong>和<strong>指向外部符号的调用入口</strong>不能混成一个问题。对一个已在对象内确定偏移、无需名字查找的 ELF x86-64 <code>R_X86_64_RELATIVE</code> 重定位，动态链接器把结果设为 <code>B + A</code>，<code>B</code> 是该共享对象的装载基址，<code>A</code> 是相对加数。它不是“只把 GOT 中所有槽都填成 B+A”。</p>
+<div class="deep-math"><strong>装载 1：0x70000000 + 0x1230 = 0x70001230</strong><span>装载 2：0x72000000 + 0x1230 = 0x72001230</span></div>
+<p>两次运行中内部对象相对库的偏移都保持 <code>0x1230</code>；只有装载基址改变。这个例子说明为何可以让代码使用相对寻址，而数据中的必要指针由装载器修复；并不承诺任意共享库的所有指针都通过 <code>RELATIVE</code> 处理。</p>
+<table class="deep-table"><thead><tr><th>情形</th><th>需要解析什么</th><th>何时完成</th></tr></thead><tbody><tr><td><code>R_X86_64_RELATIVE</code></td><td>对象内固定偏移，计算 <code>B+A</code></td><td>通常装载重定位时，不涉及外部符号查找</td></tr><tr><td><code>R_X86_64_JUMP_SLOT</code></td><td>外部函数符号，更新相应调用入口</td><td>依实现与设置，可立即绑定或延迟绑定</td></tr><tr><td><code>LD_BIND_NOW=1</code> 或 <code>-Wl,-z,now</code></td><td>要求提前进行适用的函数绑定</td><td>通常加载阶段；有利于配合完整 RELRO</td></tr></tbody></table>
+<p>访问共享库的符号也可能使用 <code>GLOB_DAT</code> 等其他重定位。<code>GOT/PLT</code> 只是常见实现机制，不能由“动态库”三个字断定每次调用都会经过 PLT 或一定存在首次惰性绑定。完整 RELRO 与 NOW 有安全意义，但确切页面保护及解析时序以工具链和加载器为准。</p>
+<pre><code>cc -std=c11 -fPIC -shared -O0 examples/deep-ch13-18-shared.c -o /tmp/deep-shared.so
+readelf -rW /tmp/deep-shared.so
+readelf -dW /tmp/deep-shared.so
+python3 examples/deep-ch13-18-models.py 14</code></pre>
+<p>在 <code>readelf</code> 中按实际输出辨认类型，不把此固定算例冒充进程实测映射。参考 <a href="https://www.sourceware.org/glibc/manual/latest/html_node/Dynamic-Linker-Hardening.html">glibc 动态链接器安全建议</a>及 <a href="https://man7.org/linux/man-pages/man8/ld.so.8.html">ld.so(8)</a>。</p></section>
+
 
 <p>这一章把动态链接拆成三个独立问题：共享对象如何映射、调用目标何时解析、PIC 如何避免对共享代码页做绝对地址修补。通过 <code>puts</code> 的小实验，我们还能观察符号插桩如何改变查找结果。从下一章开始，我们将进入一个全新的主题——异常控制流（Exceptional Control Flow, ECF）。你写的每个程序都会涉及系统调用、信号处理、进程控制——这些都属于 ECF 的范畴。理解了 ECF，你就理解了操作系统的"灵魂"。</p>
 

@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="CSAPP 中文实践教程第 15 章 · 异常控制流——异常与进程。从「第十五章：异常控制流——异常与进程」出发，理解原理、图解、实验及适用边界。">
+    <meta name="description" content="从 fork 两条返回路径、进程内存 COW 到共享文件偏移和 waitpid，配合 pipe 同步的 POSIX C 实验证明行为。">
 <link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/15.html">
 <title>第15章 异常控制流——异常与进程 — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="chapter-olah.css">
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-systems.css">
 </head>
 <body class="chapter-refined">
 <a class="skip-link" href="#content">跳转至正文</a>
@@ -52,7 +53,7 @@
 <p>一个正在运行的用户程序并非只按源码顺序前进。中断、异常和系统调用可能把控制交给内核；而 <code>fork()</code> 在内核协助下创建新进程，使父进程与子进程从看似同一个调用点继续执行，并拿到不同的返回值。</p><p>理解这种现象需要分清三个层面：处理器发生<strong>异常控制转移</strong>、操作系统维护<strong>进程及地址空间</strong>、父进程通过 <code>waitpid()</code> 观察<strong>退出状态</strong>。本章围绕这条因果链展开，示例以 Unix/Linux 系统为主，不把进程调度先后当作确定事实。</p>
 <p class="chapter-eyebrow">异常 · 内核态 · 进程生命周期</p>
 <p class="dek">CPU 为什么会离开当前指令流？为什么一个 <code>fork()</code> 会产生两个返回值，而结束的子进程仍可能留在进程表里？</p>
-<nav class="chapter-map" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c15-exception">异常分类</a><a href="#c15-syscall">系统调用</a><a href="#c15-fork">fork / COW</a><a href="#c15-exec">exec / wait</a><a href="#c15-practice">动手验证</a></nav>
+<nav class="chapter-map" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c15-exception">异常分类</a><a href="#c15-syscall">系统调用</a><a href="#c15-fork">fork / COW</a><a href="#c15-exec">exec / wait</a><a href="#c15-practice">动手验证</a><a href="#deep-15">逐步推导</a></nav>
 <div class="concept-steps" id="ch15-state" data-stage="a">
 <figure><div class="diagram-scroll" tabindex="0" aria-label="可水平滚动查看父子进程生命周期"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c15-title c15-desc" viewBox="0 0 760 245">
 <title id="c15-title">从 fork 到 execve 再到 waitpid 的进程生命周期</title>
@@ -180,6 +181,16 @@ child exit=0</code></pre>
 <h3>参考与边界</h3>
 <p>本章针对 Linux/POSIX 进程接口及 x86-64 Linux 系统调用 ABI，参见 <a href="https://man7.org/linux/man-pages/man2/fork.2.html">fork(2)</a>、<a href="https://man7.org/linux/man-pages/man2/execve.2.html">execve(2)</a>、<a href="https://man7.org/linux/man-pages/man2/wait.2.html">wait(2)</a>、<a href="https://man7.org/linux/man-pages/man2/syscall.2.html">syscall(2)</a>。CS:APP 的 ECF 四分类用于教学，具体处理器与内核行为须参考其架构文档。</p>
 </section>
+<section class="deep-study" id="deep-15" aria-labelledby="deep-15-title"><p class="deep-kicker">推导校验 · 15 / REASONING</p><h2 id="deep-15-title">fork 后内存看似相同，为什么打开文件的偏移却共享？</h2><figure class="deep-figure" tabindex="0" role="group" aria-label="独立可横向查看的图解"><img src="chapter-assets/15-deep.svg" width="960" height="264" loading="lazy" alt="fork 后父子保留独立地址空间和 file descriptor 表项；继承的文件描述符指向同一内核 open file description，因此共享文件偏移。子进程的退出状态由 waitpid 回收。"><figcaption>明确假设下的示意推导；可以对照下方公式、命令与官方参考资料。</figcaption></figure>
+<p><code>fork()</code> 为父子创建两个执行上下文。子进程在 <code>fork</code> 返回值上看到 <code>0</code>，父进程看到子进程的 PID；两者随后可能以任意调度顺序运行。用户态的普通可写内存表现为<strong>相互独立</strong>，Linux 常借助写时复制（COW）优化开始阶段的页框共享，直到某方写入才分开。</p>
+<p>但文件描述符不是完全相同的复制方式：父进程和子进程各自拥有描述符表，继承的表项可指向<strong>同一个内核 open file description</strong>。于是文件的当前偏移是共享状态；一方 <code>read()</code> 改变偏移，另一方随后的读取通常从新的偏移继续。这不意味着两者共享用户态的 <code>FILE*</code> 缓冲状态，也不意味着每个打开方式都表现得像普通可定位文件。</p>
+<table class="deep-table"><thead><tr><th>状态</th><th>fork 后关系</th><th>可观察结果</th></tr></thead><tbody><tr><td>普通用户态变量</td><td>逻辑值相同、修改相互独立</td><td>child 将整数改成 99，parent 仍看到 7</td></tr><tr><td>描述符号码</td><td>两个表可以有相同 fd 整数</td><td>对应引用同一个 open file description</td></tr><tr><td>普通文件的偏移</td><td>由共享 open file description 维护</td><td>先读 2 字节，再读 2 字节，位置从 0→2→4</td></tr><tr><td>退出状态</td><td>由父方通过 wait 取得并回收</td><td><code>WIFEXITED(status)</code> 与 <code>WEXITSTATUS</code> 辨认正常退出码</td></tr></tbody></table>
+<p>不要用父子输出的先后顺序“验证”这个性质，因为调度是不确定的。仓库中的 POSIX 小程序先 <code>fork</code>，子进程通过 <code>_exit(7)</code> 退出，父进程循环处理 <code>waitpid</code> 的 <code>EINTR</code> 并检查退出码，从而<strong>不依赖打印顺序</strong>。同一 C 程序还通过 pipe 协调读取顺序：子进程从共享普通文件读取 AB，父进程随后必定从同一个 open file description 的偏移处读取 CD；模型脚本另外检查描述符/OFD 的引用关系。</p>
+<pre><code>cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pedantic examples/deep-ch13-18-posix.c -o /tmp/deep-posix
+/tmp/deep-posix fork
+python3 examples/deep-ch13-18-models.py 15</code></pre>
+<p>解释据 <a href="https://man7.org/linux/man-pages/man2/fork.2.html">fork(2)</a>、<a href="https://man7.org/linux/man-pages/man2/open.2.html">open(2)：open file description</a> 与 <a href="https://man7.org/linux/man-pages/man2/waitpid.2.html">waitpid(2)</a>。本节限于 POSIX/Linux 单线程且无其他并发访问的说明。</p></section>
+
 
 <p>异常控制流为内核提供了介入执行的入口；而 <code>fork</code>、<code>execve</code> 与 <code>waitpid</code> 分别处理创建、替换与回收。掌握这三个职责，就能解释大多数 shell 启动命令时的进程生命周期。下一章我们将继续深入 ECF 的另一个核心话题——<strong>信号</strong>，它允许内核和进程之间进行异步通信，是我们在用户态处理"事件"的主要手段。</p>
 

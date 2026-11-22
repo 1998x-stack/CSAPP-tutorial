@@ -16,7 +16,7 @@ for (const [number, svgName, expectedHeads] of chapters) {
     const asset = read("../../docs/chapters/assets/" + svgName);
     const ledger = JSON.parse(read("../../docs/evidence/" + number + ".json"));
     assert.equal((html.match(/<h1\b/g) || []).length, 1);
-    assert.equal((html.match(/<h2\b/g) || []).length, expectedHeads + 1, 'article sections plus cross-chapter heading');
+    assert.equal((html.match(/<h2\b/g) || []).length, expectedHeads + 2, 'article sections, deep proof and cross-chapter heading');
     assert.equal((html.match(/<aside class="concept-bridge"/g) || []).length, 1);
     assert.match(html, /<html lang="zh-CN">/);
     assert.match(html, /<main id="content"><article class="chapter-olah">/);
@@ -25,7 +25,7 @@ for (const [number, svgName, expectedHeads] of chapters) {
     assert.match(html, /class="chapter-map"/);
     assert.match(html, /href="index\.html"/);
     assert.equal((html.match(/<svg\b/g) || []).length, 1);
-    assert.equal((html.match(/<figcaption\b/g) || []).length, 1);
+    assert.equal((html.match(/<figcaption\b/g) || []).length, 2);
     const inlineSvg = html.match(/<svg\b[\s\S]*?<\/svg>/);
     assert.ok(inlineSvg);
     assert.equal(asset.replace(/^<\?xml[^>]*\?>\s*/, "").trim(), inlineSvg[0]);
