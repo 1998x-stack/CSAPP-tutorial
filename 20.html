@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-io-concurrency.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳转至正文</a>
@@ -55,7 +56,7 @@
 <p class="lede">同样是文件描述符，socket 却没有“写一次、读一次”的天然对应关系。把地址解析、TCP 连接、字节流和 HTTP 消息边界分开看，才不会把正常的分段传输误判成程序故障。</p>
 <p class="chapter-scope">本章以 TCP 与 HTTP/1.1 的最小示例为主；真实 HTTPS 还包含 TLS，不能用纯 TCP 客户端假装完成 HTTPS 访问。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章导览"><strong>阅读路线</strong><a href="#c20-layers">分层</a><a href="#c20-sockets">连接</a><a href="#c20-stream">字节流</a><a href="#c20-http">HTTP</a><a href="#c20-addr">地址解析</a><a href="#c20-lab">实验与自测</a></nav>
+<nav class="chapter-toc" aria-label="本章导览"><strong>阅读路线</strong><a href="#c20-layers">分层</a><a href="#c20-sockets">连接</a><a href="#c20-stream">字节流</a><a href="#c20-http">HTTP</a><a href="#c20-addr">地址解析</a><a href="#c20-lab">实验与自测</a><a href="#deep-20">深入推导</a></nav>
 <section id="c20-layers"><h2>20.1 分层抽象：应用写的是字节，网络送的是分组</h2>
 <p>应用层定义内容语义（如 HTTP 请求）；传输层的 TCP 提供有序、可靠的<strong>字节流</strong>；网络层 IP 负责跨网络路由；链路层把分组封装成适合当前链路的帧。这是教学用的四层视图，并不意味着 DNS 属于 TCP、所有应用都使用 TCP，或一个应用写入一定对应一个 TCP 报文段。</p>
 <p>在浏览器打开 HTTPS 网址时，通常还要完成域名解析、建立传输连接并进行 TLS 协商，具体次序和传输方式取决于协议版本及连接复用；HTTP/3 使用 QUIC 而不是 TCP。因此本章的 TCP 演示不是所有现代 Web 连接的唯一形式。</p>
@@ -118,6 +119,16 @@ int main(int argc, char **argv) {
 <div class="exercise"><p>协议定义消息是 4 字节大端长度前缀 + 正文。前缀给出长度 5；你第一次 <code>recv</code> 只收到正文前 2 字节。现在是否可以交给应用解析完整消息？下一次应该读取多少字节？</p><details><summary>查看推导</summary><p>不可以。前缀表明正文恰好应有 5 字节，目前只有 2 字节，还需累计 3 字节（可能需要多次读取）。还应在分配内存前校验长度上限，并区分 EOF 与暂时没数据。</p></details></div>
 <h3>资料与边界</h3><p>协议格式以 <a href="https://www.rfc-editor.org/rfc/rfc9112.html">RFC 9112（HTTP/1.1）</a> 为准；套接字和名称解析可查 <a href="https://man7.org/linux/man-pages/man2/socket.2.html">socket(2)</a>、<a href="https://man7.org/linux/man-pages/man2/accept.2.html">accept(2)</a>、<a href="https://man7.org/linux/man-pages/man3/getaddrinfo.3.html">getaddrinfo(3)</a>。下一章继续讨论连接很多时该如何调度。</p>
 </section>
+<section class="deep-study" id="deep-20" aria-labelledby="deep-20-title"><p class="deep-kicker">技术深描 · 20 / TRACE</p><h2 id="deep-20-title">收到前 3 字节时，为什么还不能宣称收到一条消息？</h2><figure class="deep-figure" tabindex="0" role="group" aria-label="可滚动技术图解"><img src="chapter-assets/20-deep.svg" width="960" height="266" loading="lazy" alt="应用记录编码为4字节网络字节序长度5，后接 HELLO 共9字节。演示读取碎片为00 00、00 05 H、ELLO；接收端先补齐长度字段再累积五字节消息体。"><figcaption>长度前缀协议：先读满四字节，再读满正文。该图展示机制，不代表真实网络封包或基准测量。</figcaption></figure>
+<p>为一个自定义二进制应用协议规定：每条消息由<strong>4 字节无符号网络字节序长度</strong>加消息体组成。例如 <code>HELLO</code>（5 字节）的完整编码是 <code>00 00 00 05 48 45 4c 4c 4f</code>。TCP 只保证有序字节序列，不保证任何一次 <code>recv</code> 刚好拿到头部或一条记录。下面的三段只是<strong>可能的读取切片</strong>，并非真实 TCP 分包的预测。</p>
+<table class="deep-table"><thead><tr><th>累计收到</th><th>状态</th><th>能否完成</th></tr></thead><tbody><tr><td><code>00 00</code></td><td>长度字段 2/4</td><td>否；不能按不完整的头部计算正文长度</td></tr><tr><td><code>00 00 00 05 H</code></td><td>长度字段 4/4；正文 1/5</td><td>否；仍缺 4 字节</td></tr><tr><td><code>00 00 00 05 HELLO</code></td><td>正文 5/5</td><td>是；交付 HELLO 并保留可能的后续记录字节</td></tr></tbody></table>
+<p>有长度前缀不意味着可以完全信任对端。解析器应在分配内存前执行 <code>length &lt;= MAX_FRAME</code> 的上限检查，还要检查整数加法/乘法溢出，并规定当读取到 EOF 但正文不足时应标记<strong>截断记录</strong>。零长度正文是否允许是协议选择。超大长度、未知编码、恶意持续慢速发送还要求连接超时和全局资源预算。</p>
+<div class="deep-math"><strong>needed = 4 − receivedHeader；随后 needed = frameLength − receivedBody</strong><span>收到正数才增加计数；<code>EINTR</code> 与 <code>EAGAIN</code> 不是“消息长度为零”。</span></div>
+<pre><code>cc -std=c11 -Wall -Wextra -Werror -pedantic -pthread examples/deep-ch19-23.c -o /tmp/deep-io
+/tmp/deep-io frame
+python3 examples/deep-ch19-23-models.py 20</code></pre>
+<p>真实 C 程序以 <code>socketpair(AF_UNIX, SOCK_STREAM)</code> 校验相同的字节流解析契约；它<strong>不是 TCP 的网络分段测量</strong>。HTTP/1.1 的消息定界还必须遵守首部、状态码、<code>Content-Length</code>、<code>Transfer-Encoding</code> 的具体优先和错误规则，不能把这套自定义 4 字节长度直接当成 HTTP 协议。参考 <a href="https://www.rfc-editor.org/rfc/rfc9112.html">RFC 9112 §6</a>及 <a href="https://man7.org/linux/man-pages/man7/tcp.7.html">tcp(7)</a>。</p></section>
+
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 20</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="21.html"><small>延伸到第 21 章</small><span>流式协议如何支持并发服务？</span><b aria-hidden="true">↗</b></a><a href="26.html"><small>延伸到第 26 章</small><span>代理为什么不能依赖单次 read？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article></main>
 <script>
