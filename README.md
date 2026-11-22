@@ -110,6 +110,25 @@ for mode in short-read frame readiness mutex queue; do /tmp/deep-io "$mode"; don
 
 来源、适用条件和不可推广的结论见 [19–23 专项复核账本](docs/evidence/19-23-deep-review.md)。Chromium QA 对 5 章 × 1440/390/360px 检查 SVG、旧交互、焦点、整页溢出与打印可见性；是否通过应以工作流实际结果为准。
 
+## 24–28 章：从 Lab 到综合服务器的第三轮深度推演
+
+这 5 篇章节在保留原有章节、源码和交互的基础上，各新增一组<strong>有输入、状态、推导与失败边界</strong>的深度讲解和原创 SVG：
+
+- [24 Lab 容量契约](24.html#deep-24)：写入长度 `N` 与容量 `C` 的不变量 `N ≤ C−1`、数组退化为指针后 `sizeof` 失效、`size_t` 乘法回绕检查。
+- [25 状态不变量](25.html#deep-25)：教学缓存 `s=1,E=1,b=3` 对四次访问得到 `hit 1 / miss 3 / eviction 1`，以及相邻空闲块的即时合并。
+- [26 HTTP/1.1 报文定界](26.html#deep-26)：`Content-Length`、`chunked` 与“读到关闭”三种定界，短读重组、流水线拆包与截断不交付。
+- [27 RV64I 字段解码](27.html#deep-27)：`add x10,x11,x12 → 0x00C58533`、`ld x5,8(x6) → 0x00833283` 与 12 位立即数符号扩展。
+- [28 非阻塞游标](28.html#deep-28)：输入/输出双游标、短写从 `out_offset` 继续、`EAGAIN` 与代际号丢弃陈旧事件。
+
+验证只使用纯标准库的确定性模型，不需要外部网络：
+
+```bash
+python3 examples/deep-ch24-28-models.py all   # 断言 24:ok … 28:ok
+python3 examples/deep-ch24-28-models.py 26    # 仅检查报文定界模型
+```
+
+来源、适用条件和不能外推的结论见 [24–28 深度复核账本](docs/evidence/24-28-deep-review.md)。这些页面使用本地 Chromium 在 1440/390/360 像素下检查图像渲染、横向溢出、JS 报错与交互；未新增独立的 CI 工作流，实际结果以本仓 `npm test` 与账本记录为准。
+
 ## 13–18 章：从 ELF 到内存分配的第二轮系统推演
 
 这 6 篇章节在保留原有章节、源码和交互的基础上新增了<strong>明确边界的完整推演</strong>和自绘的 SVG 图解：
