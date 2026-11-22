@@ -1,3 +1,16 @@
 .deep-study{clear:both;border:1px solid #d6e3dd;border-top:4px solid #147f80;border-radius:12px;background:#fbfdf9;padding:clamp(16px,3vw,26px);margin:3rem 0 2rem;overflow-wrap:anywhere}.deep-kicker{color:#996537;font:700 .78rem ui-monospace,monospace;letter-spacing:.1em}.deep-study h2{font-family:Georgia,"Songti SC",serif;font-size:clamp(1.35rem,2.25vw,1.8rem);line-height:1.48;color:#24433f}.deep-study h3{font-size:1rem;color:#166d68}.deep-study p,.deep-study li{font-size:1rem;line-height:1.9;color:#304642}.deep-diagram{margin:1.3rem 0;background:#fff;border:1px solid #d8e4dc;border-radius:10px;padding:12px}.deep-diagram img{display:block;width:100%;height:auto}.deep-diagram figcaption{font-size:.88rem;color:#536c64;line-height:1.7;margin-top:10px}.deep-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.deep-grid>div{background:#eef6f0;border:1px solid #d3e6d7;border-radius:8px;padding:12px 15px}.deep-grid p{margin:0}.deep-table{width:100%;border-collapse:collapse;font-size:.9rem}.deep-table th,.deep-table td{border:1px solid #d7e5dc;text-align:left;padding:9px 11px;vertical-align:top}.deep-table th{background:#e8f2ea}.deep-study pre{max-width:100%;overflow-x:auto;background:#203635;color:#eef5ed;padding:15px;border-radius:9px}.deep-study pre code{background:none!important;color:inherit!important;white-space:pre;overflow-wrap:normal}.deep-study code{overflow-wrap:anywhere}.deep-study a{color:#096d71;text-underline-offset:3px}.deep-study :focus-visible{outline:3px solid #197f7a;outline-offset:3px}@media(max-width:650px){.deep-grid{grid-template-columns:1fr}.deep-study{padding:14px 12px}.deep-diagram{padding:5px}.deep-table{display:block;overflow-x:auto}}@media print{.deep-study{break-inside:avoid;background:#fff}.deep-study pre,.deep-study pre code{background:#eee;color:#111}}
 /* Detailed 12-byte and 7-cycle diagrams remain legible on phones: pan the figure, not the whole page. */
 @media(max-width:650px){.deep-diagram{overflow-x:auto;max-width:100%;overscroll-behavior-inline:contain}.deep-diagram img{min-width:720px;width:100%;height:auto}.deep-diagram figcaption{max-width:100%;font-size:.86rem}}
+
+/* Chapter 08–12 legacy .essay table rules demand min-width:570px.
+   New teaching tables scroll within their own bounds on 360/390px screens. */
+@media(max-width:650px){
+  .essay .deep-study{min-width:0;max-width:100%;box-sizing:border-box}
+  .essay .deep-study table.deep-table{
+    display:block;width:100%;max-width:100%;min-width:0;
+    overflow-x:auto;overscroll-behavior-inline:contain;
+    table-layout:auto;
+  }
+  .essay .deep-study .deep-table th,
+  .essay .deep-study .deep-table td{min-width:110px;overflow-wrap:anywhere}
+}
