@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-systems.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳转至正文</a>
@@ -53,7 +54,7 @@
 <header class="chapter-hero"><p class="eyebrow">虚拟内存 / 17</p><h1>两个进程都访问 0x1000，为什么互不干扰？</h1>
 <p class="lede">虚拟地址不是“贴上标签的物理地址”。它是在<strong>当前进程地址空间</strong>中解释的一个位置：页表可以把相同虚拟页映射到不同物理页，也可以让不同进程共享同一物理页。页表提供隔离与共享，TLB 则让这种翻译可高效重复使用。</p>
 <p class="chapter-scope">主线采用 x86-64 的传统 48 位规范虚拟地址、4 KiB 基页、四级页表作教学示例。实际硬件还可能使用五级分页、2 MiB / 1 GiB 大页及其他体系结构的翻译方式。</p></header>
-<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c17-mapping">01 地址映射</a><a href="#c17-walk">02 页表遍历</a><a href="#c17-tlb">03 TLB 的角色</a><a href="#c17-fault">04 缺页是什么</a><a href="#c17-lab">05 地址分解实验</a></nav>
+<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c17-mapping">01 地址映射</a><a href="#c17-walk">02 页表遍历</a><a href="#c17-tlb">03 TLB 的角色</a><a href="#c17-fault">04 缺页是什么</a><a href="#c17-lab">05 地址分解实验</a><a href="#deep-17">06 深度推演</a></nav>
 <section id="c17-mapping"><h2>17.1 相同虚拟页，不代表相同物理页</h2>
 <p>想象进程 A 和 B 都读取虚拟地址 <code>0x1000</code>：页表 A 可以指向物理页框 42，页表 B 可以指向物理页框 91。除非内核显式安排共享映射，它们读到的未必是相同内容。内核还能把部分虚拟页设为不可访问，利用权限位保护内存。</p>
 <figure class="lesson-figure"><img src="chapter-assets/17-process-map.svg" alt="两个进程都使用虚拟页0x1，进程A映射到物理页42，进程B映射到物理页91；共享页通过两张页表映射到同一物理页。" width="880" height="305"><figcaption>图 17-1：地址的意义依赖于<strong>当前地址空间</strong>；需要共享时，两份页表可以故意指向同一物理页。</figcaption></figure>
@@ -109,6 +110,16 @@ int main(void) {
 }</code></pre>
 <p>编译运行：<code>cc -std=c11 -Wall -Wextra -pedantic examples/olah-ch17-vm.c -o vm &amp;&amp; ./vm</code>。更进一步用 <code>sysconf(_SC_PAGESIZE)</code> 查询本机基础页大小，不要假设所有平台都是 4 KiB。</p>
 <div class="exercise"><h3>自测</h3><p>一个有效页表映射对应的虚拟页不在 TLB 中，处理器必须向内核发出 page fault 吗？</p><details><summary>查看答案</summary><p>不必。常见硬件页表遍历能找到有效 PTE 并填充 TLB，之后继续访问；只有映射或权限无法满足时才进入异常处理路径。</p></details></div></section>
+<section class="deep-study" id="deep-17" aria-labelledby="deep-17-title"><p class="deep-kicker">逐步核验 · 17 / SYSTEM MODEL</p><h2 id="deep-17-title">给定一条 48 位地址，四层页表究竟取哪四个索引？</h2><figure class="deep-figure" tabindex="0" role="group" aria-label="可横向滚动的独立图解"><img src="chapter-assets/17-deep.svg" width="960" height="264" loading="lazy" alt="示例虚拟地址 0x00007f123456789a，48位规范地址中 PML4 索引254、PDPT 索引72、PD 索引418、PT 索引359，页内偏移0x89a；假设页表将其映射到页框0x2a7则物理地址0x2a789a。"><figcaption>4 × 9 位索引 + 12 位偏移的可核对字段。模型前提与验证方法详见下文。</figcaption></figure>
+<p>假定 CPU 使用 x86-64 的<strong>四级分页</strong>、48 位规范虚拟地址与 4 KiB 基页。给出一个明确输入 <code>VA = 0x00007f123456789a</code>。页内偏移来自 <code>VA &amp; 0xfff = 0x89a</code>；剩下的有效地址位按每 9 位一组被四层页表用作索引。</p>
+<table class="deep-table"><thead><tr><th>字段</th><th>位范围</th><th>计算</th><th>结果</th></tr></thead><tbody><tr><td>PML4</td><td>47:39</td><td><code>(VA &gt;&gt; 39) &amp; 0x1ff</code></td><td>254</td></tr><tr><td>PDPT</td><td>38:30</td><td><code>(VA &gt;&gt; 30) &amp; 0x1ff</code></td><td>72</td></tr><tr><td>PD</td><td>29:21</td><td><code>(VA &gt;&gt; 21) &amp; 0x1ff</code></td><td>418</td></tr><tr><td>PT</td><td>20:12</td><td><code>(VA &gt;&gt; 12) &amp; 0x1ff</code></td><td>359</td></tr><tr><td>页内偏移</td><td>11:0</td><td><code>VA &amp; 0xfff</code></td><td>0x89a</td></tr></tbody></table>
+<p>以上仅确定<strong>在当前地址空间中要查哪些索引</strong>，不保证其中的页表项存在，更不可能仅凭虚拟地址推导出真实物理页框。为了完整走一遍算术，额外<strong>假设</strong>页表项最终给出物理页框号 <code>PPN = 0x2a7</code>，才有：</p>
+<div class="deep-math"><strong>PA = (0x2a7 &lt;&lt; 12) | 0x89a = 0x2a789a</strong><span>只有映射、权限等检查成功，才能把这个 PA 作为有效翻译结果。</span></div>
+<p>假如 TLB 不命中但有效页表项存在，处理器可以遍历页表并填充 TLB，<strong>无需发生页故障</strong>；如果相应映射尚未建立但允许按需分配，则可能触发可由操作系统处理的缺页；如果地址不属于可访问的有效映射，则可能产生访问错误。CPU 的 TLB miss、缺页异常、磁盘 I/O 是三个不同层面的事件。2 MiB/1 GiB 大页会提前停止遍历；启用 5 级分页时索引层数也不同。</p>
+<pre><code>python3 examples/deep-ch13-18-models.py 17
+# 与浏览器现有地址分解交互独立，不读取物理页映射。</code></pre>
+<p>计算规则可据 <a href="https://www.kernel.org/doc/html/latest/mm/page_tables.html">Linux Kernel Documentation · Page Tables</a> 和 <a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel SDM · IA-32e Paging</a>核对；本例并未通过特权指令观察页表内容。</p></section>
+
 <section id="c17-close"><h2>归纳：分清翻译、缓存与缺页</h2><p>虚拟页定义“进程看到什么”，页表定义“它映射到哪里”，TLB 缓存“近期翻译结果”，缺页异常让内核处理“尚未建立或不允许的访问”。下一章把视角移到 <code>malloc</code> / <code>free</code>：用户态分配器怎样在这些虚拟映射之上管理对象。</p>
 <h3>延伸阅读</h3><p><a href="https://www.kernel.org/doc/html/latest/mm/page_tables.html">Linux Page Tables</a>、<a href="https://man7.org/linux/man-pages/man2/mmap.2.html">mmap(2)</a>、<a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel 软件开发手册</a>；上述教学例子采用四级分页与 4 KiB 基页。</p></section>
 

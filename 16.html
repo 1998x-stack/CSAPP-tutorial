@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-systems.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳转至正文</a>
@@ -54,7 +55,7 @@
 <h1>一个信号到来时，程序停在了哪里？</h1>
 <p class="lede">你按下 <code>Ctrl+C</code> 时，程序并没有主动调用某个“退出函数”。内核向前台进程组发出 <code>SIGINT</code>，进程根据自身的处置方式决定终止、忽略还是运行处理函数。真正困难的是：<strong>通知可能在代码的任何可中断位置到达。</strong></p>
 <p class="chapter-scope">下文采用 POSIX 信号模型和 Linux 行为解释；示例程序按单线程进程编写。信号编号、默认动作和系统调用重启行为不能脱离平台随意类推。</p></header>
-<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c16-route">01 信号的旅程</a><a href="#c16-safe">02 最小处理函数</a><a href="#c16-mask">03 屏蔽与竞争</a><a href="#c16-jump">04 非本地跳转</a><a href="#c16-lab">05 可复现实验</a></nav>
+<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c16-route">01 信号的旅程</a><a href="#c16-safe">02 最小处理函数</a><a href="#c16-mask">03 屏蔽与竞争</a><a href="#c16-jump">04 非本地跳转</a><a href="#c16-lab">05 可复现实验</a><a href="#deep-16">06 深度推演</a></nav>
 <section id="c16-route"><h2>16.1 发送不等于处理：生成、等待、递送</h2>
 <p>把信号看作一个<strong>事件通知</strong>，而不是可靠的消息队列。信号由终端、内核异常、定时器或进程（例如 <code>kill</code>）生成；目标可能立即接收，也可能在被屏蔽时保持<strong>待处理（pending）</strong>。当信号解除屏蔽且可递送，内核才执行对应处置。普通非实时信号多次生成不保证保留次数；实时信号具有不同的排队语义。</p>
 <figure class="lesson-figure"><img src="chapter-assets/16-signal-path.svg" alt="信号生成后进入待处理状态；若被屏蔽则仍待处理；解除屏蔽后按默认、忽略或处理函数的处置进行递送。" width="880" height="300"><figcaption>图 16-1：<strong>生成 → 待处理 → 递送</strong>。被屏蔽表示暂不递送，不等于永久丢弃；普通信号的待处理状态也不是累计计数器。</figcaption></figure>
@@ -160,6 +161,17 @@ int main(void) {
 <p>用 <code>cc -std=c11 -Wall -Wextra -pedantic examples/olah-ch16-signals.c -o signals &amp;&amp; ./signals</code> 运行。标准信号不累计次数；若要传送队列中的多个事件，应选其他同步或消息机制。</p>
 <div class="exercise"><h3>自测</h3><p>如果信号在“检查标志为零”与 <code>pause()</code> 之间被递送，程序为什么可能永久等待？<details><summary>查看推导</summary><p>处理函数已返回，<code>pause()</code> 不会因为过去已经处理的事件立即返回。用 <code>sigprocmask</code> 配合 <code>sigsuspend</code> 才能把解除屏蔽和等待做成一个原子步骤。</p></details></p></div>
 </section>
+<section class="deep-study" id="deep-16" aria-labelledby="deep-16-title"><p class="deep-kicker">逐步核验 · 16 / SYSTEM MODEL</p><h2 id="deep-16-title">为何检查完标志再 pause，仍可能永远醒不过来？</h2><figure class="deep-figure" tabindex="0" role="group" aria-label="可横向滚动的独立图解"><img src="chapter-assets/16-deep.svg" width="960" height="264" loading="lazy" alt="错误方法在检查标志与 pause 之间存在信号送达的空隙。安全方法先屏蔽信号，检查标志后通过 sigsuspend 原子地替换信号屏蔽字并睡眠；待处理信号会唤醒线程。"><figcaption>让解除屏蔽与睡眠成为一个原子步骤。模型前提与验证方法详见下文。</figcaption></figure>
+<p>假设信号处理器只将一个 <code>volatile sig_atomic_t ready</code> 标志置为 1。看似合理的 <code>while (!ready) pause();</code> 实际包含一个无法通过普通源码顺序排除的竞争：主程序刚检查到 <code>ready==0</code>，信号便在执行 <code>pause()</code> <strong>之前</strong>送达；处理器将标志设为 1 后返回，主程序却继续进入 <code>pause()</code>，此时已经没有新的未屏蔽信号能够把它唤醒。</p>
+<table class="deep-table"><thead><tr><th>时刻</th><th>存在竞争的做法</th><th>阻塞 + sigsuspend</th></tr></thead><tbody><tr><td>①</td><td>检查 <code>!ready</code> 为真</td><td>先 <code>sigprocmask(SIG_BLOCK,...)</code></td></tr><tr><td>②</td><td>信号送达；handler 设 <code>ready=1</code></td><td>信号产生但因屏蔽而保持 pending</td></tr><tr><td>③</td><td>调用 <code>pause()</code>，可能无限等待</td><td><code>sigsuspend(&amp;unblocked)</code> 原子替换掩码并等待</td></tr><tr><td>④</td><td>需要额外事件才能醒来</td><td>pending 信号递送；handler 设标志，随后返回循环</td></tr></tbody></table>
+<p><code>sigsuspend</code> 最重要的是<strong>临时换掩码与睡眠的原子性</strong>；当捕获信号的处理器返回时，原先信号掩码自动恢复，再由应用显式恢复进入临界区之前保存的掩码。循环必须重新检查条件，因为无关信号也可能使等待返回。对于传统非实时信号，多次相同信号不保证逐次排队，因此这个标志仅适合通知“至少发生过”，不能充当可靠计数队列。</p>
+<div class="deep-math"><strong>安全顺序：block → 检查标志 → sigsuspend → 重新检查 → restore</strong><span>handler 内只修改 sig_atomic_t；不调用 printf、malloc 或其他未保证 async-signal-safe 的函数。</span></div>
+<pre><code>cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pedantic \
+  examples/deep-ch13-18-posix.c -o /tmp/deep-posix
+/tmp/deep-posix signal
+python3 examples/deep-ch13-18-models.py 16</code></pre>
+<p>仓库 C 示例先屏蔽 <code>SIGUSR1</code>，通过 <code>raise</code> 使它变成 pending，再以 <code>sigsuspend</code> 原子解除屏蔽并唤醒。它<strong>不通过实际挂起程序来“验证错误路径”</strong>，以免演示代码无限阻塞；该示例也不涵盖多线程定向信号分发。接口依据 <a href="https://man7.org/linux/man-pages/man2/sigsuspend.2.html">sigsuspend(2)</a>、<a href="https://man7.org/linux/man-pages/man7/signal-safety.7.html">signal-safety(7)</a>。</p></section>
+
 <section id="c16-close"><h2>归纳：信号只通知，不替你完成同步</h2><p>区分<strong>生成/待处理/递送</strong>，缩短处理函数，并消除检查与等待之间的竞态。下一章进入虚拟地址空间：内核还会通过另一类控制流变化——缺页异常——帮助程序按需获得内存。</p>
 <h3>延伸阅读</h3><p><a href="https://man7.org/linux/man-pages/man7/signal.7.html">signal(7)</a>、<a href="https://man7.org/linux/man-pages/man7/signal-safety.7.html">signal-safety(7)</a>、<a href="https://man7.org/linux/man-pages/man2/sigsuspend.2.html">sigsuspend(2)</a> 与 <a href="https://man7.org/linux/man-pages/man3/longjmp.3.html">longjmp(3)</a>；章节示例限定在 POSIX 单线程情形。</p></section>
 
