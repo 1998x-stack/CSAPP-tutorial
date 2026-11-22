@@ -1,0 +1,37 @@
+name: CSAPP chapters 19–23 causal browser QA
+on:
+  pull_request:
+    paths:
+      - '19.html'
+      - '20.html'
+      - '21.html'
+      - '22.html'
+      - '23.html'
+      - 'deep-io-concurrency.css'
+      - 'chapter-assets/**'
+      - 'scripts/browser-qa-deep-19-23.py'
+      - '.github/workflows/chapters19-23-deep-browser.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Chromium browser
+        run: |
+          python -m pip install playwright==1.65.2
+          python -m playwright install --with-deps chromium
+      - name: Verify 19–23 at three widths
+        run: python scripts/browser-qa-deep-19-23.py --output reports/deep-19-23
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deep-19-23-browser
+          path: reports/deep-19-23
+          if-no-files-found: ignore
