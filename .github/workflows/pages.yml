@@ -9,6 +9,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: read
 
 concurrency:
   group: github-pages
@@ -33,6 +34,30 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+      - name: Wait for Pages artifact to become visible to the API
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # A completed upload can precede Actions artifact index visibility.
+          # Do not retry a whole run after deployment fails: that can create
+          # multiple artifacts with the same name in one run.
+          for attempt in $(seq 1 30); do
+            count="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100" \
+              --jq '[.artifacts[] | select(.name == "github-pages" and .expired == false)] | length')"
+            if [ "$count" = "1" ]; then
+              echo "One github-pages artifact is ready."
+              exit 0
+            fi
+            if [ "$count" -gt 1 ]; then
+              echo "::error::Multiple github-pages artifacts in this run; use a new workflow run."
+              exit 1
+            fi
+            echo "Artifact index not ready (attempt ${attempt}/30); retrying..."
+            sleep 2
+          done
+          echo "::error::Pages artifact did not become queryable within 60 seconds."
+          exit 1
       - uses: actions/deploy-pages@v4
         id: deployment
 
