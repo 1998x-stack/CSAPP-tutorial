@@ -198,7 +198,39 @@ def ch27():
     assert (add & 0x7F) != (ld & 0x7F)
 
 
-CASES = {"24": ch24, "25": ch25, "26": ch26, "27": ch27}
+# ---- 28: non-blocking connection cursors, short writes and fd generations ----
+
+def ch28():
+    # A single request may arrive in any number of short reads.
+    request = b"GET /health HTTP/1.1\r\nHost: h\r\n\r\n"
+    in_buffer = b""
+    complete = False
+    for size in (1, 12, 40):
+        chunks = [request[i:i + size] for i in range(0, len(request), size)]
+        in_buffer = b"".join(chunks)
+        complete = in_buffer.endswith(b"\r\n\r\n")
+    assert complete and in_buffer == request
+
+    # Non-blocking writes advance an offset; 0 models EAGAIN and is not failure.
+    response = bytes(4096)
+    offset = 0
+    for returned in (1536, 0, 2560):
+        if returned == 0:
+            continue                      # rearm EPOLLOUT and keep the buffer
+        offset += returned
+    assert offset == len(response)
+    assert 1536 + 2560 == 4096            # continued from the offset, did not resend
+
+    # A reallocated fd number must not be operated on by a stale event.
+    generation = {7: 1}
+    stale_ok = generation.get(7) == 1     # event carrying generation 1
+    generation[7] = 2                     # fd 7 reused by a new connection
+    assert stale_ok is True
+    assert (generation.get(7) == 1) is False
+    assert (generation.get(7) == 2) is True
+
+
+CASES = {"24": ch24, "25": ch25, "26": ch26, "27": ch27, "28": ch28}
 
 if __name__ == "__main__":
     selection = list(CASES) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]

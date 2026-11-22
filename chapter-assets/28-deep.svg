@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 350" role="img" aria-labelledby="t28 desc28">
+<title id="t28">非阻塞连接的两个游标与事件驱动的状态转换</title>
+<desc id="desc28">一条连接维护两个游标：输入游标记录已接收的请求字节，输出游标记录已发送的响应字节。读就绪时按实际返回量推进输入游标，EAGAIN 时停止等待；写就绪时从输出游标继续推进，短写不会重发开头。当输出游标等于响应长度时响应完成，Keep-Alive 则清空两个游标以复用连接。代际号用于防止陈旧事件操作被重新分配的同一整数 fd。</desc>
+<rect width="960" height="350" rx="15" fill="#f8fbfb"/>
+<text x="22" y="36" font-size="20" font-weight="700" fill="#1f4a52">一条连接的两个游标：输入已收多少、输出已发多少</text>
+<text x="20" y="98" font-size="14" font-weight="700" fill="#1f4a52">请求输入</text>
+<text x="20" y="182" font-size="14" font-weight="700" fill="#1f4a52">响应输出</text>
+<rect x="180" y="72" width="760" height="48" rx="8" fill="#eef4f4" stroke="#bfd7d5"/>
+<rect x="180" y="72" width="418" height="48" rx="8" fill="#bcdedb" stroke="#8fbfba"/>
+<text x="389" y="102" font-size="14" text-anchor="middle" fill="#164a45">已收 in_cursor</text>
+<text x="679" y="102" font-size="14" text-anchor="middle" fill="#2c5257">待收</text>
+<text x="180" y="146" font-size="13" fill="#2c5257">读就绪：in_cursor += n（n 为实际返回字节数）；EAGAIN 时停止并等下一次 EPOLLIN。</text>
+<rect x="180" y="156" width="760" height="48" rx="8" fill="#eef4f4" stroke="#bfd7d5"/>
+<rect x="180" y="156" width="285" height="48" rx="8" fill="#f0e2c6" stroke="#cbb98f"/>
+<text x="322" y="186" font-size="14" text-anchor="middle" fill="#5a4a22">已发 out_offset</text>
+<text x="702" y="186" font-size="14" text-anchor="middle" fill="#2c5257">待发（保持引用）</text>
+<text x="180" y="230" font-size="13" fill="#2c5257">写就绪：out_offset += m（m 为实际发送字节数）；短写后必须从 out_offset 继续，不能重发开头。</text>
+<rect x="22" y="252" width="916" height="80" rx="10" fill="#e9f3f2" stroke="#bfd7d5"/>
+<text x="38" y="278" font-size="14" fill="#2c5257"><tspan font-weight="700" fill="#1f4a52">完成：</tspan>out_offset == 响应长度 → 响应排空；<tspan font-weight="700" fill="#1f4a52">复用：</tspan>Keep-Alive 清空两个游标并重置空闲计时。</text>
+<text x="38" y="302" font-size="14" fill="#2c5257"><tspan font-weight="700" fill="#1f4a52">防护：</tspan>连接带代际号；事件到达时若代际不匹配，说明整数 fd 已被新连接复用，必须丢弃该事件。</text>
+<text x="38" y="324" font-size="14" fill="#2c5257"><tspan font-weight="700" fill="#1f4a52">边界：</tspan>读到 0（EOF）与读到 EAGAIN 是不同状态；一次事件不对应一个完整请求。</text>
+</svg>

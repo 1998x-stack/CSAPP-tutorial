@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-labs.css">
 </head>
 <body class="olah-lesson">
 <a class="skip-link" href="#chapter-main">跳到正文</a>
@@ -57,7 +58,7 @@
 <p class="lede">服务器要管理的是<strong>许多大部分时间都在等待的连接</strong>。如果每个连接占据一个阻塞线程，资源很快耗尽；如果把连接的读写状态交给非阻塞事件循环，则少量执行线程可以复用在众多连接之间。真正难的不是调用一次 <code>epoll_wait</code>，而是让每一次状态转换都正确。</p>
 <p class="chapter-scope">本章是一份 Linux HTTP/1.1 教学服务器的设计与验收指南，不是已交付的生产服务器；“十万连接”和特定 RPS 都只能在指定环境中被测量，不能由架构名称推导。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c28-arch">01 架构边界</a><a href="#c28-state">02 连接状态机</a><a href="#c28-worker">03 线程与背压</a><a href="#c28-http">04 HTTP 语义</a><a href="#c28-bench">05 验收路线</a></nav>
+<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c28-arch">01 架构边界</a><a href="#c28-state">02 连接状态机</a><a href="#c28-worker">03 线程与背压</a><a href="#c28-http">04 HTTP 语义</a><a href="#c28-bench">05 验收路线</a><a href="#deep-28">深入推导</a></nav>
 <section id="c28-arch">
 <h2>28.1 先分清“就绪通知”与“工作已经完成”</h2>
 <p><code>epoll</code> 告诉程序哪些描述符可能可以不阻塞地读写，<strong>不会替你读完报文、解析 HTTP 或发送所有响应</strong>。一个连接可在“读到半个请求头”“等待业务结果”“写缓冲尚未排空”之间移动。现代 Linux 上 <code>epoll</code> 避免了 <code>select</code> 的位图上限，但“复杂度只等于就绪 fd 数”不是所有工作负载下的完整性能公式。</p>
@@ -125,6 +126,23 @@ wrk -t2 -c100 -d30s --latency http://127.0.0.1:8080/health
 </section>
 
 <section id="c28-ownership" class="lesson-extension"><h2>设计审查：谁能读取、写入、关闭一个连接？</h2><p>线程池化的 Reactor 最容易出现的错误，不是某一条系统调用写错，而是两个线程都以为自己拥有同一个连接。应先定义所有权，再谈并发优化。下表是一种教学设计选择，不是唯一实现方案。</p><table><thead><tr><th>对象</th><th>职责</th><th>必须保持的不变量</th></tr></thead><tbody><tr><td>Reactor 事件循环</td><td>监听就绪、管理连接状态与代际标识</td><td>旧事件不能操作重新分配了同一整数 fd 的新连接</td></tr><tr><td>Worker 任务</td><td>处理已界定的请求并生成待发送响应</td><td>不能在尚有使用者时释放共享缓冲或关闭连接</td></tr><tr><td>输出缓冲区</td><td>记录响应字节及已发送偏移量</td><td><code>write</code> 只返回已发送量；剩余字节留待后续可写事件</td></tr><tr><td>关闭流程</td><td>撤销后续使用、处理未完成工作、回收资源</td><td>资源释放必须发生在引用与未完成 I/O 安全结束之后</td></tr></tbody></table><p>思考一次短写：如果响应共有 4096 字节，第一次非阻塞写仅返回 1536，那么下一次可写事件应继续从偏移量 <strong>1536</strong> 发送，不能重发开头，也不能错误地宣称响应已完成。对 <code>EAGAIN</code>、EOF、错误和连接关闭都应定义明确状态转移。</p><div class="extension-track" role="img" aria-label="短写状态进度：准备 4096 字节，首次发送 1536，剩余 2560；再次就绪后从偏移 1536 继续"><span>准备 4096 B</span><strong>→</strong><span>已发送 1536 B</span><strong>→</strong><span>剩余 2560 B 待发送</span></div><p>实际实现中，<code>epoll</code> 的边沿触发模式通常需要按接口约定持续处理到 <code>EAGAIN</code>；这与工作线程的调度和响应完整性是两个需要分别验证的条件。参考 <a href="https://man7.org/linux/man-pages/man7/epoll.7.html">epoll(7)</a>。</p></section>
+
+<section class="deep-study" id="deep-28" aria-labelledby="deep-28-title">
+<p class="deep-kicker">技术深描 · 28 / EVENT-DRIVEN STATE</p>
+<h2 id="deep-28-title">两个游标为何决定正确性？把非阻塞状态机写成可复算的验证</h2>
+<figure class="deep-figure" tabindex="0" role="group" aria-label="可水平查看的因果图"><img src="chapter-assets/28-deep.svg" width="960" height="350" loading="lazy" alt="一条连接维护输入与输出两个游标。读就绪时按实际返回量推进输入游标，EAGAIN 时等下一次 EPOLLIN；写就绪时从输出游标继续推进，短写不重发开头；输出游标等于响应长度才算响应完成；Keep-Alive 则清空两个游标；代际号防止陈旧事件操作被重新分配的同一整数 fd。"><figcaption>状态机只需两个游标和一条完成条件就能描述大部分正确性：<code>in_cursor</code> 记录已收字节，<code>out_offset</code> 记录已发字节。该图是教学模型，不表示任何已实测的吞吐量或延迟。</figcaption></figure>
+<p>“事件就绪”只表示一次读写操作可被尝试，并非保证交付正数字节或完整回复。把这句话写成状态后，非阻塞服务器的正确性就变得可验证：每个事件只做有限步，并保持游标在合法范围内。</p>
+<table class="deep-table"><thead><tr><th>事件/返回值</th><th>含义（不是猜测）</th><th>动作</th></tr></thead><tbody>
+<tr><td>读返回 n &gt; 0</td><td>收到了 n 个新字节</td><td>追加到输入缓冲，复位解析状态机</td></tr>
+<tr><td>读返回 0（EOF）</td><td>对端关闭了发送方向</td><td>结合未完成请求决定结束或关闭写方向</td></tr>
+<tr><td>读/写返回 <code>EAGAIN</code></td><td>当前暂不可继续</td><td>停止本轮，等下一次 <code>EPOLLIN</code> / <code>EPOLLOUT</code></td></tr>
+<tr><td>写返回 m &gt; 0（m &lt; 剩余）</td><td>短写，只发送了 m 字节</td><td><code>out_offset += m</code>；不重发开头，不宣称完成</td></tr>
+<tr><td>陈旧事件</td><td>fd 号已被新连接复用</td><td>代际不匹配则丢弃，不操作新连接</td></tr>
+</tbody></table>
+<div class="deep-math"><strong>0 ≤ in_cursor ≤ 已收；0 ≤ out_offset ≤ len；完成 ⇔ out_offset == len</strong><span>由这两个游标与代际号构成的有限状态机，不允许一次事件无限阻塞其他连接，也不允许把刚收到的一半当作完整请求。</span></div>
+<pre><code>python3 examples/deep-ch24-28-models.py 28</code></pre>
+<p>模型只使用标准库：把一条请求按 1/12/40 字节重组并断言只有以空行结尾时才视为完整；又用 <code>1536, 0, 2560</code> 模拟一次短写加一次 <code>EAGAIN</code> 再加一次写，断言总共发送 4096 字节且没有重发；最后用一个代际号演示旧事件在 fd 被复用后必须被丢弃。依据 <a href="https://man7.org/linux/man-pages/man7/epoll.7.html">epoll(7)</a> 与 RFC 9112 的报文定界规则。这是一个验证不变量的小模型，不提供任何 RPS 或连接数承诺。</p>
+</section>
 
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 28</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="19.html"><small>延伸到第 19 章</small><span>短读短写的状态怎样跨事件保留？</span><b aria-hidden="true">↗</b></a><a href="23.html"><small>延伸到第 23 章</small><span>队列背压与线程池边界如何落实？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article>
