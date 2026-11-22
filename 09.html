@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="从一段 hello.c 出发，理解字节、编译与链接、CPU、存储层次、操作系统抽象和 Amdahl 定律。">
+<meta name="description" content="以 Y86-64 五级流水线为模型，逐周期推导 load-use 停顿、转发、分支处理与精确异常。">
 <link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/09.html">
 <title>第 9 章 · 让五条指令同时向前走 | CSAPP</title>
 <link rel="stylesheet" href="theme.css">
@@ -103,6 +103,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visi
 @media print{body{background:white;font-size:11pt}.book-layout{display:block;box-shadow:none}.book-sidebar,.inline-toc,.trace-grid,.controls,.skip-link{display:none!important}.essay{padding:0}.article-body{max-width:none}.essay section{margin-top:24pt;break-inside:auto}.figure-card,.math-panel,.widget{break-inside:avoid;box-shadow:none}.math-scroll{overflow:visible}.math-scroll math[display=block]{font-size:1.15rem}.references a::after{content:" (" attr(href) ")";font-size:.75em}}
 .essay .figure-card svg{max-width:100%;height:auto}.essay .step-button:focus-visible{outline:3px solid #147f80;outline-offset:3px}.essay .step-button{min-height:45px}.essay .figure-card{overflow-x:auto}@media(max-width:580px){.essay .figure-card figure{min-width:640px}.essay .figure-card svg{min-width:0}}@media print{.essay .widget .trace-grid{display:none}}</style>
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-chapters.css">
 </head>
 <body>
 <a class="skip-link" href="#content">跳转到正文</a>
@@ -176,7 +177,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visi
 <p class="dek">流水线不让一条指令的工作消失，而是让多个指令的不同步骤重叠。理解它，要同时看清时间、依赖与恢复。</p>
 <div class="lede-line" aria-hidden="true"></div>
 <p>第 8 章的 SEQ 在一个较长的周期中完成一条指令。若把这条长组合路径分成五段，中间放入流水线寄存器，我们就能让第二条指令在第一条离开取指后立刻开始。<strong>吞吐率与延迟是不同的问题。</strong></p>
-<nav class="inline-toc" aria-label="本章阅读路径"><a href="#time">时间轴</a><a href="#model">性能模型</a><a href="#hazard">数据依赖</a><a href="#branch">分支恢复</a><a href="#precise">精确状态</a><a href="#practice">动手推演</a></nav>
+<nav class="inline-toc" aria-label="本章阅读路径"><a href="#time">时间轴</a><a href="#model">性能模型</a><a href="#hazard">数据依赖</a><a href="#branch">分支恢复</a><a href="#precise">精确状态</a><a href="#practice">动手推演</a><a href="#deep-09">深入推导</a></nav>
 </header>
 <section id="time" aria-labelledby="time-title"><span class="section-no">01 / TIME</span><h2 id="time-title">为什么五个工位能接连完成任务？</h2>
 <p>CS:APP 的 Y86-64 PIPE 分成五个阶段：<strong>取指 F、译码 D、执行 E、访存 M、写回 W</strong>。同名的 F/D/E/M/W 流水线寄存器保存对应阶段所需的状态；这里没有独立的第六个“PC 更新流水级”。</p>
@@ -248,6 +249,12 @@ assert schedule[(3, "W")] == 8
 assert len(set(schedule[(i, "W")] for i in range(4))) == 4
 print(schedule[(3, "W")])  # 8</code></pre>
 </section>
+<section class="deep-study" id="deep-09" aria-labelledby="deep-09-title"><p class="deep-kicker">技术推导 · 09</p><h2 id="deep-09-title">为什么 ALU 结果可转发，紧邻的 load 仍需一个气泡？</h2><figure class="deep-diagram"><img src="chapter-assets/09-deep.svg" width="960" height="264" loading="lazy" alt="Load–Use 的一周期停顿的三阶段独立推导示意"><figcaption>经典五级 PIPE 时序：load-use 一拍停顿；非所有真实 CPU 都相同。这是明确条件下的教学模型。</figcaption></figure>
+<p>对 Y86-64 PIPE 五级流水线，<code>mrmovq 0(%rdi),%rax</code> 的加载值直到 <strong>Memory 阶段末</strong>才产生。紧随的 <code>addq %rax,%rbx</code> 原本在第 4 个周期进入 Execute，需要在该周期开始使用这个值；即使有转发通路，也无法从尚未完成的存储器读取得到结果。</p>
+<table class="deep-table"><thead><tr><th>指令 / 事件</th><th>周期 1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th></tr></thead><tbody><tr><td>mrmovq load</td><td>F</td><td>D</td><td>E</td><td>M</td><td>W</td><td>—</td><td>—</td></tr><tr><td>addq consumer</td><td>—</td><td>F</td><td>D</td><td>D（停）</td><td>E</td><td>M</td><td>W</td></tr><tr><td>插入气泡</td><td>—</td><td>—</td><td>—</td><td>E bubble</td><td>—</td><td>—</td><td>—</td></tr></tbody></table>
+<p>硬件在第 4 周期<strong>保持 F/D</strong>，同时向 E 注入气泡；下一周期，消费者在 E 阶段使用可转发的已取得值。与此不同，简单 ALU 生产者往往在 E 阶段末就生成 <code>valE</code>，下一条指令可沿旁路获得，未必需要停顿。</p>
+<p>这只是教材 PIPE 的时序模型，不能用来宣称所有 x86 微架构的“load-use 永远多一周期”。真实处理器的多级缓存、乱序执行、访存延迟、调度宽度与依赖链均可能改变观测行为。</p>
+<p>通过 <code>python3 examples/deep-ch05-12.py 09</code> 检查时序的严格先后。交叉验证参照 <a href="https://csapp.cs.cmu.edu/3e/simguide.pdf">CS:APP3e 官方 Y86-64 模拟器指南</a>的 load-use bubble 和转发解释，以及 <a href="https://csapp.cs.cmu.edu/3e/figures.html">第 4 章 PIPE 图目录</a>。</p></section>
 <section id="references" class="references" aria-labelledby="references-title"><span class="section-no">REFERENCES</span><h2 id="references-title">参考与边界</h2>
 <ol><li>Bryant、O'Hallaron，《<a href="https://csapp.cs.cmu.edu/3e/">CS:APP 第三版</a>》第 4 章 §§4.4–4.5，PIPE 五级结构、转发与控制逻辑。</li>
 <li>CS:APP 官方<a href="https://csapp.cs.cmu.edu/3e/figures.html">图目录</a>，图 4.35 起的流水线时序与后续 PIPE 图。</li>
