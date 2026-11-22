@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-io-concurrency.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳转至正文</a>
@@ -55,7 +56,7 @@
 <p class="lede">迭代服务器的问题不是“没有 while 循环”，而是等待一个客户端时不能及时处理另一个客户端。我们用进程隔离、CGI 标准接口和 I/O 就绪通知三种视角，拆开“并发”背后的成本与边界。</p>
 <p class="chapter-scope">示例以 Unix/Linux 与 HTTP/1.1 为语境；CGI 是历史上重要的接口，不应直接等同于当前的应用服务器部署规范。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章导览"><strong>阅读路线</strong><a href="#c21-models">服务模型</a><a href="#c21-fork">进程回收</a><a href="#c21-cgi">CGI</a><a href="#c21-select">多路复用</a><a href="#c21-tools">排错工具</a><a href="#c21-lab">实验与自测</a></nav>
+<nav class="chapter-toc" aria-label="本章导览"><strong>阅读路线</strong><a href="#c21-models">服务模型</a><a href="#c21-fork">进程回收</a><a href="#c21-cgi">CGI</a><a href="#c21-select">多路复用</a><a href="#c21-tools">排错工具</a><a href="#c21-lab">实验与自测</a><a href="#deep-21">深入推导</a></nav>
 <section id="c21-models"><h2>21.1 三种处理方式：让等待不再串行传播</h2>
 <p>迭代服务器在处理 A 的阻塞读取期间，通常无法及时服务 B；<code>fork-per-client</code> 为每个连接创建子进程，能够把处理逻辑隔离开；一个事件循环则在多个 fd 中等待<strong>就绪事件</strong>，只处理当前可推进的操作。并发不代表没有等待，而是等待的组织方式不同。</p>
 <figure class="lesson-figure"><img src="chapter-assets/21-server-models.svg" width="920" height="285" alt="迭代模型中 A 的等待挡住 B；多进程模型中 A、B 分别处理；事件循环在 A 等待时可处理 B 的就绪事件。"><figcaption>图 21-1：模型没有绝对优劣。连接数、工作负载、隔离要求、进程/线程成本决定选型。</figcaption></figure>
@@ -147,6 +148,16 @@ strace -e trace=network ./server</code></pre>
 <div class="exercise"><p>对客户端 B 的 fd，<code>select</code> 返回“可读”。随后一次 <code>read</code> 返回 0。该把这次事件解释成收到一条空的业务消息，还是连接状态变化？对于 <code>read</code> 返回正数但消息未读完又怎么办？</p><details><summary>查看推导</summary><p>流式 TCP 上 <code>read</code> 返回 0 一般表示对端已进行有序关闭；应按协议与状态机处理并释放资源，而非自动构造空消息。正数短读则累计数据，等待其余部分满足分帧条件后再交给解析器。</p></details></div>
 <h3>资料与边界</h3><p><a href="https://www.rfc-editor.org/rfc/rfc3875.html">RFC 3875（CGI/1.1）</a> 规定服务器/脚本的职责；<a href="https://man7.org/linux/man-pages/man2/select.2.html">select(2)</a> 与 <a href="https://man7.org/linux/man-pages/man7/epoll.7.html">epoll(7)</a> 描述事件通知；<a href="https://man7.org/linux/man-pages/man2/waitpid.2.html">waitpid(2)</a> 解释子进程回收。下一章将把共享状态与线程同步加入并发模型。</p>
 </section>
+<section class="deep-study" id="deep-21" aria-labelledby="deep-21-title"><p class="deep-kicker">技术深描 · 21 / TRACE</p><h2 id="deep-21-title">可读事件来了，却 read() == 0：这究竟是错误还是正常？</h2><figure class="deep-figure" tabindex="0" role="group" aria-label="可滚动技术图解"><img src="chapter-assets/21-deep.svg" width="960" height="266" loading="lazy" alt="管道写端关闭后，poll 显示读端有事件可处理，read 返回0表示 EOF。网络 socket 场景还需要处理就绪之后的 EAGAIN、正数短读、半关闭和缓冲区状态。"><figcaption>就绪是许可尝试，不是完成保证。该图展示机制，不代表真实网络封包或基准测量。</figcaption></figure>
+<p>一个事件循环并不是一遍遍猜“谁可能有数据”，而是等待内核报告<strong>哪些文件描述符有值得尝试的操作</strong>。但“可读”只说明这次可以试着读，并不承诺读到正数，更不承诺已经收到整个 HTTP 请求。对于一个写端已经关闭、读端无剩余数据的管道，<code>poll</code> 可报告读端有可处理事件，随后的 <code>read</code> 返回 0 —— 这是预期的 EOF。</p>
+<table class="deep-table"><thead><tr><th>事件循环观察</th><th>下一步</th><th>原因</th></tr></thead><tbody><tr><td>可读 + <code>n &gt; 0</code></td><td>追加输入缓冲，尽可能解析完整记录</td><td>不假设一次读完成记录</td></tr><tr><td>可读 + <code>n == 0</code></td><td>处理输入方向 EOF；可能需要先送完回应再关闭</td><td>TCP 半关闭时读 EOF 不等于写侧必须立刻关闭</td></tr><tr><td>读/写返回 <code>EAGAIN</code></td><td>保留状态并等待后续就绪</td><td>竞态或非阻塞缓冲状态可能变化</td></tr><tr><td>可写 + 部分成功</td><td>更新发送游标与剩余字节数</td><td>可写也不保证完整发送</td></tr></tbody></table>
+<p>因此应当把每条连接建模为显式状态机，例如 <code>READ_HEADER → READ_BODY → PROCESS → WRITE_PENDING → CLOSE</code>，并分别保存输入长度、预期正文长度、输出游标、超时预算。<strong>CPU 密集任务不应直接长时间霸占事件循环</strong>；移交工作线程也需明确连接状态与缓冲区的所有权。</p>
+<div class="deep-math"><strong>就绪通知 + 非阻塞操作 + 状态记录 = 可继续推进的事件循环</strong><span>每次回调可设置读写预算以避免单条繁忙连接饿死其他连接。</span></div>
+<pre><code>cc -std=c11 -Wall -Wextra -Werror -pedantic -pthread examples/deep-ch19-23.c -o /tmp/deep-io
+/tmp/deep-io readiness
+python3 examples/deep-ch19-23-models.py 21</code></pre>
+<p>C 程序使用 <code>poll</code> 观察已关闭写端的管道，随后确认 <code>read=0</code>。这是一项可复现的 POSIX 就绪实验，并非真实 HTTP 服务器的性能测试。依据 <a href="https://man7.org/linux/man-pages/man2/poll.2.html">poll(2)</a>、<a href="https://man7.org/linux/man-pages/man7/epoll.7.html">epoll(7)</a>；继续参考 <a href="28.html">第 28 章的非阻塞写与连接所有权</a>。</p></section>
+
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 21</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="22.html"><small>延伸到第 22 章</small><span>线程怎样改变服务器并发模型？</span><b aria-hidden="true">↗</b></a><a href="28.html"><small>延伸到第 28 章</small><span>就绪事件如何驱动连接状态机？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article></main>
 <script>

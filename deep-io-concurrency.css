@@ -1,0 +1,21 @@
+/* Independent, source-backed IO and concurrency deep dives, 19–23. */
+.deep-study{clear:both;margin:3.1rem 0 2rem;padding:clamp(16px,3vw,26px);max-width:100%;min-width:0;box-sizing:border-box;border:1px solid #d5e4db;border-top:4px solid #147f80;border-radius:12px;background:#fbfdf9;overflow-wrap:anywhere}
+.deep-kicker{font:750 .76rem/1.5 ui-monospace,monospace;color:#965f37;letter-spacing:.1em}
+.deep-study h2{font-family:Georgia,"Songti SC",serif;font-size:clamp(1.35rem,2.5vw,1.9rem);line-height:1.5;color:#234b46}
+.deep-study p,.deep-study li{font-size:1rem;line-height:1.87;color:#2c4942}
+.deep-study code{overflow-wrap:anywhere}
+.deep-figure{box-sizing:border-box;display:block;max-width:100%;overflow-x:auto;background:white;border:1px solid #d9e7de;border-radius:10px;padding:10px;margin:1.35rem 0;overscroll-behavior-inline:contain}
+.deep-figure img{display:block;width:100%;height:auto;max-width:none;min-width:700px}
+.deep-figure figcaption{font-size:.86rem;line-height:1.74;color:#537369;margin-top:10px}
+.deep-study .deep-table{display:block;width:100%;max-width:100%;min-width:0;overflow-x:auto;border-collapse:collapse;font-size:.9rem}
+.deep-study .deep-table th,.deep-study .deep-table td{border:1px solid #d7e5db;padding:9px 12px;vertical-align:top;text-align:left;min-width:120px}
+.deep-study .deep-table th{background:#e6f1e9;color:#246057}
+.deep-study .deep-math{display:grid;gap:8px;padding:14px 17px;border-left:4px solid #147f80;background:#e9f3ed;border-radius:0 9px 9px 0}
+.deep-math strong{font:750 1rem/1.85 ui-monospace,monospace;color:#1a5a50}
+.deep-math span{font-size:.88rem;color:#516f65}
+.deep-study pre{display:block;max-width:100%;box-sizing:border-box;overflow-x:auto;padding:16px;background:#203b39;color:#f1faf3;border-radius:10px;font-size:.86rem;line-height:1.75}
+.deep-study pre code{white-space:pre;color:inherit!important;background:none!important;overflow-wrap:normal}
+.deep-study a{color:#08767a;text-decoration-thickness:1px;text-underline-offset:3px}
+.deep-study :focus-visible{outline:3px solid #147f80;outline-offset:3px}
+@media(max-width:650px){.deep-study{padding:13px 10px;margin:2rem 0}.deep-figure{padding:6px}.deep-figure img{min-width:760px}.deep-study .deep-table{display:block;overflow-x:auto;min-width:0}.deep-study .deep-table th,.deep-study .deep-table td{min-width:125px}}
+@media print{.deep-study{background:white}.deep-figure{overflow:visible}.deep-figure img{min-width:0;max-width:100%}.deep-study pre{background:#eee;color:#111;white-space:pre-wrap}.deep-study pre code{color:#111!important}}

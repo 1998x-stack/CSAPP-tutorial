@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-io-concurrency.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳转至正文</a>
@@ -55,7 +56,7 @@
 <p class="lede">一个 <code>read()</code> 读到的不是“一个完整消息”，<code>dup2()</code> 也没有复制文件内容。沿着“描述符 → 打开文件描述 → 文件”这条路径，我们把 Unix I/O、重定向、缓冲和短读写串成一个可检查的模型。</p>
 <p class="chapter-scope">阅读前提：了解进程和基本 C 语法；本章示例以 POSIX / Linux 为语境，不把所有设备等同于普通磁盘文件。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章导览"><strong>阅读路线</strong><a href="#c19-model">文件描述符</a><a href="#c19-syscall">短读写</a><a href="#c19-dup">重定向</a><a href="#c19-buffer">stdio 缓冲</a><a href="#c19-rio">RIO</a><a href="#c19-lab">实验与自测</a></nav>
+<nav class="chapter-toc" aria-label="本章导览"><strong>阅读路线</strong><a href="#c19-model">文件描述符</a><a href="#c19-syscall">短读写</a><a href="#c19-dup">重定向</a><a href="#c19-buffer">stdio 缓冲</a><a href="#c19-rio">RIO</a><a href="#c19-lab">实验与自测</a><a href="#deep-19">深入推导</a></nav>
 <section id="c19-model"><h2>19.1 描述符不是文件：先看三层映射</h2>
 <p>进程看见的文件描述符（fd）只是一个小整数。内核通过<strong>进程的描述符表</strong>找到一个打开文件描述（open file description），其中保存文件偏移量和文件状态标志，再指向文件对象。<code>open()</code> 通常创建新的打开文件描述；<code>dup()</code> / <code>dup2()</code> 则让两个 fd 指向<strong>同一个</strong>打开文件描述。</p>
 <figure class="lesson-figure"><img src="chapter-assets/19-fd-map.svg" width="920" height="284" alt="fd 3 与 fd 4 均指向同一个打开文件描述和同一个文件，另一个 open 创建独立的打开文件描述。"><figcaption>图 19-1：共享与否的关键不是 fd 数值，而是它们是否指向同一条“打开文件描述”。</figcaption></figure>
@@ -140,6 +141,16 @@ ssize_t readn(int fd, void *dest, size_t count) {
 <div class="exercise"><p>先 <code>fd1 = open("a", O_RDONLY)</code>，随后 <code>fd2 = dup(fd1)</code>；<code>read(fd1, b, 3)</code> 成功返回 3。接下来对 fd2 读取从哪个位置开始？如果把 <code>dup</code> 改成第二次 <code>open</code> 又怎样？</p><details><summary>查看推导</summary><p><code>dup</code> 后两个描述符指向同一打开文件描述，所以 fd2 从偏移量 3 继续；独立 <code>open</code> 通常从偏移量 0 开始。这里假设普通可定位文件且没有其他进程或线程改变偏移量。</p></details></div>
 <h3>资料与适用范围</h3><p>更多接口细节见 <a href="https://man7.org/linux/man-pages/man2/open.2.html">open(2)</a>、<a href="https://man7.org/linux/man-pages/man2/read.2.html">read(2)</a>、<a href="https://man7.org/linux/man-pages/man2/write.2.html">write(2)</a> 和 <a href="https://man7.org/linux/man-pages/man2/dup.2.html">dup(2)</a>；本章以 <a href="https://csapp.cs.cmu.edu/3e/students.html">CS:APP 3e</a> 的系统级 I/O 教学范围为起点。系统调用、文件系统和标准 I/O 实现的细节应以运行平台为准。</p>
 </section>
+<section class="deep-study" id="deep-19" aria-labelledby="deep-19-title"><p class="deep-kicker">技术深描 · 19 / TRACE</p><h2 id="deep-19-title">read(7) 为什么只返回 3？短读、EOF 和 EINTR 如何分开处理？</h2><figure class="deep-figure" tabindex="0" role="group" aria-label="可滚动技术图解"><img src="chapter-assets/19-deep.svg" width="960" height="266" loading="lazy" alt="管道发送端写入 ABC 三字节然后关闭。接收端请求读七字节，实际得到三字节 ABC；第二次读取返回零表示 EOF。读到正数、零、-1 是不同事件。"><figcaption>一次请求七字节，只交付三字节。该图展示机制，不代表真实网络封包或基准测量。</figcaption></figure>
+<p>当调用 <code>read(fd, buf, 7)</code>，<code>7</code> 只是<strong>上限</strong>，并不是内核保证填满的长度。构造一个确定性输入：管道写端先写 <code>ABC</code>（3 字节），然后关闭；接收端第一次要求最多 7 字节，得到正数 3 和字符 <code>ABC</code>；第二次读返回 0，表示写端全都关闭且缓冲数据耗尽。这个实验不涉及网络、不依赖 TCP 报文分段，也不依赖调度先后。</p>
+<table class="deep-table"><thead><tr><th>返回情况</th><th>含义</th><th>应用应做什么</th></tr></thead><tbody><tr><td><code>n &gt; 0</code></td><td>本次交付了 n 字节，可能小于 count</td><td>累计偏移、继续解析或按业务结束</td></tr><tr><td><code>n == 0</code></td><td>普通流中表示已读到 EOF；零长度请求另当别论</td><td>根据协议判断是否提前截断，勿死循环</td></tr><tr><td><code>n == -1 &amp;&amp; errno == EINTR</code></td><td>在交付数据前被信号打断</td><td>按调用契约和取消策略重试</td></tr><tr><td><code>n == -1 &amp;&amp; (EAGAIN/EWOULDBLOCK)</code></td><td>非阻塞操作当前不能继续</td><td>等待下一次就绪，不忙循环</td></tr></tbody></table>
+<p>写端也必须检查 <code>write</code> 的返回值：一次写入可能只接受一部分字节。要发送完整缓冲区，通常应保存<strong>尚未发送部分的起始偏移</strong>；注意处理 <code>EINTR</code>、非阻塞 <code>EAGAIN</code> 和错误，并避免在未约定的情况下重放已成功写入的前缀。</p>
+<div class="deep-math"><strong>剩余待处理字节 = 原始长度 − 已成功累计字节数</strong><span>例：目标 7 B，首次得到 3 B，剩 4 B；但流在下一次读时出现 EOF，则“7 B 应用记录”不完整。</span></div>
+<pre><code>cc -std=c11 -Wall -Wextra -Werror -pedantic -pthread examples/deep-ch19-23.c -o /tmp/deep-io
+/tmp/deep-io short-read
+python3 examples/deep-ch19-23-models.py 19</code></pre>
+<p>这份 C 程序使用匿名管道验证<strong>短读 + EOF</strong>，不是制造未定义的网络时序。规则依据 <a href="https://man7.org/linux/man-pages/man2/read.2.html">read(2)</a>、<a href="https://man7.org/linux/man-pages/man2/write.2.html">write(2)</a>；下一章再把流上的字节转为有明确定界的应用记录。</p></section>
+
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 19</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="20.html"><small>延伸到第 20 章</small><span>文件描述符如何扩展为 socket？</span><b aria-hidden="true">↗</b></a><a href="28.html"><small>延伸到第 28 章</small><span>非阻塞 I/O 如何保持发送进度？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article></main>
 <script>
