@@ -1,0 +1,38 @@
+name: CSAPP chapters 13–18 causal browser QA
+on:
+  pull_request:
+    paths:
+      - '13.html'
+      - '14.html'
+      - '15.html'
+      - '16.html'
+      - '17.html'
+      - '18.html'
+      - 'deep-systems.css'
+      - 'chapter-assets/**'
+      - 'scripts/browser-qa-systems-13-18.py'
+      - '.github/workflows/chapters13-18-browser.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright and Chromium
+        run: |
+          python -m pip install playwright==1.65.2
+          python -m playwright install --with-deps chromium
+      - name: Inspect all 6 chapters at desktop and phone widths
+        run: python scripts/browser-qa-systems-13-18.py --output reports/systems-13-18
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: chapters-13-18-browser
+          path: reports/systems-13-18
+          if-no-files-found: ignore
