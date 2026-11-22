@@ -89,6 +89,19 @@
 | [27 · 现代系统新趋势](27.html) | RISC-V开放指令集、GPU异构计算CUDA |
 | [28 · 综合项目：手写高性能Web服务器](28.html) | epoll事件驱动架构、线程池+任务队列 |
 
+## 05–12 章：逐步推演与可执行自检
+
+第 05–12 章各增加一篇独立的深度推导和一张可访问的 SVG 因果图：条件码与 signed/unsigned 分支、System V 栈对齐、结构体 padding、Y86-64 存储指令、load-use 停顿、CPE 两种理论下界、Cache/TLB 工作集以及缓存相联度冲突。
+
+每章直接在网页中解释输入、变换、状态、结果和适用边界，并提供不依赖第三方库的可执行验证脚本：
+
+```bash
+python3 examples/deep-ch05-12.py all   # 运行八章的确定性断言
+python3 examples/deep-ch05-12.py 09    # 仅检查流水线时序
+```
+
+这些脚本验证数学/状态模型，不会伪装成真实硬件性能实验。核验清单和技术来源见 [05–12 深度复核记录](docs/evidence/05-12-deep-review.md)。
+
 ## 在本地验证与构建
 
 依赖：**Node.js 22+、Python 3.10+、C11 编译器（GCC/Clang）**。常规静态构建不需要安装 npm 包。
