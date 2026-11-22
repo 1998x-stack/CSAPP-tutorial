@@ -2,10 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>第13章 链接——静态链接 — 深入理解计算机系统（CSAPP）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="CSAPP 中文实践教程第 13 章 · 链接——静态链接。从「第十三章：链接——静态链接」出发，理解原理、图解、实验及适用边界。">
+<link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/13.html">
+<title>第13章 链接——静态链接 — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="chapter-olah.css">
+<link rel="stylesheet" href="course-improvements.css">
 </head>
 <body class="chapter-refined">
 <a class="skip-link" href="#content">跳转至正文</a>
@@ -45,15 +48,8 @@
         </ul>
     </div>
     <div class="main-content"><main id="content"><article class="chapter-olah">
-<h1>第十三章：链接——静态链接</h1>
-
-        <p>在第一章的计算机系统漫游中，我提到过 C 程序变成可执行文件需要经过四个阶段：预处理、编译、汇编、链接。前三步我们已经在第 2 到第 7 章（信息的表示、机器级表示）中有了深入的理解。但链接——这个将多个目标文件"粘合"成最终可执行文件的步骤——往往被当作"黑盒子"对待。</p>
-
-        <p>实际上，链接过程中隐藏着大量容易踩坑的地方。你有没有遇到过这样的场景：明明在头文件里声明了一个全局变量，链接时报"undefined reference"；或者更诡异的——改了某个全局变量的值，结果程序莫名其妙崩溃了。这些问题很可能出在链接阶段。</p>
-
-        <p>这一章我们要打开链接器的"黑盒子"，深入理解 ELF 文件格式、符号解析和重定位的过程。这不仅是知识层面的"补课"，更是在实战中少踩坑的保障。</p>
-
-        
+<h1>链接器如何把未定义的名字变成可执行地址？</h1>
+<p>两个源文件分别定义 <code>main()</code> 和 <code>sum()</code>。编译成 <code>.o</code> 后，调用方仍不知道 <code>sum</code> 最终位于哪个地址；因此目标文件留下符号引用和重定位项。链接器必须找到定义、决定布局，再修正相关引用，才能生成可执行文件。</p><p>这不是简单拼接字节：ELF 的节、符号表、静态库提取规则和重定位类型共同约束链接结果。下面从可观察的工具输出出发，解释为什么有时会看到 <code>undefined reference</code>，为什么链接顺序会改变静态库解析结果，以及怎样自行验证。</p>
 <p class="chapter-eyebrow">ELF · 符号解析 · 重定位</p>
 <p class="dek">链接器不是把二进制简单拼起来：它要证明每个引用找得到定义，并把「不知道地址」变成「可执行的地址」。</p>
 <nav class="chapter-map" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c13-elf">目标文件</a><a href="#c13-symbols">符号</a><a href="#c13-archive">静态库</a><a href="#c13-weak">强弱符号</a><a href="#c13-reloc">重定位</a><a href="#c13-practice">动手验证</a></nav>
@@ -289,7 +285,9 @@ $ cc ./libarith.a main.o -o bad     # 常见 GNU ld 单次扫描行为下失败<
             <a href="index.html">📖 返回目录</a>
             <a href="14.html">下一章 →</a>
         </div>
-    </article></main></div>
+    
+<aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 13</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="14.html"><small>延伸到第 14 章</small><span>动态链接如何推迟地址绑定？</span><b aria-hidden="true">↗</b></a><a href="15.html"><small>延伸到第 15 章</small><span>链接后的程序怎样进入执行？</span><b aria-hidden="true">↗</b></a></div></aside>
+</article></main></div>
 </div>
 </div>
 <script>

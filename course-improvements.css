@@ -1,0 +1,30 @@
+/* Site-wide progressive reading enhancements. Works without JavaScript. */
+.site-topic-toc{display:flex;flex-wrap:wrap;gap:.55rem .85rem;align-items:baseline;padding:1.1rem 0;border-top:1px solid #dbe5df;border-bottom:1px solid #dbe5df;margin:1.4rem 0 2rem;font-size:.84rem}
+.site-topic-toc strong{color:#315e5c;margin-right:.4rem;font-weight:800;white-space:nowrap}
+.site-topic-toc a{color:#146f6d;text-decoration:none;border-bottom:1px solid #a5c8bd;padding:3px 0}
+.site-topic-toc a:hover{color:#0d4948;border-color:currentColor}
+.concept-bridge{clear:both;margin:3.5rem 0 2.2rem;padding:1.4rem clamp(1rem,3.2vw,1.8rem);border:1px solid #d5e5df;border-radius:13px;background:#f4f8f4;color:#234541}
+.concept-bridge-kicker{margin:0 0 .4rem!important;font:800 .73rem/1.5 ui-monospace,monospace!important;letter-spacing:.12em;text-transform:uppercase;color:#a06a37!important}
+.concept-bridge h2{font-family:Georgia,"Songti SC",serif;font-size:1.5rem;line-height:1.45;margin:0 0 .55rem;color:#194943}
+.concept-bridge-intro{margin:.35rem 0 1.1rem!important;color:#516b61!important;font-size:.94rem!important;line-height:1.7!important}
+.concept-bridge-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+.concept-bridge-links a{position:relative;display:flex;flex-direction:column;gap:.3rem;min-width:0;background:#fff;border:1px solid #dbe8df;border-radius:9px;text-decoration:none;padding:1rem 2rem 1rem 1rem;color:#1a5a57!important}
+.concept-bridge-links a:hover{border-color:#76a99b;background:#fbfffc}
+.concept-bridge-links small{font-size:.76rem;color:#697f75}
+.concept-bridge-links span{font-size:.96rem;line-height:1.6;font-weight:650}
+.concept-bridge-links b{position:absolute;right:.8rem;bottom:.85rem}
+.lesson-extension{margin:2.5rem 0;padding:1.25rem clamp(1rem,3vw,1.6rem);background:#fbf9f2;border:1px solid #e9dfc9;border-left:4px solid #b47735;border-radius:11px}
+.lesson-extension h2{font-family:Georgia,"Songti SC",serif;font-size:1.45rem;line-height:1.5}
+.lesson-extension p{line-height:1.82}
+.lesson-extension pre{max-width:100%;overflow-x:auto}
+.extension-compare{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem;margin:1rem 0}
+.extension-compare>div{border:1px solid #d7e5dc;background:#fff;border-radius:9px;padding:.75rem 1rem}
+.extension-compare p{margin:.3rem 0 0}
+.extension-track{display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:1rem;margin:1rem 0;border:1px solid #d7e5dc;background:#fff;border-radius:9px}
+.extension-track span{background:#e2f1e9;padding:8px 11px;border-radius:7px;color:#17645e}
+.extension-track strong{color:#ad6b2b}
+.site-topic-toc a:focus-visible,.concept-bridge a:focus-visible{outline:3px solid #197e78;outline-offset:3px}
+@media(max-width:760px){.concept-bridge-links,.extension-compare{grid-template-columns:1fr}.concept-bridge{margin-block:2rem}.site-topic-toc{gap:.35rem .75rem}}
+/* The 28-link sidebar becomes a horizontally scrollable chapter rail on narrow screens. */
+@media(max-width:900px){body.olah-lesson .sidebar{max-height:none!important;overflow:visible!important}body.olah-lesson .sidebar .chapter-list{display:flex!important;columns:auto!important;gap:.4rem;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:thin;padding-bottom:.4rem}body.olah-lesson .sidebar .chapter-list li{flex:0 0 auto}body.olah-lesson .sidebar .chapter-list a{white-space:nowrap;display:block}body.olah-lesson .sidebar .chapter-list a.active{outline:2px solid #73a99c;outline-offset:-2px}}
+@media print{.site-topic-toc{display:none}.concept-bridge{break-inside:avoid;background:#fff;box-shadow:none}.lesson-extension{break-inside:avoid}}

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="从地址位拆解和两路缓存的命中追踪，学习缓存 3C Miss、矩阵访问次序与分块。">
+<link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/12.html">
 <title>第 12 章：Cache 映射与性能 · CSAPP 中文教程</title>
 <link rel="stylesheet" href="theme.css">
 <style>
@@ -108,6 +109,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visi
 .cache-result p{margin:2px 0;font-size:.95rem}
 @media(max-width:580px){.essay .figure-card svg{min-width:620px}.cache-trace{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
+<link rel="stylesheet" href="course-improvements.css">
 </head>
 <body>
 <a class="skip-link" href="#content">跳转到正文</a>
@@ -233,6 +235,8 @@ for (int i = 0; i &lt; N; ++i)
 <div class="callout"><p><strong>带走的模型：</strong>先按块号选择 set，再比较 tag，最后靠 offset 找到数据；组织结构限制了“可能保留什么”，而访问次序决定“是否真的复用它”。</p></div></section>
 <section id="references"><span class="section-no">参考与边界</span><h2>延伸阅读</h2><ol class="references"><li><a href="https://csapp.cs.cmu.edu/3e/">Bryant &amp; O'Hallaron, CS:APP（第 3 版官方站点）</a>，第 6 章 Caches、Writing Cache-Friendly Code。</li><li><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf">ISO C11 committee draft N1570</a>，数组布局与浮点语义。</li><li><a href="https://man7.org/linux/man-pages/man1/perf-stat.1.html">Linux perf-stat(1)</a>，硬件性能事件的计量工具与其局限。</li></ol></section>
 <nav class="footer-nav" aria-label="章节翻页"><a href="11.html">← 上一章</a><a href="index.html">返回目录</a><a href="13.html">下一章 →</a></nav>
+
+<aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 12</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="10.html"><small>延伸到第 10 章</small><span>局部性怎样转化成循环性能？</span><b aria-hidden="true">↗</b></a><a href="25.html"><small>延伸到第 25 章</small><span>如何推导 Cache Lab 的命中与淘汰？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article></main></div>
 <script>
 (() => {

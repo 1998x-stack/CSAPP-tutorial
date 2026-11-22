@@ -2,10 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>第14章 链接——动态链接 — 深入理解计算机系统（CSAPP）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="CSAPP 中文实践教程第 14 章 · 链接——动态链接。从「第十四章：链接——动态链接」出发，理解原理、图解、实验及适用边界。">
+<link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/14.html">
+<title>第14章 链接——动态链接 — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="chapter-olah.css">
+<link rel="stylesheet" href="course-improvements.css">
 </head>
 <body class="chapter-refined">
 <a class="skip-link" href="#content">跳转至正文</a>
@@ -45,13 +48,8 @@
         </ul>
     </div>
     <div class="main-content"><main id="content"><article class="chapter-olah">
-<h1>第十四章：链接——动态链接</h1>
-
-        <p>上一章我们学习了静态链接——链接器把多个 .o 文件和 .a 静态库打包成一个独立的可执行文件。静态链接会把程序实际需要的归档库成员带入可执行文件，因此多个程序可能分别保留库代码。库升级后，已经静态链接进去的代码通常也需要重新链接与部署。</p>
-
-        <p>动态链接（Dynamic Linking）就是来解决这些问题的。它的核心思想是：把链接过程推迟到程序加载时甚至运行时进行。共享库（Shared Library，Linux 上为 .so 文件，Windows 上为 .dll 文件）可以复用磁盘上的库文件，并让多个进程共享只读代码的物理内存页。这一章，我们深入这个机制的核心——看看 GOT、PLT、PIC 这些听起来很高深的概念到底是什么。</p>
-
-        
+<h1>共享库地址不固定，程序为什么仍能调用它？</h1>
+<p>假设一个程序引用共享库里的 <code>puts</code>，系统启动程序时未必知道库最终映射到哪个虚拟地址。位置无关代码、动态重定位与 GOT/PLT 机制使链接时的引用能够在装载或调用阶段得到解析。</p><p>需要区分三件事：<strong>目标文件里的未解析引用</strong>、<strong>运行时加载器的重定位</strong>，以及某些符号绑定策略下的<strong>延迟绑定</strong>。不同架构、链接器选项与安全配置可能改变实际流程；以下以 Linux x86-64 ELF 为主要模型。</p>
 <p class="chapter-eyebrow">共享库 · GOT/PLT · 位置无关代码</p>
 <p class="dek">同一个 <code>puts</code>，编译时不知道它会被映射到哪里，调用却能成功。这背后是「独立确定代码位置」与「晚一点解析符号」的分工。</p>
 <nav class="chapter-map" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c14-motive">为什么共享</a><a href="#c14-plt">GOT / PLT</a><a href="#c14-pic">PIC</a><a href="#c14-preload">插桩</a><a href="#c14-practice">动手验证</a></nav>
@@ -218,7 +216,9 @@ $ LD_PRELOAD=./libtraceputs.so ./hello_puts
             <a href="index.html">📖 返回目录</a>
             <a href="15.html">下一章 →</a>
         </div>
-    </article></main></div>
+    
+<aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 14</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="13.html"><small>延伸到第 13 章</small><span>静态解析与运行时解析差在哪？</span><b aria-hidden="true">↗</b></a><a href="17.html"><small>延伸到第 17 章</small><span>位置无关代码与虚拟地址为何有关？</span><b aria-hidden="true">↗</b></a></div></aside>
+</article></main></div>
 </div>
 </div>
 <script>

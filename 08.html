@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="从一段 hello.c 出发，理解字节、编译与链接、CPU、存储层次、操作系统抽象和 Amdahl 定律。">
+<link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/08.html">
 <title>第 8 章 · CPU 如何读懂一串字节？ | CSAPP</title>
 <link rel="stylesheet" href="theme.css">
 <style>
@@ -101,6 +102,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visi
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important}}
 @media print{body{background:white;font-size:11pt}.book-layout{display:block;box-shadow:none}.book-sidebar,.inline-toc,.trace-grid,.controls,.skip-link{display:none!important}.essay{padding:0}.article-body{max-width:none}.essay section{margin-top:24pt;break-inside:auto}.figure-card,.math-panel,.widget{break-inside:avoid;box-shadow:none}.math-scroll{overflow:visible}.math-scroll math[display=block]{font-size:1.15rem}.references a::after{content:" (" attr(href) ")";font-size:.75em}}
 .essay .figure-card svg{max-width:100%;height:auto}.essay .step-button:focus-visible{outline:3px solid #147f80;outline-offset:3px}.essay .step-button{min-height:45px}.essay .figure-card{overflow-x:auto}@media(max-width:580px){.essay .figure-card figure{min-width:640px}.essay .figure-card svg{min-width:0}}@media print{.essay .widget .trace-grid{display:none}}</style>
+<link rel="stylesheet" href="course-improvements.css">
 </head>
 <body>
 <a class="skip-link" href="#content">跳转到正文</a>
@@ -273,6 +275,8 @@ print(encoded.hex(" "))</code></pre>
 <li><a href="https://riscv.org/specifications/ratified/">RISC-V 已批准规范</a>；本章仅对 ISA 设计原则作定性比较。</li>
 </ol><p class="small-note">本章中的编码与 SEQ 图是自绘简化教学模型；不表示门级电路、路径实测延迟或芯片指标。</p></section>
 <nav class="footer-nav" aria-label="章节导航"><a href="07.html">← 第 7 章</a><a href="index.html">课程目录</a><a href="09.html">第 9 章：流水线 →</a></nav>
+
+<aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 08</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="09.html"><small>延伸到第 09 章</small><span>顺序执行如何演化成流水线？</span><b aria-hidden="true">↗</b></a><a href="27.html"><small>延伸到第 27 章</small><span>真实 ISA 与教学模型有什么边界？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article></main></div>
 <script>
 (function(){
