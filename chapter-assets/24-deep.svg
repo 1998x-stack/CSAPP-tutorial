@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 320" role="img" aria-labelledby="t24 desc24">
+<title id="t24">写入长度与缓冲区容量不一致时的因果链</title>
+<desc id="desc24">四段因果链：字节流长度先未知；容量由 sizeof buf 给出、长度随写入计算；有界判定比较写入长度 N 与容量 C，N 不超过 C 才完整；无检查的越界写入会破坏相邻内存。底部列出容量检查、栈保护、不可执行内存、地址随机化与控制流完整性等互补防御层，任一层都不单独保证安全。</desc>
+<rect width="960" height="320" rx="15" fill="#f8fbfb"/>
+<text x="22" y="36" font-size="20" font-weight="700" fill="#1f4a52">容量契约：为什么“输入看起来短”不是边界</text>
+<rect x="22" y="60" width="200" height="158" rx="11" fill="#e7f2f2" stroke="#bfd7d5"/>
+<text x="36" y="92" font-size="18" font-weight="700" fill="#1f4a52">1. 观察到的事实</text>
+<text x="36" y="122" font-size="14" fill="#2c5257">写入长度 N 先未知</text>
+<text x="36" y="148" font-size="14" fill="#2c5257">字节可能分多次到达</text>
+<text x="36" y="174" font-size="14" fill="#2c5257">行结束符可能缺失</text>
+<rect x="262" y="60" width="200" height="158" rx="11" fill="#f6efe2" stroke="#bfd7d5"/>
+<text x="276" y="92" font-size="18" font-weight="700" fill="#1f4a52">2. 两个量</text>
+<text x="276" y="122" font-size="14" fill="#2c5257">C = sizeof buf</text>
+<text x="276" y="148" font-size="14" fill="#2c5257">N = 想写入的字节数</text>
+<text x="276" y="174" font-size="14" fill="#2c5257">N 的计算本身也可能溢出</text>
+<rect x="502" y="60" width="200" height="158" rx="11" fill="#eceff7" stroke="#bfd7d5"/>
+<text x="516" y="92" font-size="18" font-weight="700" fill="#1f4a52">3. 有界判定</text>
+<text x="516" y="122" font-size="14" fill="#2c5257">N ≤ C：完整放入</text>
+<text x="516" y="148" font-size="14" fill="#2c5257">N == C：截断并清理</text>
+<text x="516" y="174" font-size="14" fill="#2c5257">无判定：不变量失效</text>
+<rect x="742" y="60" width="196" height="158" rx="11" fill="#f3ecef" stroke="#bfd7d5"/>
+<text x="756" y="92" font-size="18" font-weight="700" fill="#1f4a52">4. 后果</text>
+<text x="756" y="122" font-size="14" fill="#2c5257">有界：状态可预测</text>
+<text x="756" y="148" font-size="14" fill="#2c5257">越界：覆盖相邻内存</text>
+<text x="756" y="174" font-size="14" fill="#2c5257">控制流可能被改写</text>
+<path d="M222 139 H256" stroke="#2c8075" stroke-width="2.5"/>
+<path d="M462 139 H496" stroke="#2c8075" stroke-width="2.5"/>
+<path d="M702 139 H736" stroke="#2c8075" stroke-width="2.5"/>
+<path d="M252 139 l-9 -6 v12 z" fill="#2c8075"/>
+<path d="M492 139 l-9 -6 v12 z" fill="#2c8075"/>
+<path d="M732 139 l-9 -6 v12 z" fill="#2c8075"/>
+<rect x="22" y="240" width="916" height="58" rx="10" fill="#e9f3f2" stroke="#bfd7d5"/>
+<text x="38" y="264" font-size="14" font-weight="700" fill="#1f4a52">互补防御层（纵深，不是单点保证）</text>
+<text x="38" y="286" font-size="14" fill="#2c5257">显式容量检查 → 栈保护金丝雀 → 不可执行内存(NX/DEP) → 地址随机化(ASLR) → 控制流完整性(CFI/CET)</text>
+</svg>

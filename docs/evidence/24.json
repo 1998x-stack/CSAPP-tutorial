@@ -83,6 +83,24 @@
       "locator": "Part II mitigations",
       "status": "derived",
       "notes": "未声称 CET 或其他防御可完全消除 ROP。"
+    },
+    {
+      "id": "24-bounds-contract",
+      "claim": "写入长度 N 与目标容量 C 必须满足 N ≤ C（保留结尾时为 N ≤ C−1），且校验与消费必须使用同一 N",
+      "kind": "derived",
+      "source_url": "https://csapp.cs.cmu.edu/3e/attacklab.pdf",
+      "locator": "Target Programs, getbuf 的无边界复制",
+      "status": "derived",
+      "notes": "examples/deep-ch24-28-models.py 24 用固定容量 16 的确定性模型演示完整与截断两态。"
+    },
+    {
+      "id": "24-size-t-overflow",
+      "claim": "长度按“元素个数 × 元素大小”计算时可能在 size_t 中回绕，分配前需先做除法检查",
+      "kind": "language",
+      "source_url": "https://en.cppreference.com/w/c/types/size_t",
+      "locator": "size_t 的无符号回绕语义",
+      "status": "derived",
+      "notes": "该模型断言 checked_mul(2^40, 2^30) 被判定为溢出，而 1024×8 在范围内。"
     }
   ]
 }

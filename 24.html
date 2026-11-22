@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-labs.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳转至正文</a>
@@ -57,7 +58,7 @@
 <p class="lede">会写 C 语言，不代表理解了每个运算符产生什么位、每条机器指令改变了什么状态，或一次不受限写入为什么有危险。三个经典 Lab 刚好把这三层连接起来：<strong>先证明表达式，再解释机器行为，最后识别越界与控制流风险。</strong></p>
 <p class="chapter-scope">本章课程编号 24 不等于原书章节号。实验以 CMU CS:APP 3e 官方 handout 为准；不同教学版本和个人实例的参数与题目可能不同。仅在获授权的教学环境内进行安全实验。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c24-map">01 共同主线</a><a href="#c24-data">02 Data Lab</a><a href="#c24-bomb">03 Bomb Lab</a><a href="#c24-attack">04 Attack Lab</a><a href="#c24-defense">05 防御边界</a><a href="#c24-practice">06 练习</a></nav>
+<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c24-map">01 共同主线</a><a href="#c24-data">02 Data Lab</a><a href="#c24-bomb">03 Bomb Lab</a><a href="#c24-attack">04 Attack Lab</a><a href="#c24-defense">05 防御边界</a><a href="#c24-practice">06 练习</a><a href="#deep-24">深入推导</a></nav>
 
 <section id="c24-map">
 <h2>24.1 三个实验，其实在追问同一件事</h2>
@@ -69,7 +70,7 @@
 <section id="c24-data">
 <h2>24.2 Data Lab：运算符少了，为什么理解反而更深？</h2>
 <p>Data Lab 的整数题常限制可用运算符与次数，并规定具体宽度、补码与移位语义。约束让你不能直接用高层运算符“绕过”问题，而必须从真值表推导。例如仅用按位非和按位与表达异或：</p>
-<div class="math-scroll" tabindex="0" role="group" aria-label="异或的布尔等价式">
+<div class="math-scroll" tabindex="0" role="region" aria-label="异或的布尔等价式">
 <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="x 异或 y 等于 非括号 非括号 x 与 非 y 括号 与 非括号 非 x 与 y 括号"><mrow><mi>x</mi><mo>⊕</mo><mi>y</mi><mo>=</mo><mo>¬</mo><mo>(</mo><mo>¬</mo><mo>(</mo><mi>x</mi><mo>∧</mo><mo>¬</mo><mi>y</mi><mo>)</mo><mo>∧</mo><mo>¬</mo><mo>(</mo><mo>¬</mo><mi>x</mi><mo>∧</mo><mi>y</mi><mo>)</mo><mo>)</mo></mrow></math>
 </div>
 <pre><code>/* 可独立编译的 C11 位表达式；unsigned 消除有符号溢出的干扰 */
@@ -132,6 +133,24 @@ if (fgets(buf, sizeof buf, stdin) != NULL) {
 <div class="insight"><strong>带走的模型：</strong>Data Lab 问“位规则能否推导”；Bomb Lab 问“机器状态能否解释”；Attack Lab 问“内存边界被破坏后什么假设失效”。三者把系统编程中的正确性与安全性连接为一条主线。</div>
 <h3>官方资源</h3>
 <p><a href="https://csapp.cs.cmu.edu/3e/labs.html">CMU CS:APP 3e Labs</a>、<a href="https://csapp.cs.cmu.edu/3e/attacklab.pdf">Attack Lab 官方讲义</a>（阶段定义见 Figure 1）、<a href="https://csapp.cs.cmu.edu/3e/students.html">CS:APP 学生资源</a>。应遵循课程许可、实验隔离与提交规定。</p>
+</section>
+
+<section class="deep-study" id="deep-24" aria-labelledby="deep-24-title">
+<p class="deep-kicker">技术深描 · 24 / LAB REASONING LOOP</p>
+<h2 id="deep-24-title">“放得下”到底由哪两个量决定？把安全边界写成一个不变量</h2>
+<figure class="deep-figure" tabindex="0" role="group" aria-label="可水平查看的因果图"><img src="chapter-assets/24-deep.svg" width="960" height="320" loading="lazy" alt="写入长度与缓冲区容量不一致时的四段因果链：长度先未知；容量由 sizeof buf 给出、长度随写入计算；有界判定比较 N 与 C，并区分完整与截断；无检查的越界写入会覆盖相邻内存。底部列出容量检查、栈保护、不可执行内存、地址随机化与控制流完整性等互补防御层。"><figcaption>写入长度 N 与目标容量 C 的比较构成安全边界。该图说明的是“长度与容量是否对齐”这一个问题，不描画任何栈布局或攻击载荷；防御层是纵深叠加，任一层都不单独构成保证。</figcaption></figure>
+<p>Data Lab 让位规则可推导，Bomb Lab 让机器状态可解释，Attack Lab 把“边界被破坏后哪些假设失效”显式化。三者背后是同一个可写成不变量的命题：<strong>一次写入只有在其长度与目标对象容量保持一致时才安全</strong>。关键在于，“容量”不是写入方总能自动知道的信息。</p>
+<table class="deep-table"><thead><tr><th>会被忽略的问题</th><th>需要维持的不变量</th><th>可验证手段</th></tr></thead><tbody>
+<tr><td>写入长度与目标容量脱节</td><td>写入长度 <code>N ≤ C</code>；若保留结尾 <code>N ≤ C−1</code></td><td>写入前后检查边界哨兵；用返回值报告截断</td></tr>
+<tr><td>数组在传参中退化为指针，<code>sizeof</code> 不再等于容量</td><td>容量必须作为显式参数随指针一起传递</td><td>接口签名携带 <code>size_t cap</code>，编译期无法推断的容量不允许隐式获得</td></tr>
+<tr><td>长度由“元素个数 × 元素大小”算出</td><td>该乘积不得在 <code>size_t</code> 中回绕</td><td>先做除法判断再相乘；分配前检查溢出</td></tr>
+<tr><td>“输入看起来短”被当作充分条件</td><td>是否被截断必须有明确状态</td><td>区分“完整 / 截断 / 拒绝”三态，而不是只返回一个指针</td></tr>
+</tbody></table>
+<p>因此正确的容量检查至少要求三点：检查所用的长度等于真正被消费的长度；容量来自对象本身而非猜测；越界前已经做出拒绝或截断决定。栈保护、NX/DEP、ASLR 与 CFI/CET 是不同层面的纵深防御，其支持与启用依赖 CPU、操作系统与构建配置，<strong>不能把它们当成“不可能被利用”的证明</strong>。</p>
+<div class="deep-math"><strong>N ≤ C − 1 = sizeof(buf) − 1；校验与消费必须用同一个 N</strong><span>当 N 超过上限时的正确行为是明确的截断或拒绝，并清理剩余输入，而不是静默继续写入。</span></div>
+<pre><code>python3 examples/deep-ch24-28-models.py 24
+cc -std=c11 -Wall -Wextra -Werror -pedantic examples/olah-ch24-bitlogic.c -o /tmp/ch24 &amp;&amp; /tmp/ch24</code></pre>
+<p>第一个命令运行一个纯标准库的确定性模型：它用固定容量 16 的缓冲区验证“完整 / 截断”两种判定，并用除法检查一个会回绕的 <code>size_t</code> 乘法；通过时打印 <code>24:ok</code>。语料依据 <a href="https://csapp.cs.cmu.edu/3e/attacklab.pdf">Attack Lab 官方讲义</a>中 <code>getbuf</code> 对写入长度的处理，以及 ISO C 对有符号移位与整数提升的规定；模型是教学示意，不是对某个实例的复现。</p>
 </section>
 
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 24</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="02.html"><small>延伸到第 02 章</small><span>整数模型为何决定位运算结果？</span><b aria-hidden="true">↗</b></a><a href="07.html"><small>延伸到第 07 章</small><span>反汇编怎样解释越界访问？</span><b aria-hidden="true">↗</b></a></div></aside>

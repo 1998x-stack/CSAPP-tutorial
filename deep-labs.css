@@ -1,0 +1,21 @@
+/* CSAPP chapters 24–28: lab reasoning, modern trends and the capstone server. */
+.deep-study{clear:both;border:1px solid #d5e3e0;border-top:4px solid #1c6e78;border-radius:12px;background:#fbfdfb;padding:clamp(16px,3vw,27px);margin:3.2rem 0 2.2rem;box-sizing:border-box;max-width:100%;min-width:0;overflow-wrap:anywhere}
+.deep-study .deep-kicker{font:750 .76rem/1.4 ui-monospace,monospace;letter-spacing:.12em;color:#9a5f34;margin:0 0 .6rem}
+.deep-study h2{font-family:Georgia,"Songti SC",serif;font-size:clamp(1.35rem,2.6vw,1.85rem);line-height:1.52;color:#1f4a52;margin:.2rem 0 1rem}
+.deep-study p,.deep-study li{font-size:1rem;line-height:1.94;color:#28454a}
+.deep-study code{overflow-wrap:anywhere}
+.deep-figure{display:block;max-width:100%;width:100%;box-sizing:border-box;overflow-x:auto;overflow-y:hidden;background:white;border:1px solid #d6e4e2;border-radius:10px;padding:12px;margin:1.4rem 0;overscroll-behavior-inline:contain}
+.deep-figure img{display:block;width:100%;max-width:none;height:auto;min-width:650px}
+.deep-figure figcaption{font-size:.87rem;line-height:1.75;color:#4f6d6c;margin-top:9px;max-width:100%}
+.deep-study .deep-math{display:grid;gap:5px;background:#eaf3f2;padding:15px 18px;border-left:4px solid #1c6e78;border-radius:4px 9px 9px 4px;max-width:100%;overflow-x:auto}
+.deep-math strong{font:750 clamp(.9rem,1.5vw,1.04rem)/1.9 ui-monospace,monospace;color:#1b5158;white-space:normal}
+.deep-math span{font-size:.89rem;color:#4b6867}
+.deep-study .deep-table{display:block;max-width:100%;width:100%;min-width:0;overflow-x:auto;border-collapse:collapse;box-sizing:border-box;scrollbar-width:thin;font-size:.88rem}
+.deep-study .deep-table th,.deep-study .deep-table td{padding:9px 11px;border:1px solid #d3e3e0;vertical-align:top;text-align:left;min-width:115px}
+.deep-study .deep-table th{background:#e3efee;color:#205459}
+.deep-study pre{display:block;max-width:100%;box-sizing:border-box;white-space:pre;overflow-x:auto;background:#1b3336;color:#f1f7f6;border-radius:9px;padding:15px;font-size:.84rem;line-height:1.75}
+.deep-study pre code{background:none!important;color:inherit!important;white-space:pre;overflow-wrap:normal}
+.deep-study a{color:#0a6b74;text-decoration-thickness:1px;text-underline-offset:3px}
+.deep-study :focus-visible{outline:3px solid #1c6e78;outline-offset:3px}
+@media(max-width:650px){.deep-study{padding:14px 11px;margin:2rem 0}.deep-figure{padding:6px}.deep-figure img{min-width:760px}.deep-study .deep-table{overflow-x:auto;display:block;min-width:0;width:100%}.deep-study .deep-table th,.deep-study .deep-table td{min-width:110px}}
+@media print{.deep-study{background:white;break-inside:auto}.deep-study pre{white-space:pre-wrap;background:#efefef;color:#111}.deep-study pre code{color:#111!important}.deep-figure{overflow:visible}.deep-figure img{min-width:0;max-width:100%}}
