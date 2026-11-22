@@ -21,6 +21,9 @@ def verify(page, chapter: int, width: int) -> dict:
     assert page.locator("main figcaption").count() == 3
     deep_img = page.locator(f'main img[src="chapter-assets/{chapter:02}-deep.svg"]')
     assert deep_img.count() == 1
+    deep_img.scroll_into_view_if_needed()  # The new image is intentionally lazy-loaded.
+    deep_img.evaluate("(img) => img.decode()")
+    page.evaluate("window.scrollTo(0, 0)")
     image_ready = deep_img.evaluate("(img) => img.complete && img.naturalWidth > 0 && img.naturalHeight > 0")
     assert image_ready, (chapter, width, "new SVG unavailable")
     svg_state = page.locator("main svg").evaluate_all(
