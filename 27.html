@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-labs.css">
 </head>
 <body class="olah-lesson">
 <a class="skip-link" href="#chapter-main">跳到正文</a>
@@ -57,7 +58,7 @@
 <p class="lede">现代系统的许多变化，都能用一条旧问题串起来：<strong>计算在哪里发生？数据从哪里来？谁保证访问有权限而且结果可见？</strong> RISC-V、GPU、eBPF 和 CXL 并非同一种技术的四个品牌，而是从不同层级回答这三个问题。</p>
 <p class="chapter-scope">本章聚焦机制与适用边界，不把指令集规范当作具体芯片的性能，不把硬件能力等同于所有操作系统都已自动启用。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c27-bridge">01 四种扩展</a><a href="#c27-riscv">02 RISC-V</a><a href="#c27-gpu">03 GPU</a><a href="#c27-bpf">04 eBPF</a><a href="#c27-cxl">05 CXL</a></nav>
+<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c27-bridge">01 四种扩展</a><a href="#c27-riscv">02 RISC-V</a><a href="#c27-gpu">03 GPU</a><a href="#c27-bpf">04 eBPF</a><a href="#c27-cxl">05 CXL</a><a href="#deep-27">深入推导</a></nav>
 <section id="c27-bridge">
 <h2>27.1 先建立一张系统地图</h2>
 <p>先不要急着把这四种技术放在一张“谁更快”表里。它们分别工作在<strong>ISA、计算执行、内核执行环境、内存互联</strong>四个层次，优化目标和可观察指标不同。</p>
@@ -111,6 +112,23 @@ on_sys_enter_read(ctx):
 </section>
 
 <section id="c27-roofline-check" class="lesson-extension"><h2>把 Roofline 算式补上单位，才知道谁在限制性能</h2><p>若设备在所研究的数据路径上可持续提供 <strong>2 GB/s</strong> 的数据带宽、该计算类型的峰值为 <strong>8 GFLOP/s</strong>，那么在计算强度 <code>I = FLOP / byte</code> 下，吞吐量上界是 <code>min(8, 2 × I)</code> GFLOP/s。这里的 2 和 8 都是假设参数，不是对任意 GPU 或 CPU 的测量。</p><table><thead><tr><th>计算强度</th><th>带宽上界</th><th>可用上界</th><th>初步判断</th></tr></thead><tbody><tr><td>0.25 FLOP/byte</td><td>0.5 GFLOP/s</td><td>0.5 GFLOP/s</td><td>带宽约束更紧</td></tr><tr><td>1 FLOP/byte</td><td>2 GFLOP/s</td><td>2 GFLOP/s</td><td>带宽约束更紧</td></tr><tr><td>4 FLOP/byte</td><td>8 GFLOP/s</td><td>8 GFLOP/s</td><td>两条理论上界相交</td></tr><tr><td>8 FLOP/byte</td><td>16 GFLOP/s</td><td>8 GFLOP/s</td><td>计算峰值约束更紧</td></tr></tbody></table><p>交点 <code>I* = 8 / 2 = 4 FLOP/byte</code> 来自单位约简。<strong>上界不是预测值</strong>：实际性能还会受到缓存、访存模式、分支、同步、占用率和实现细节影响；带宽必须对应所选的内存层级和数据流量定义。</p></section>
+
+<section class="deep-study" id="deep-27" aria-labelledby="deep-27-title">
+<p class="deep-kicker">技术深描 · 27 / ISA FIELDS</p>
+<h2 id="deep-27-title">同一位模式为何能是不同指令？用字段解码验证 ISA 约定</h2>
+<figure class="deep-figure" tabindex="0" role="group" aria-label="可水平查看的因果图"><img src="chapter-assets/27-deep.svg" width="960" height="340" loading="lazy" alt="一个 32 位指令字的字段划分。R 型从高位到低位为 funct7、rs2、rs1、funct3、rd、opcode；I 型为 12 位立即数、rs1、funct3、rd、opcode。opcode 决定格式，funct3 与 funct7 在同一格式内选择操作，立即数需要符号扩展。"><figcaption>指令字的字段位置来自 ISA 规范，而“该位模式是哪条指令”由 opcode 与 funct 共同决定。该图是编码约定示意，不表示任何具体芯片的流水线实现或频率。</figcaption></figure>
+<p>“ISA 开放”容易被误读为“实现高性能”或“随便定义指令”。实际约束是：ISA 规定了软件与硬件都必须遵守的<strong>可见行为</strong>，包括指令字的字段划分。一次解码可以写成与位段无关的普通整数运算，因此可以用纯标准库验证。</p>
+<table class="deep-table"><thead><tr><th>字段</th><th>位范围</th><th>作用</th></tr></thead><tbody>
+<tr><td><code>opcode</code></td><td>6:0</td><td>先由它确定使用哪种指令格式</td></tr>
+<tr><td><code>rd</code></td><td>11:7</td><td>目的寄存器号（5 位，编号 0–31）</td></tr>
+<tr><td><code>funct3</code></td><td>14:12</td><td>在同一格式内选择具体操作</td></tr>
+<tr><td><code>rs1</code></td><td>19:15</td><td>第一个源寄存器号</td></tr>
+<tr><td><code>rs2</code> / <code>funct7</code></td><td>24:20 / 31:25</td><td>R 型第二个源寄存器与操作选择（I 型的 31:20 改为 12 位立即数）</td></tr>
+</tbody></table>
+<div class="deep-math"><strong>opcode[6:0] → 格式；其余字段按该格式解释；I 型 imm[11:0] 需符号扩展</strong><span>同一条位模式，若按错误格式解释就会得到完全不同的寄存器与偏移；这也是“部署了一个 RISC-V 核”不能等同于“获得了某个性能”的同一类边界。</span></div>
+<pre><code>python3 examples/deep-ch24-28-models.py 27</code></pre>
+<p>该模型只使用整数移位与掩码，把 <code>add x10,x11,x12</code> 编码为 <code>0x00C58533</code> 并断言解码回相同的六字段；又把 <code>ld x5,8(x6)</code> 编码为 <code>0x00833283</code> 并断言 <code>imm=8, rs1=6, rd=5, funct3=011, opcode=0000011</code>；最后验证同一个 12 位字段在符号扩展后变成 <code>-4</code>。它检验的是编码约定，不代表任何微架构的指令吞吐或功耗。字段定义依据 <a href="https://docs.riscv.org/reference/isa/unpriv/unpriv-index.html">RISC-V Unprivileged ISA</a>。</p>
+</section>
 
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 27</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="08.html"><small>延伸到第 08 章</small><span>ISA 与微架构如何分层？</span><b aria-hidden="true">↗</b></a><a href="10.html"><small>延伸到第 10 章</small><span>Roofline 上界如何指导性能分析？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article>

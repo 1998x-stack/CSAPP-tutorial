@@ -37,6 +37,15 @@
       "locator": "Driver initialization and memory configuration",
       "status": "source-checked",
       "notes": "Topology/performance depend on platform; not necessarily transparent"
+    },
+    {
+      "id": "c27-isa-fields",
+      "claim": "RV64I 指令字由 opcode 选格式；add x10,x11,x12 编码为 0x00C58533，ld x5,8(x6) 编码为 0x00833283",
+      "kind": "standard",
+      "source_url": "https://docs.riscv.org/reference/isa/unpriv/unpriv-index.html",
+      "locator": "RV64I instruction formats (R-type, I-type)",
+      "status": "source-checked",
+      "notes": "examples/deep-ch24-28-models.py 27 检验编码与符号扩展，不代表微架构性能"
     }
   ]
 }

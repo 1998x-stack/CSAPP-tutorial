@@ -154,7 +154,51 @@ def ch26():
     assert frame_chunked(b"4\r\nWik")[0] is False   # mid-chunk close is not a message
 
 
-CASES = {"24": ch24, "25": ch25, "26": ch26}
+# ---- 27: RV64I instruction-word field decoding (teaching model) ----
+
+def encode_r(funct7, rs2, rs1, funct3, rd, opcode):
+    """Assemble an R-type instruction word from its ISA fields."""
+    return (((funct7 & 0x7F) << 25) | ((rs2 & 0x1F) << 20) | ((rs1 & 0x1F) << 15)
+            | ((funct3 & 7) << 12) | ((rd & 0x1F) << 7) | (opcode & 0x7F))
+
+
+def decode_r(word):
+    return {'funct7': (word >> 25) & 0x7F, 'rs2': (word >> 20) & 0x1F,
+            'rs1': (word >> 15) & 0x1F, 'funct3': (word >> 12) & 7,
+            'rd': (word >> 7) & 0x1F, 'opcode': word & 0x7F}
+
+
+def decode_i(word):
+    imm = word >> 20                       # 12-bit immediate in bits 31:20
+    if imm & 0x800:
+        imm -= 0x1000                      # sign-extend the field
+    return {'imm': imm, 'rs1': (word >> 15) & 0x1F, 'funct3': (word >> 12) & 7,
+            'rd': (word >> 7) & 0x1F, 'opcode': word & 0x7F}
+
+
+def ch27():
+    # add x10, x11, x12 : R-type, opcode 0110011, funct3 000, funct7 0000000.
+    add = encode_r(0, 12, 11, 0, 10, 0b0110011)
+    assert add == 0x00C58533               # exact encoding check
+    assert decode_r(add) == {'funct7': 0, 'rs2': 12, 'rs1': 11, 'funct3': 0,
+                             'rd': 10, 'opcode': 0b0110011}
+
+    # ld x5, 8(x6) : I-type, opcode 0000011, funct3 011, imm = 8.
+    ld = (8 << 20) | (6 << 15) | (3 << 12) | (5 << 7) | 0b0000011
+    assert ld == 0x00833283
+    fields = decode_i(ld)
+    assert (fields['imm'], fields['rs1'], fields['rd']) == (8, 6, 5)
+    assert (fields['funct3'], fields['opcode']) == (0b011, 0b0000011)
+
+    # The same 12-bit pattern encodes a negative offset after sign extension.
+    neg = ((-4 & 0xFFF) << 20) | (6 << 15) | (3 << 12) | (5 << 7) | 0b0000011
+    assert decode_i(neg)['imm'] == -4
+
+    # opcode alone selects the format; the remaining fields are read per format.
+    assert (add & 0x7F) != (ld & 0x7F)
+
+
+CASES = {"24": ch24, "25": ch25, "26": ch26, "27": ch27}
 
 if __name__ == "__main__":
     selection = list(CASES) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
