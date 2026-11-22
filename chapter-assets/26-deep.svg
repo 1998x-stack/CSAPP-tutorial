@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 350" role="img" aria-labelledby="t26 desc26">
+<title id="t26">HTTP/1.1 报文定界决定消息边界</title>
+<desc id="desc26">代理从字节流中先读首部直到空行 CRLF CRLF，再按定界方式读体：Content-Length 指定字节数，Transfer-Encoding: chunked 逐个分块，或读到连接关闭。三种方式都把剩余字节保留给下一条消息。若缺少定界或提前截断，代理可能把上一条消息的尾部与下一条消息拼接，从而把 A 的内容交给 B。</desc>
+<rect width="960" height="350" rx="15" fill="#f8fbfb"/>
+<text x="22" y="36" font-size="20" font-weight="700" fill="#1f4a52">消息边界从哪里来：先读首部，再按声明的定界读体</text>
+<rect x="22" y="58" width="230" height="150" rx="11" fill="#e7f2f2" stroke="#bfd7d5"/>
+<text x="36" y="86" font-size="17" font-weight="700" fill="#1f4a52">1. 读首部</text>
+<text x="36" y="114" font-size="14" fill="#2c5257">累积字节直到空行</text>
+<text x="36" y="140" font-size="14" fill="#2c5257">CRLF CRLF 表示首部结束</text>
+<text x="36" y="166" font-size="14" fill="#2c5257">剩余字节不能丢弃</text>
+<text x="36" y="192" font-size="14" fill="#2c5257">首部长度需要上限</text>
+<rect x="290" y="58" width="286" height="150" rx="11" fill="#f6efe2" stroke="#bfd7d5"/>
+<text x="304" y="86" font-size="17" font-weight="700" fill="#1f4a52">2. 选择定界方式</text>
+<text x="304" y="114" font-size="14" fill="#2c5257">Content-Length: N → 读满 N 字节</text>
+<text x="304" y="140" font-size="14" fill="#2c5257">chunked → 逐个分块解码</text>
+<text x="304" y="166" font-size="14" fill="#2c5257">否则 → 读到连接关闭(EOF)</text>
+<text x="304" y="192" font-size="14" fill="#2c5257">同一消息的定界方式必须唯一</text>
+<rect x="614" y="58" width="324" height="150" rx="11" fill="#eceff7" stroke="#bfd7d5"/>
+<text x="628" y="86" font-size="17" font-weight="700" fill="#1f4a52">3. 交付并保留余量</text>
+<text x="628" y="114" font-size="14" fill="#2c5257">完整消息 → 回复当前请求者</text>
+<text x="628" y="140" font-size="14" fill="#2c5257">剩余字节 → 交给下一条消息</text>
+<text x="628" y="166" font-size="14" fill="#2c5257">截断/定界缺失 → 拒绝，不缓存</text>
+<text x="628" y="192" font-size="14" fill="#2c5257">短读短写都只是“已尝试”</text>
+<path d="M252 133 H286" stroke="#2c8075" stroke-width="2.5"/>
+<path d="M576 133 H610" stroke="#2c8075" stroke-width="2.5"/>
+<path d="M282 133 l-9 -6 v12 z" fill="#2c8075"/>
+<path d="M606 133 l-9 -6 v12 z" fill="#2c8075"/>
+<rect x="22" y="236" width="916" height="86" rx="10" fill="#f3ecef" stroke="#bfd7d5"/>
+<text x="38" y="262" font-size="15" font-weight="700" fill="#1f4a52">定界错误的后果：响应错位</text>
+<text x="38" y="286" font-size="14" fill="#2c5257">若把“读到连接关闭”误当成“一次 read 的边界”，上一条消息的尾部会与下一条消息的首部拼在一起。</text>
+<text x="38" y="308" font-size="14" fill="#2c5257">于是 A 请求得到 B 的内容。缓存这种“半条消息”会把这个错误放大到更多后续请求者。</text>
+</svg>

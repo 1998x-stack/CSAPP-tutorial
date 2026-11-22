@@ -37,6 +37,15 @@
       "locator": "Proxy Lab cache concurrency",
       "status": "derived",
       "notes": "Engineering invariant, no performance claim"
+    },
+    {
+      "id": "c26-framing",
+      "claim": "HTTP/1.1 消息边界由首部与 Content-Length、chunked 或连接关闭等定界方式确定，剩余字节属于下一条消息",
+      "kind": "standard",
+      "source_url": "https://www.rfc-editor.org/rfc/rfc9112",
+      "locator": "RFC 9112 message body length",
+      "status": "source-checked",
+      "notes": "examples/deep-ch24-28-models.py 26 只检验定界逻辑，不实现全部首部与状态码规则"
     }
   ]
 }

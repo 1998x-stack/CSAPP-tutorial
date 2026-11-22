@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-labs.css">
 </head>
 <body class="olah-lesson">
 <a class="skip-link" href="#chapter-main">跳到正文</a>
@@ -57,7 +58,7 @@
 <p class="lede">Proxy Lab 把三个子系统接在一起：网络 I/O 负责传递字节，线程池负责并发，缓存负责复用响应。单看每一部分都不难，困难在于<strong>客户端断开、缓存过期和多个线程命中同一键</strong>时还能不能保持语义正确。</p>
 <p class="chapter-scope">先实现 HTTP/1.0 风格的最小转发路径，再讨论并发与教学缓存。真实 HTTP 共享缓存需满足 RFC 9111 的条件，不能把“GET + URI 相同”当成通用可缓存判据。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c26-flow">01 请求流</a><a href="#c26-queue">02 有界队列</a><a href="#c26-cache">03 缓存判定</a><a href="#c26-test">04 压测与检查</a></nav>
+<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c26-flow">01 请求流</a><a href="#c26-queue">02 有界队列</a><a href="#c26-cache">03 缓存判定</a><a href="#c26-test">04 压测与检查</a><a href="#deep-26">深入推导</a></nav>
 <section id="c26-flow">
 <h2>26.1 一个请求要穿过哪些边界？</h2>
 <p>浏览器向正向代理发送目标 URI；代理一面接收客户端请求，一面作为客户端连接源站。最小实现需要按字节处理<strong>请求行、首部、响应头、响应体</strong>，不能假设一次 <code>read</code> 就读完，也不能假设一次 <code>write</code> 就发完。头部有解析上限，响应体可能包含零字节，不能用 <code>strlen()</code> 推断其大小。</p>
@@ -122,6 +123,22 @@ ab -n 1000 -c 20 -X 127.0.0.1:8888 http://127.0.0.1:8000/fixture.bin
 </section>
 
 <section id="c26-decision" class="lesson-extension"><h2>深挖：一次共享缓存命中，至少要过四道关</h2><p>即使两次请求都指向 <code>/news</code>，也不能仅凭 URL 相同就共享响应。按照 HTTP 缓存规则，先确认响应<strong>允许共享缓存存储</strong>，再确认所缓存的响应<strong>仍然新鲜或经过有效重新验证</strong>，最后还要检查 <code>Vary</code> 所列请求首部是否匹配。涉及请求授权时存在单独的共享缓存约束。</p><div class="extension-compare"><div><strong>请求 A</strong><p><code>GET /news</code><br><code>Accept-Language: zh-CN</code></p><p>响应：<code>Vary: Accept-Language</code></p></div><div><strong>请求 B</strong><p><code>GET /news</code><br><code>Accept-Language: en-US</code></p><p>即使 URL 相同，也不能直接复用 A 的变体。</p></div></div><table><thead><tr><th>检查点</th><th>不满足时的动作</th></tr></thead><tbody><tr><td>存储资格（如 no-store、private、认证约束）</td><td>不作为共享缓存内容保存</td></tr><tr><td>响应完整性</td><td>不能把截断的响应当作完整缓存对象交给其他客户端</td></tr><tr><td>新鲜度 / 重新验证</td><td>按适用规则向源站验证或获取新响应，不擅自提供过期内容</td></tr><tr><td>Vary 指定的请求首部</td><td>变体不匹配就不能直接命中原缓存对象</td></tr></tbody></table><p>这是<strong>判定流程的教学骨架</strong>，不是 RFC 9111 所有条件的替代实现。真正的共享缓存还需正确处理状态码、方法、<code>Cache-Control</code> 指令、验证器及年龄计算。详见 <a href="https://www.rfc-editor.org/rfc/rfc9111.html">RFC 9111 §3–4</a>。</p></section>
+
+<section class="deep-study" id="deep-26" aria-labelledby="deep-26-title">
+<p class="deep-kicker">技术深描 · 26 / MESSAGE FRAMING</p>
+<h2 id="deep-26-title">一条响应到哪里结束？把字节流定界写成可复算的解析器</h2>
+<figure class="deep-figure" tabindex="0" role="group" aria-label="可水平查看的因果图"><img src="chapter-assets/26-deep.svg" width="960" height="350" loading="lazy" alt="代理从字节流先读首部直到空行，再按定界方式读体：Content-Length 指定字节数、chunked 逐个分块或读到连接关闭。三种方式都把剩余字节保留给下一条消息。若缺少定界或提前截断，代理可能把上一条的尾部与下一条拼接，将 A 的内容交给 B。"><figcaption>报文边界来自首部与声明的定界方式，而不是某一次 <code>read</code> 的返回长度。该图说明定界选择与剩余字节归属，不给出任何具体的请求或源站响应文本。</figcaption></figure>
+<p>“代理转发成功却把错误内容给下一个人”最常见的根源不是缓存算法，而是<strong>消息定界错误</strong>：把一次短读当成完整报文，或把“读到连接关闭”与“本次读写边界”混为一谈。TCP 只提供字节流，段边界、<code>send()</code> 调用边界与应用记录没有一一对应关系。</p>
+<table class="deep-table"><thead><tr><th>定界方式</th><th>结束条件</th><th>最常见的错误</th></tr></thead><tbody>
+<tr><td><code>Content-Length: N</code></td><td>首部后恰好读满 N 字节</td><td>把短读当作 EOF，或把剩余字节丢弃而不是留给下一条消息</td></tr>
+<tr><td><code>Transfer-Encoding: chunked</code></td><td>逐个读分块长度，直到大小为 0 的分块及尾段</td><td>只确认首块就回复；或多个定界方式同时出现而不拒绝</td></tr>
+<tr><td>读到连接关闭</td><td>对端关闭写方向（EOF）</td><td>把它当持久连接下的消息边界，导致下一条消息被拼接</td></tr>
+</tbody></table>
+<div class="deep-math"><strong>0 ≤ received ≤ declared；只有 received == declared 才交付</strong><span>代理状态机至少保存：首部累积缓冲、已读取的体长度、剩余输出游标与连接关闭状态；否则就会忙等或无限增长。</span></div>
+<pre><code>python3 examples/deep-ch24-28-models.py 26</code></pre>
+<p>该模型把同一段报文按 1/7/20/全长字节的不同分块重新拼回，断言只能得到完整且唯一的体；又验证两条流水线消息能按声明长度依次拆开、截断时<strong>不交付任何内容</strong>、chunked 解码在大小为 0 的分块停止并把尾部字节留给后续。依据 RFC 9112 的报文定界规则与 RFC 9111 的存放条件，模型只检验定界逻辑，不代表已处理完所有首部与状态码规则。</p>
+<p>需要强调两点：其一，“可读/可写”只表示一次操作可被尝试，不保证交付正数字节或完整回复，所以真实代码要把 <code>EINTR</code>、<code>EAGAIN</code> 与 0（EOF）分开处理；其二，报文在进入共享缓存前必须先完整、未被截断，否则错误会被放大给更多后续请求者。</p>
+</section>
 
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 26</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="20.html"><small>延伸到第 20 章</small><span>TCP 字节流怎样影响代理报文定界？</span><b aria-hidden="true">↗</b></a><a href="28.html"><small>延伸到第 28 章</small><span>连接状态和缓存对象如何拥有生命周期？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article>

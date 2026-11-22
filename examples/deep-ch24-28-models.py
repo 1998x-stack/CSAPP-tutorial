@@ -94,7 +94,67 @@ def ch25():
     assert free_runs(heap) == 1 and heap.count(True) == 0  # whole heap is one run
 
 
-CASES = {"24": ch24, "25": ch25}
+# ---- 26: HTTP/1.1 message framing over an arbitrary byte chunking ----
+
+def frame_content_length(stream, length):
+    """Split one header+body message using a declared Content-Length.
+
+    Returns (complete, body, rest). If the body is truncated, nothing is
+    delivered so the caller cannot hand half a message to a client.
+    """
+    sep = stream.find(b"\r\n\r\n")
+    if sep < 0:
+        return False, b"", b""
+    body_start = sep + 4
+    body = stream[body_start:body_start + length]
+    if len(body) < length:
+        return False, b"", stream
+    return True, body, stream[body_start + length:]
+
+
+def frame_chunked(stream):
+    """Decode a chunked body; return (complete, body, rest) and stop at 0-size."""
+    rest = stream
+    body = b""
+    while True:
+        line_end = rest.find(b"\r\n")
+        if line_end < 0:
+            return False, b"", stream
+        size = int(rest[:line_end].split(b";")[0], 16)
+        rest = rest[line_end + 2:]
+        if size == 0:
+            trailers = rest.find(b"\r\n")   # empty trailer section ends with CRLF
+            return True, body, rest[trailers + 2:] if trailers >= 0 else b""
+        if len(rest) < size + 2:
+            return False, b"", stream
+        body += rest[:size]
+        rest = rest[size + 2:]
+
+
+def ch26():
+    message = b"GET /f HTTP/1.1\r\nContent-Length: 3\r\n\r\nabc"
+    # The same bytes may arrive in any number of short reads.
+    for split in (1, 7, 20, len(message)):
+        chunks = [message[i:i + split] for i in range(0, len(message), split)]
+        complete, body, rest = frame_content_length(b"".join(chunks), 3)
+        assert complete and body == b"abc" and rest == b""
+
+    truncated = b"GET /f HTTP/1.1\r\nContent-Length: 5\r\n\r\nabc"
+    assert frame_content_length(truncated, 5) == (False, b"", truncated)
+
+    first = b"GET /a HTTP/1.1\r\nContent-Length: 1\r\n\r\nX"
+    second = b"GET /b HTTP/1.1\r\nContent-Length: 1\r\n\r\nY"
+    complete, body, rest = frame_content_length(first + second, 1)
+    assert complete and body == b"X" and rest == second
+    complete, body, rest = frame_content_length(rest, 1)
+    assert complete and body == b"Y" and rest == b""
+
+    complete, body, rest = frame_chunked(b"4\r\nWiki\r\n5\r\npedia\r\n0\r\n\r\nNEXT")
+    assert complete and body == b"Wikipedia" and rest == b"NEXT"
+    assert frame_chunked(b"4\r\nWik")[0] is False   # mid-chunk close is not a message
+
+
+CASES = {"24": ch24, "25": ch25, "26": ch26}
 
 if __name__ == "__main__":
     selection = list(CASES) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
