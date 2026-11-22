@@ -22,7 +22,8 @@ test('chapter 19–21 reading structure, SVG and source ledger', () => {
     assert.match(html, /aria-live="polite"/);
     assert.match(html, /href="olah-chapters.css"/);
     const assets = [...html.matchAll(/<img src="(chapter-assets\/[^"]+\.svg)"/g)].map(m => m[1]);
-    assert.equal(assets.length, 2);
+    assert.equal(assets.length, 3);
+    assert.equal(assets[2], 'chapter-assets/' + n + '-deep.svg');
     for (const asset of assets) {
       assert.ok(existsSync(join(root, asset)), asset);
       assert.match(read(asset), /<svg[^>]+viewBox=/);
