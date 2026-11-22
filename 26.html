@@ -2,10 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>第26章 经典Lab实战(III)——Proxy Lab — 深入理解计算机系统（CSAPP）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="CSAPP 中文实践教程第 26 章 · 经典Lab实战(III)——Proxy Lab。从「代理明明转发成功，为什么还会把错误内容给下一个人？」出发，理解原理、图解、实验及适用边界。">
+<link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/26.html">
+<title>第26章 经典Lab实战(III)——Proxy Lab — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
+<link rel="stylesheet" href="course-improvements.css">
 </head>
 <body class="olah-lesson">
 <a class="skip-link" href="#chapter-main">跳到正文</a>
@@ -117,6 +120,10 @@ ab -n 1000 -c 20 -X 127.0.0.1:8888 http://127.0.0.1:8000/fixture.bin
 <h3>资料与适用范围</h3>
 <p>实验要求：<a href="https://csapp.cs.cmu.edu/3e/labs.html">CS:APP3e Proxy Lab</a>。HTTP 缓存规范：<a href="https://www.rfc-editor.org/rfc/rfc9111">RFC 9111</a>。本文将实验简化路径与通用 HTTP 缓存语义分开，示例数据不代表实测性能。</p>
 </section>
+
+<section id="c26-decision" class="lesson-extension"><h2>深挖：一次共享缓存命中，至少要过四道关</h2><p>即使两次请求都指向 <code>/news</code>，也不能仅凭 URL 相同就共享响应。按照 HTTP 缓存规则，先确认响应<strong>允许共享缓存存储</strong>，再确认所缓存的响应<strong>仍然新鲜或经过有效重新验证</strong>，最后还要检查 <code>Vary</code> 所列请求首部是否匹配。涉及请求授权时存在单独的共享缓存约束。</p><div class="extension-compare"><div><strong>请求 A</strong><p><code>GET /news</code><br><code>Accept-Language: zh-CN</code></p><p>响应：<code>Vary: Accept-Language</code></p></div><div><strong>请求 B</strong><p><code>GET /news</code><br><code>Accept-Language: en-US</code></p><p>即使 URL 相同，也不能直接复用 A 的变体。</p></div></div><table><thead><tr><th>检查点</th><th>不满足时的动作</th></tr></thead><tbody><tr><td>存储资格（如 no-store、private、认证约束）</td><td>不作为共享缓存内容保存</td></tr><tr><td>响应完整性</td><td>不能把截断的响应当作完整缓存对象交给其他客户端</td></tr><tr><td>新鲜度 / 重新验证</td><td>按适用规则向源站验证或获取新响应，不擅自提供过期内容</td></tr><tr><td>Vary 指定的请求首部</td><td>变体不匹配就不能直接命中原缓存对象</td></tr></tbody></table><p>这是<strong>判定流程的教学骨架</strong>，不是 RFC 9111 所有条件的替代实现。真正的共享缓存还需正确处理状态码、方法、<code>Cache-Control</code> 指令、验证器及年龄计算。详见 <a href="https://www.rfc-editor.org/rfc/rfc9111.html">RFC 9111 §3–4</a>。</p></section>
+
+<aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 26</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="20.html"><small>延伸到第 20 章</small><span>TCP 字节流怎样影响代理报文定界？</span><b aria-hidden="true">↗</b></a><a href="28.html"><small>延伸到第 28 章</small><span>连接状态和缓存对象如何拥有生命周期？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article>
 </main>
 <script>

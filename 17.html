@@ -2,10 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>第17章 虚拟内存——地址翻译 — 深入理解计算机系统（CSAPP）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="CSAPP 中文实践教程第 17 章 · 虚拟内存——地址翻译。从「两个进程都访问 0x1000，为什么互不干扰？」出发，理解原理、图解、实验及适用边界。">
+<link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/17.html">
+<title>第17章 虚拟内存——地址翻译 — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
+<link rel="stylesheet" href="course-improvements.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳转至正文</a>
@@ -108,6 +111,8 @@ int main(void) {
 <div class="exercise"><h3>自测</h3><p>一个有效页表映射对应的虚拟页不在 TLB 中，处理器必须向内核发出 page fault 吗？</p><details><summary>查看答案</summary><p>不必。常见硬件页表遍历能找到有效 PTE 并填充 TLB，之后继续访问；只有映射或权限无法满足时才进入异常处理路径。</p></details></div></section>
 <section id="c17-close"><h2>归纳：分清翻译、缓存与缺页</h2><p>虚拟页定义“进程看到什么”，页表定义“它映射到哪里”，TLB 缓存“近期翻译结果”，缺页异常让内核处理“尚未建立或不允许的访问”。下一章把视角移到 <code>malloc</code> / <code>free</code>：用户态分配器怎样在这些虚拟映射之上管理对象。</p>
 <h3>延伸阅读</h3><p><a href="https://www.kernel.org/doc/html/latest/mm/page_tables.html">Linux Page Tables</a>、<a href="https://man7.org/linux/man-pages/man2/mmap.2.html">mmap(2)</a>、<a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel 软件开发手册</a>；上述教学例子采用四级分页与 4 KiB 基页。</p></section>
+
+<aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 17</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="12.html"><small>延伸到第 12 章</small><span>TLB 未命中与 Cache 未命中为何不同？</span><b aria-hidden="true">↗</b></a><a href="18.html"><small>延伸到第 18 章</small><span>内存映射如何变成实际页分配？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article></main>
 <script>
 (() => {

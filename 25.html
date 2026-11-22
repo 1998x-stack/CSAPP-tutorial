@@ -2,10 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>第25章 经典Lab实战(II)——Cache/Shell/Malloc — 深入理解计算机系统（CSAPP）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="CSAPP 中文实践教程第 25 章 · 经典Lab实战(II)。从「三个 Lab，为什么都在考“状态是否一致”？」出发，理解原理、图解、实验及适用边界。">
+<link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/25.html">
+<title>第25章 经典Lab实战(II)——Cache/Shell/Malloc — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
+<link rel="stylesheet" href="course-improvements.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳到正文</a>
@@ -126,6 +129,8 @@ if (pid == 0) {
 <h3>资料与适用范围</h3>
 <p>官方实验边界参阅 <a href="https://csapp.cs.cmu.edu/3e/labs.html">CS:APP3e Labs</a>；POSIX 作业控制与进程组可对照 <a href="https://man7.org/linux/man-pages/man2/setpgid.2.html">setpgid(2)</a> 与 <a href="https://man7.org/linux/man-pages/man2/waitpid.2.html">waitpid(2)</a>。本章是课程导学，不包含官方 handout 中的完整实现或标准答案。</p>
 </section>
+
+<aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 25</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="11.html"><small>延伸到第 11 章</small><span>局部性实验与存储层次如何相连？</span><b aria-hidden="true">↗</b></a><a href="15.html"><small>延伸到第 15 章</small><span>为什么 shell 必须管理进程状态？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article>
 </main>
 <script>

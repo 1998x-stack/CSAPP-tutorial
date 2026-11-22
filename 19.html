@@ -2,10 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>第19章 系统级I/O — 深入理解计算机系统（CSAPP）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="CSAPP 中文实践教程第 19 章 · 系统级I/O。从「同一个文件，为什么两个描述符会共享位置？」出发，理解原理、图解、实验及适用边界。">
+<link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/19.html">
+<title>第19章 系统级I/O — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
+<link rel="stylesheet" href="course-improvements.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳转至正文</a>
@@ -136,7 +139,9 @@ ssize_t readn(int fd, void *dest, size_t count) {
 <section id="c19-lab"><h2>19.6 自测：读了几字节，两个位置分别在哪？</h2>
 <div class="exercise"><p>先 <code>fd1 = open("a", O_RDONLY)</code>，随后 <code>fd2 = dup(fd1)</code>；<code>read(fd1, b, 3)</code> 成功返回 3。接下来对 fd2 读取从哪个位置开始？如果把 <code>dup</code> 改成第二次 <code>open</code> 又怎样？</p><details><summary>查看推导</summary><p><code>dup</code> 后两个描述符指向同一打开文件描述，所以 fd2 从偏移量 3 继续；独立 <code>open</code> 通常从偏移量 0 开始。这里假设普通可定位文件且没有其他进程或线程改变偏移量。</p></details></div>
 <h3>资料与适用范围</h3><p>更多接口细节见 <a href="https://man7.org/linux/man-pages/man2/open.2.html">open(2)</a>、<a href="https://man7.org/linux/man-pages/man2/read.2.html">read(2)</a>、<a href="https://man7.org/linux/man-pages/man2/write.2.html">write(2)</a> 和 <a href="https://man7.org/linux/man-pages/man2/dup.2.html">dup(2)</a>；本章以 <a href="https://csapp.cs.cmu.edu/3e/students.html">CS:APP 3e</a> 的系统级 I/O 教学范围为起点。系统调用、文件系统和标准 I/O 实现的细节应以运行平台为准。</p>
-</section></article></main>
+</section>
+<aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 19</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="20.html"><small>延伸到第 20 章</small><span>文件描述符如何扩展为 socket？</span><b aria-hidden="true">↗</b></a><a href="28.html"><small>延伸到第 28 章</small><span>非阻塞 I/O 如何保持发送进度？</span><b aria-hidden="true">↗</b></a></div></aside>
+</article></main>
 <script>
 (() => {
  const slider=document.getElementById('c19-bytes'), out=document.getElementById('c19-offset');

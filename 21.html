@@ -2,10 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>第21章 网络编程——进阶 — 深入理解计算机系统（CSAPP）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="CSAPP 中文实践教程第 21 章 · 网络编程——进阶。从「一个慢连接，为什么能拖住整个服务器？」出发，理解原理、图解、实验及适用边界。">
+<link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/21.html">
+<title>第21章 网络编程——进阶 — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
+<link rel="stylesheet" href="course-improvements.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳转至正文</a>
@@ -143,7 +146,9 @@ strace -e trace=network ./server</code></pre>
 <section id="c21-lab"><h2>21.6 自测：就绪是不是等于已完成？</h2>
 <div class="exercise"><p>对客户端 B 的 fd，<code>select</code> 返回“可读”。随后一次 <code>read</code> 返回 0。该把这次事件解释成收到一条空的业务消息，还是连接状态变化？对于 <code>read</code> 返回正数但消息未读完又怎么办？</p><details><summary>查看推导</summary><p>流式 TCP 上 <code>read</code> 返回 0 一般表示对端已进行有序关闭；应按协议与状态机处理并释放资源，而非自动构造空消息。正数短读则累计数据，等待其余部分满足分帧条件后再交给解析器。</p></details></div>
 <h3>资料与边界</h3><p><a href="https://www.rfc-editor.org/rfc/rfc3875.html">RFC 3875（CGI/1.1）</a> 规定服务器/脚本的职责；<a href="https://man7.org/linux/man-pages/man2/select.2.html">select(2)</a> 与 <a href="https://man7.org/linux/man-pages/man7/epoll.7.html">epoll(7)</a> 描述事件通知；<a href="https://man7.org/linux/man-pages/man2/waitpid.2.html">waitpid(2)</a> 解释子进程回收。下一章将把共享状态与线程同步加入并发模型。</p>
-</section></article></main>
+</section>
+<aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 21</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="22.html"><small>延伸到第 22 章</small><span>线程怎样改变服务器并发模型？</span><b aria-hidden="true">↗</b></a><a href="28.html"><small>延伸到第 28 章</small><span>就绪事件如何驱动连接状态机？</span><b aria-hidden="true">↗</b></a></div></aside>
+</article></main>
 <script>
 (() => {
  const input=document.getElementById('c21-fds'), out=document.getElementById('c21-ready');

@@ -2,10 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>第15章 异常控制流——异常与进程 — 深入理解计算机系统（CSAPP）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="CSAPP 中文实践教程第 15 章 · 异常控制流——异常与进程。从「第十五章：异常控制流——异常与进程」出发，理解原理、图解、实验及适用边界。">
+<link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/15.html">
+<title>第15章 异常控制流——异常与进程 — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="chapter-olah.css">
+<link rel="stylesheet" href="course-improvements.css">
 </head>
 <body class="chapter-refined">
 <a class="skip-link" href="#content">跳转至正文</a>
@@ -45,14 +48,8 @@
         </ul>
     </div>
     <div class="main-content"><main id="content"><article class="chapter-olah">
-<h1>第十五章：异常控制流——异常与进程</h1>
-
-        <p>设想一个场景：你在终端前台跑着一个编译任务，突然发现忘了在另一个窗口打开编辑器。你按下 <code>Ctrl+Z</code> 把编译进程挂起，敲 <code>bg</code> 让它到后台继续跑，再执行 <code>vim</code> 开始写代码。在这看似流畅的多任务操作背后，操作系统在一秒内可能进行了成千上万次上下文切换、处理了无数次硬件中断和系统调用——这些机制共同构成了所谓的"异常控制流"（Exceptional Control Flow, ECF）。</p>
-
-        <p>前几章我们讨论的，本质上是程序在"正常"路径下的执行——指令一条接一条顺序执行。但现实世界远没有这么规整：用户按下了键盘、磁盘数据准备好了、你写的代码除零了、或者访问了尚未映射的合法虚拟内存——这些事件可能让 CPU 把控制权交给内核。理解这些突变，是理解操作系统内核的起点。本章我们先从最底层的异常分类讲起，再深入到进程的创建和管理。</p>
-
-        
-
+<h1>fork 一次，为什么会产生两条执行路径？</h1>
+<p>一个正在运行的用户程序并非只按源码顺序前进。中断、异常和系统调用可能把控制交给内核；而 <code>fork()</code> 在内核协助下创建新进程，使父进程与子进程从看似同一个调用点继续执行，并拿到不同的返回值。</p><p>理解这种现象需要分清三个层面：处理器发生<strong>异常控制转移</strong>、操作系统维护<strong>进程及地址空间</strong>、父进程通过 <code>waitpid()</code> 观察<strong>退出状态</strong>。本章围绕这条因果链展开，示例以 Unix/Linux 系统为主，不把进程调度先后当作确定事实。</p>
 <p class="chapter-eyebrow">异常 · 内核态 · 进程生命周期</p>
 <p class="dek">CPU 为什么会离开当前指令流？为什么一个 <code>fork()</code> 会产生两个返回值，而结束的子进程仍可能留在进程表里？</p>
 <nav class="chapter-map" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c15-exception">异常分类</a><a href="#c15-syscall">系统调用</a><a href="#c15-fork">fork / COW</a><a href="#c15-exec">exec / wait</a><a href="#c15-practice">动手验证</a></nav>
@@ -191,7 +188,9 @@ child exit=0</code></pre>
             <a href="index.html">📖 返回目录</a>
             <a href="16.html">下一章 →</a>
         </div>
-    </article></main></div>
+    
+<aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 15</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="16.html"><small>延伸到第 16 章</small><span>异步信号如何打断正常控制流？</span><b aria-hidden="true">↗</b></a><a href="25.html"><small>延伸到第 25 章</small><span>Shell Lab 如何回收子进程？</span><b aria-hidden="true">↗</b></a></div></aside>
+</article></main></div>
 </div>
 </div>
 <script>
