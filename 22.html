@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-io-concurrency.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳转至正文</a>
@@ -57,7 +58,7 @@
 <p class="lede">“执行了两次”不等于“共享状态更新了两次”。并发的困难不是线程跑得快，而是<strong>两个独立执行流会在一个共享世界里相遇</strong>。从一个计数器开始，我们逐步建立线程、同步与等待的正确模型。</p>
 <p class="chapter-scope">范围：POSIX Threads / Linux 常见实践、C11 及以上的普通内存访问规则。时间线图是说明交错顺序的教学模型，不代表数据竞争程序具有可预测结果。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c22-model">01 共享边界</a><a href="#c22-life">02 生命周期</a><a href="#c22-race">03 丢失更新</a><a href="#c22-mutex">04 临界区</a><a href="#c22-cond">05 等待条件</a><a href="#c22-practice">06 动手验证</a></nav>
+<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c22-model">01 共享边界</a><a href="#c22-life">02 生命周期</a><a href="#c22-race">03 丢失更新</a><a href="#c22-mutex">04 临界区</a><a href="#c22-cond">05 等待条件</a><a href="#c22-practice">06 动手验证</a><a href="#deep-22">深入推导</a></nav>
 
 <section id="c22-model">
 <h2>22.1 先画边界：线程究竟共享什么？</h2>
@@ -145,6 +146,16 @@ pthread_mutex_unlock(&amp;mu);</code></pre>
 <h3>资料与范围</h3>
 <p>参阅 <a href="https://man7.org/linux/man-pages/man3/pthread_create.3.html">pthread_create(3)</a>、<a href="https://man7.org/linux/man-pages/man3/pthread_join.3.html">pthread_join(3)</a>、<a href="https://man7.org/linux/man-pages/man3/pthread_cond_wait.3.html">pthread_cond_wait(3)</a> 和 <a href="https://en.cppreference.com/w/c/language/memory_model">C 内存模型</a>。图示属于教学抽象；调度、可见性和错误返回请以目标平台规范为准。</p>
 </section>
+<section class="deep-study" id="deep-22" aria-labelledby="deep-22-title"><p class="deep-kicker">技术深描 · 22 / CONCURRENCY MODEL</p><h2 id="deep-22-title">四个线程各加 10,000 次：怎样证明结果必定是 40,000？</h2><figure class="deep-figure" tabindex="0" role="group" aria-label="可水平查看的因果图"><img src="chapter-assets/22-deep.svg" width="960" height="266" loading="lazy" alt="无锁的两个读取先后写入示意可能丢失一次逻辑更新，但在 C 里非原子共享变量的数据竞争属于未定义行为。使用同一互斥锁包围整个计数器更新，四线程各10000次最终必为40000。"><figcaption>互斥锁将整个读—改—写组合成临界区。逻辑推导与真实 POSIX 验证的边界见正文。</figcaption></figure>
+<p>设共享变量初值为 7，两条线程都打算执行一次 <code>counter++</code>。教材常画出 <code>A read 7 → B read 7 → A write 8 → B write 8</code>，以帮助理解<strong>为何读—改—写不是一个原子动作</strong>。但真实 C 程序若让线程无同步地访问并修改普通 <code>int</code>，会构成<strong>数据竞争与未定义行为</strong>；不能根据示意图宣布真实程序的最终值只可能是 8 或 9。</p>
+<p>可复现的正确版本用 <code>pthread_mutex_t</code> 把整个三步操作包起来：四条工作线程各执行 10,000 次，每次都遵守同一把锁，最后主线程 <code>pthread_join</code> 全部工作线程，读取总计数为 <code>4 × 10,000 = 40,000</code>。互斥提供的是<strong>同步及访问排序</strong>，不是让所有代码在物理上永远只运行一条线程。</p>
+<table class="deep-table"><thead><tr><th>机制</th><th>需要满足的条件</th><th>可保证什么</th></tr></thead><tbody><tr><td>单纯 <code>volatile int</code></td><td>无同步</td><td>不能防数据竞争，也不实现原子加一</td></tr><tr><td><code>pthread_mutex_lock</code></td><td>所有共享更新都持同一把锁</td><td>临界区互斥；相应加锁解锁形成同步</td></tr><tr><td>C11 原子 <code>atomic_fetch_add</code></td><td>所有相关读写遵守原子对象语义</td><td>原子读—改—写；内存序仍需按需求选</td></tr><tr><td><code>pthread_join</code></td><td>工作线程可连接且已完成</td><td>主线程可在 join 后检查最终状态</td></tr></tbody></table>
+<div class="deep-math"><strong>正确性不变量：0 ≤ counter ≤ 4 × 10,000</strong><span>所有线程结束且每次加一恰好执行一次时，最终值必须为 40,000；调度顺序不影响计数。</span></div>
+<pre><code>cc -std=c11 -Wall -Wextra -Werror -pedantic -pthread examples/deep-ch19-23.c -o /tmp/deep-io
+/tmp/deep-io mutex
+python3 examples/deep-ch19-23-models.py 22</code></pre>
+<p>实际 C 实验只执行<strong>没有数据竞争的正确版本</strong>，不编译运行未定义行为来“观察丢失更新”。如果多个锁保护不同资源，仍要考虑锁顺序、死锁与锁粒度。参考 <a href="https://man7.org/linux/man-pages/man3/pthread_mutex_lock.3p.html">pthread_mutex_lock(3p)</a>、<a href="https://man7.org/linux/man-pages/man3/pthread_join.3.html">pthread_join(3)</a> 与 <a href="https://en.cppreference.com/w/c/language/memory_model.html">C 内存模型</a>。</p></section>
+
 
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 22</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="23.html"><small>延伸到第 23 章</small><span>为什么互斥之外还需要条件同步？</span><b aria-hidden="true">↗</b></a><a href="26.html"><small>延伸到第 26 章</small><span>如何使生产者与消费者正确协作？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article>

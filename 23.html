@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-io-concurrency.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳转至正文</a>
@@ -57,7 +58,7 @@
 <p class="lede">在真正的服务里，瓶颈往往不是“线程数量不足”，而是队列无边界、锁覆盖了耗时任务，或者每次请求都新建线程。<strong>并发架构的关键，是把共享规则和任务生命周期设计清楚。</strong></p>
 <p class="chapter-scope">使用 POSIX 读写锁和条件变量说明机制；性能依赖负载与实现，不引用未经测量的纳秒数或固定加速比。以下线程池为教学模型，不是完整生产级库。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c23-rw">01 读写锁</a><a href="#c23-pool">02 任务队列</a><a href="#c23-shutdown">03 关闭协议</a><a href="#c23-deadlock">04 死锁</a><a href="#c23-debug">05 诊断工具</a><a href="#c23-practice">06 实验</a></nav>
+<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c23-rw">01 读写锁</a><a href="#c23-pool">02 任务队列</a><a href="#c23-shutdown">03 关闭协议</a><a href="#c23-deadlock">04 死锁</a><a href="#c23-debug">05 诊断工具</a><a href="#c23-practice">06 实验</a><a href="#deep-23">深入推导</a></nav>
 
 <section id="c23-rw">
 <h2>23.1 读者共享，写者独占：读写锁解决的是访问规则</h2>
@@ -136,6 +137,17 @@ run(task);                                 /* 一定在锁外 */</code></pre>
 <div class="insight"><strong>带走的模型：</strong>读写锁规范兼容访问；线程池规范任务流动；关闭协议规范生命周期；锁顺序规范资源依赖。并发性能评估应在正确性成立之后，再用真实负载测量。</div>
 <h3>资料与范围</h3><p>参阅 <a href="https://pubs.opengroup.org/onlinepubs/9699919799/functions/pthread_rwlock_rdlock.html">POSIX pthread_rwlock_rdlock</a>、<a href="https://man7.org/linux/man-pages/man3/pthread_cond_wait.3.html">pthread_cond_wait(3)</a> 与 <a href="https://clang.llvm.org/docs/ThreadSanitizer.html">ThreadSanitizer 使用说明</a>。等待公平性、吞吐量与检测开销均与平台/负载有关。</p>
 </section>
+<section class="deep-study" id="deep-23" aria-labelledby="deep-23-title"><p class="deep-kicker">技术深描 · 23 / CONCURRENCY MODEL</p><h2 id="deep-23-title">队列已经空了，条件变量到底等待什么？又怎样优雅关闭？</h2><figure class="deep-figure" tabindex="0" role="group" aria-label="可水平查看的因果图"><img src="chapter-assets/23-deep.svg" width="960" height="266" loading="lazy" alt="容量2的任务队列，producer 在满时等待 not_full，consumer 在空时等待 not_empty，pthread_cond_wait 在等待时原子释放互斥锁并在返回前重新加锁。关闭后拒绝新任务，已入队工作排空后退出。"><figcaption>有界队列的条件谓词和关闭协议。逻辑推导与真实 POSIX 验证的边界见正文。</figcaption></figure>
+<p>对一个固定容量 <code>capacity=2</code> 的任务队列，定义状态 <code>count</code>（当前排队任务数）、<code>closed</code>（是否拒绝新工作）、<code>enqueued</code>、<code>dequeued</code>（已接纳和已领取的计数）。最核心的不变量是 <code>0 ≤ count ≤ 2</code> 以及 <code>enqueued = dequeued + count</code>。任务<strong>从队列取出</strong>和任务<strong>真正完成</strong>不是同一时刻；结束条件要按业务要求确定。</p>
+<table class="deep-table"><thead><tr><th>参与者</th><th>在同一 mutex 下检查的条件</th><th>状态更新与通知</th></tr></thead><tbody><tr><td>生产者</td><td><code>while (count==2 &amp;&amp; !closed)</code> 等待 <code>not_full</code></td><td>没关闭才入队；<code>count++</code>；通知 <code>not_empty</code></td></tr><tr><td>消费者</td><td><code>while (count==0 &amp;&amp; !closed)</code> 等待 <code>not_empty</code></td><td>有任务才出队；<code>count--</code>；通知 <code>not_full</code></td></tr><tr><td>关闭发起者</td><td>持锁将 <code>closed=true</code></td><td>广播唤醒两类等待者；已接纳任务可以继续被消费</td></tr><tr><td>消费者退出</td><td><code>closed &amp;&amp; count==0</code></td><td>退出循环并让主线程 <code>join</code></td></tr></tbody></table>
+<p>核心并不在于“通知次数等于任务个数”。<code>pthread_cond_wait</code> 会<strong>原子地释放 mutex 并进入等待</strong>，唤醒返回前重新获得同一 mutex；因此必须在 <code>while</code> 循环里重新检查<strong>共享状态谓词</strong>。允许虚假唤醒，也允许别的线程先改变条件；<code>if</code> 只检查一次就继续工作可能越界或消费空队列。通知应该伴随受锁保护的状态更新，而不是单独充当任务计数器。</p>
+<p>关闭时，先停止接收新任务，唤醒阻塞的生产者和消费者；工作线程可以在队列清空后退出。工作线程拿到任务之后通常应<strong>在锁外执行耗时工作</strong>，否则即使配置了很多线程，也会被串成一个全局临界区。</p>
+<div class="deep-math"><strong>0 ≤ count ≤ 2；enqueued − dequeued = count</strong><span>终态：closed = true、count = 0、全部工作线程 join；不会将未接纳请求悄悄视作完成。</span></div>
+<pre><code>cc -std=c11 -Wall -Wextra -Werror -pedantic -pthread examples/deep-ch19-23.c -o /tmp/deep-io
+/tmp/deep-io queue
+python3 examples/deep-ch19-23-models.py 23</code></pre>
+<p>实际 C 程序用一个生产者、一个消费者、两个队列槽、六个确定性任务值，检查累积结果与已处理数；线程的运行次序不固定，<strong>断言检查最终状态而不是日志顺序</strong>。依据 <a href="https://man7.org/linux/man-pages/man3/pthread_cond_wait.3p.html">pthread_cond_wait(3p)</a>、<a href="https://man7.org/linux/man-pages/man3/pthread_cond_broadcast.3p.html">pthread_cond_broadcast(3p)</a>。</p></section>
+
 
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 23</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="22.html"><small>延伸到第 22 章</small><span>共享状态里的竞争条件怎么证明？</span><b aria-hidden="true">↗</b></a><a href="28.html"><small>延伸到第 28 章</small><span>线程池与 Reactor 的职责怎么划分？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article>
