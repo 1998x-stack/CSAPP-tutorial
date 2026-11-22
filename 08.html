@@ -103,6 +103,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visi
 @media print{body{background:white;font-size:11pt}.book-layout{display:block;box-shadow:none}.book-sidebar,.inline-toc,.trace-grid,.controls,.skip-link{display:none!important}.essay{padding:0}.article-body{max-width:none}.essay section{margin-top:24pt;break-inside:auto}.figure-card,.math-panel,.widget{break-inside:avoid;box-shadow:none}.math-scroll{overflow:visible}.math-scroll math[display=block]{font-size:1.15rem}.references a::after{content:" (" attr(href) ")";font-size:.75em}}
 .essay .figure-card svg{max-width:100%;height:auto}.essay .step-button:focus-visible{outline:3px solid #147f80;outline-offset:3px}.essay .step-button{min-height:45px}.essay .figure-card{overflow-x:auto}@media(max-width:580px){.essay .figure-card figure{min-width:640px}.essay .figure-card svg{min-width:0}}@media print{.essay .widget .trace-grid{display:none}}</style>
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-chapters.css">
 </head>
 <body>
 <a class="skip-link" href="#content">跳转到正文</a>
@@ -178,7 +179,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visi
 <p class="dek">先定义机器“能看见什么”，再顺着一条 <code>irmovq</code> 指令走过编码、控制信号与 SEQ 数据通路。</p>
 <div class="lede-line" aria-hidden="true"></div>
 <p>程序员看到的是 <code>irmovq $0x1122334455667788, %r8</code>。硬件收到的却只有十个字节。<strong>指令集体系结构（ISA）是一份双方都必须遵守的契约：</strong>怎样编码、读写哪些状态、执行后必须得到什么结果。它没有规定内部必须使用多少流水级。</p>
-<nav class="inline-toc" aria-label="本章阅读路径"><a href="#contract">ISA 契约</a><a href="#encoding">编码拆解</a><a href="#hcl">控制信号</a><a href="#seq">SEQ 单周期</a><a href="#compare">CISC / RISC</a><a href="#lab">动手检验</a></nav>
+<nav class="inline-toc" aria-label="本章阅读路径"><a href="#contract">ISA 契约</a><a href="#encoding">编码拆解</a><a href="#hcl">控制信号</a><a href="#seq">SEQ 单周期</a><a href="#compare">CISC / RISC</a><a href="#lab">动手检验</a><a href="#deep-08">深入推导</a></nav>
 </header>
 <section id="contract" aria-labelledby="contract-title"><span class="section-no">01 / CONTRACT</span>
 <h2 id="contract-title">先划清边界：哪些是“程序员可见状态”？</h2>
@@ -268,6 +269,11 @@ assert int.from_bytes(encoded[2:], "little") == value
 print(encoded.hex(" "))</code></pre>
 <p class="small-note">理解迁移：第 8 章解释“一条指令必须做什么”；<a href="09.html">第 9 章</a>解释“怎么让多条指令重叠执行”。</p>
 </section>
+<section class="deep-study" id="deep-08" aria-labelledby="deep-08-title"><p class="deep-kicker">技术推导 · 08</p><h2 id="deep-08-title">一条存储指令的数据，究竟从哪来、写到哪里？</h2><figure class="deep-diagram"><img src="chapter-assets/08-deep.svg" loading="lazy" width="960" height="264" alt="rmmovq 的编码与数据通路，三阶段因果流程"><figcaption>Y86-64 rmmovq 的编码长度 = 1+1+8 = 10 B。图为简化教学模型，非设备测量。</figcaption></figure>
+<p>以教学 ISA Y86-64 的 <code>rmmovq %rax, 8(%rbx)</code> 为例，它被编码成 <code>40 03 08 00 00 00 00 00 00 00</code>：第一个字节是指令种类，第二个字节指定 <code>rA=0</code>（%rax）、<code>rB=3</code>（%rbx），后 8 字节是小端位移 <code>8</code>。这<strong>不是 x86-64 实际编码</strong>。</p>
+<table class="deep-table"><thead><tr><th>阶段</th><th>信号值</th><th>职责</th></tr></thead><tbody><tr><td>Fetch</td><td>valC=8，valP=PC+10</td><td>取出指令并计算顺序后继</td></tr><tr><td>Decode</td><td>valA=R[%rax]，valB=R[%rbx]</td><td>读源值与基址</td></tr><tr><td>Execute</td><td>valE=valB+8</td><td>得到有效地址</td></tr><tr><td>Memory</td><td>M8[valE] ← valA</td><td>写入连续 8 字节</td></tr><tr><td>Write back</td><td>dstE=dstM=RNONE</td><td>不写回通用寄存器</td></tr></tbody></table>
+<p>若 <code>%rbx=0x1000</code>、<code>%rax=0x1122334455667788</code>，则目标地址是 <code>0x1008</code>，按 Y86-64 小端内存模型，写入的字节依次为 <code>88 77 66 55 44 33 22 11</code>。位移字节和被写入的值是<strong>两条不同的数据来源</strong>。</p>
+<p>执行 <code>python3 examples/deep-ch05-12.py 08</code> 检查 10 字节编码和内存结果；官方可查证资料为 <a href="https://csapp.cs.cmu.edu/3e/figures.html">CS:APP 3e 第 4 章图目录</a>与 <a href="https://csapp.cs.cmu.edu/3e/waside/waside-hcl.pdf">SEQ/PIPE HCL 描述</a>。</p></section>
 <section id="references" class="references" aria-labelledby="references-title"><span class="section-no">REFERENCES</span><h2 id="references-title">参考与边界</h2>
 <ol>
 <li>R. Bryant、D. O'Hallaron，《<a href="https://csapp.cs.cmu.edu/3e/">Computer Systems: A Programmer's Perspective</a>》第 3 版，第 4 章“Processor Architecture”。</li>

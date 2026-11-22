@@ -5,6 +5,7 @@
 <link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/05.html">
 <title>第 5 章：程序的机器级表示——控制流 · CSAPP 中文教程</title>
 <link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="olah-ch05-07.css"><link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-chapters.css">
 </head>
 <body class="olah-body"><a class="skip-link" href="#main">跳转至正文</a>
 <div class="double-border olah-shell"><div class="container olah-grid">
@@ -73,7 +74,7 @@
 <p class="eyebrow">CSAPP · 05 / MACHINE-LEVEL PROGRAMMING</p>
 <h1>一条 if，究竟让 CPU 改变了什么？</h1>
 <p class="dek">从 <code>cmp</code> 设置条件码，到 <code>jcc</code> 选择下一条指令，再到循环的回边和 <code>switch</code> 的分派。本章要学的不是“背汇编”，而是把高级语言的判断还原成可追踪的控制流图。</p>
-<nav class="reading-map" aria-label="本章阅读路径"><strong>阅读路线</strong><a href="#flags">条件码</a><a href="#branches">分支</a><a href="#loops">循环</a><a href="#switch">switch</a><a href="#experiment">动手验证</a></nav>
+<nav class="reading-map" aria-label="本章阅读路径"><strong>阅读路线</strong><a href="#flags">条件码</a><a href="#branches">分支</a><a href="#loops">循环</a><a href="#switch">switch</a><a href="#experiment">动手验证</a><a href="#deep-05">深入推导</a></nav>
 </header>
 <nav class="site-topic-toc" aria-label="本章小节导航"><strong>快速定位</strong><a href="#chapter-section-05-1">01 · 比较并不产生布尔值，它先留下“痕迹”</a><a href="#chapter-section-05-2">02 · 一次分支，就是对下一条指令地址作选择</a><a href="#chapter-section-05-3">03 · 循环不是特殊魔法，而是一条回边</a><a href="#chapter-section-05-4">04 · switch 可能是多次比较，也可能是一次索引…</a><a href="#chapter-section-05-5">05 · 让编译器展示证据，而不是猜结果</a><a href="#chapter-section-05-6">查证与下一步</a></nav>
 <section class="chapter-section" id="flags">
@@ -171,6 +172,11 @@ objdump -dr flow.o</code></pre>
 </ol>
 <p class="mini-note">实验依赖本机工具链和目标架构。汇编清单、指令选择和栈布局随编译器、版本、目标和标志改变；本章代码块中的汇编仅为可推导的教学示意。</p>
 </section>
+<section class="deep-study" id="deep-05" aria-labelledby="deep-05-title"><p class="deep-kicker">技术推导 · 05</p><h2 id="deep-05-title">8 位比较为什么出现 SF=0，却仍然有符号小于？</h2><figure class="deep-diagram"><img src="chapter-assets/05-deep.svg" loading="lazy" width="960" height="264" alt="条件码不能只看符号位，三阶段因果流程"><figcaption>有符号：−128 < 1；无符号：128 不小于 1。图为简化教学模型，非设备测量。</figcaption></figure>
+<p>把比较还原成一次固定宽度减法。若 <code>%al=0x80</code>，<code>cmpb $1, %al</code> 计算低 8 位的 <code>0x80−0x01=0x7f</code>，丢弃结果，但留下条件码。结果的符号位为零，故 <code>SF=0</code>；从有符号 −128 减 1 数学上得到 −129，超出 8 位补码范围，故 <code>OF=1</code>；无符号 128 减 1 没有借位，故 <code>CF=0</code>，而 <code>ZF=0</code>。</p>
+<div class="deep-grid"><div><h3>有符号分支 <code>jl</code></h3><p>小于的判据是 <code>SF≠OF</code>，本例 <code>0≠1</code>，因此跳转。不能仅凭结果最高位判断大小。</p></div><div><h3>无符号分支 <code>jb</code></h3><p>小于的判据是 <code>CF=1</code>，本例为 0，不跳转。相同位模式可被解释为无符号 128 和 1。</p></div></div>
+<p>将操作数调换，<code>0x01−0x80=0x81</code>：<code>SF=1, OF=1, CF=1</code>，故有符号 <code>1&lt;−128</code> 为假，无符号 <code>1&lt;128</code> 为真。这是机器 8 位运算，不等同于 C 的 <code>char</code> 表达式：后者通常先做整数提升。</p>
+<p>用 <code>python3 examples/deep-ch05-12.py 05</code> 断言两组标志及跳转结果。以 <a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel CMP / Jcc 手册</a>核对判据；教材的机器级程序内容可参照 <a href="https://csapp.cs.cmu.edu/3e/">CS:APP 3e</a>。</p></section>
 <section class="chapter-section" id="references">
 <h2 id="chapter-section-05-6">查证与下一步</h2>
 <p>把握三个问题：<strong>哪条指令写标志？哪条指令读取标志？哪里存在回边或多路分派？</strong>下一章将让这些控制流跨过函数边界，观察 <code>call</code>、返回地址与调用栈。</p>

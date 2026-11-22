@@ -5,6 +5,7 @@
 <link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/06.html">
 <title>第 6 章：程序的机器级表示——过程与栈 · CSAPP 中文教程</title>
 <link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="olah-ch05-07.css"><link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-chapters.css">
 </head>
 <body class="olah-body"><a class="skip-link" href="#main">跳转至正文</a>
 <div class="double-border olah-shell"><div class="container olah-grid">
@@ -73,7 +74,7 @@
 <p class="eyebrow">CSAPP · 06 / PROCEDURES &amp; THE STACK</p>
 <h1>函数返回时，CPU 怎么知道该回哪里？</h1>
 <p class="dek">一个 <code>call</code> 可能改变两件事：控制流转去被调用函数，返回地址被保存在栈上。把这个最小机制看清后，再讨论参数、寄存器所有权、16 字节对齐和递归栈帧，就不会把“典型编译结果”误以为“所有函数都一样”。</p>
-<nav class="reading-map" aria-label="本章阅读路径"><strong>阅读路线</strong><a href="#call">call / ret</a><a href="#stack">栈帧</a><a href="#abi">调用约定</a><a href="#recursion">递归</a><a href="#experiment">实验</a></nav>
+<nav class="reading-map" aria-label="本章阅读路径"><strong>阅读路线</strong><a href="#call">call / ret</a><a href="#stack">栈帧</a><a href="#abi">调用约定</a><a href="#recursion">递归</a><a href="#experiment">实验</a><a href="#deep-06">深入推导</a></nav>
 </header>
 <nav class="site-topic-toc" aria-label="本章小节导航"><strong>快速定位</strong><a href="#chapter-section-06-1">01 · 一次调用：先记住来路，再跳向目标</a><a href="#chapter-section-06-2">02 · 栈帧是约定出来的空间，不是固定模板</a><a href="#chapter-section-06-3">03 · ABI：两段机器代码事先约好的规则</a><a href="#chapter-section-06-4">04 · 递归为什么会“层层返回”？</a><a href="#chapter-section-06-5">05 · 用 gdb 把返回地址与栈顶对上号</a><a href="#chapter-section-06-6">查证与下一步</a></nav>
 <section class="chapter-section" id="call">
@@ -154,6 +155,14 @@ bt</code></pre>
 <p>每一次 <code>bt</code> 展示的是调试器能恢复的调用关系；栈顶内存必须结合当前函数的序言/栈调整后才可解释，不能在任意位置把 <code>(%rsp)</code> 当成返回地址。随后用 <code>cc -O2 -S calls.c</code> 比较结果，尝试观察帧指针消失、内联或更复杂的优化。</p>
 <div class="insight"><p><strong>三个可检查的不变量：</strong>调用前的栈对齐、被调用者保存寄存器的恢复、以及返回地址对应调用点的下一条指令。对具体二进制做断言之前，还要确定目标 ABI 和编译选项。</p></div>
 </section>
+<section class="deep-study" id="deep-06" aria-labelledby="deep-06-title"><p class="deep-kicker">技术推导 · 06</p><h2 id="deep-06-title">call 前后，栈指针为何相差 8 模 16？</h2><figure class="deep-diagram"><img src="chapter-assets/06-deep.svg" loading="lazy" width="960" height="264" alt="栈对齐与返回地址，三阶段因果流程"><figcaption>示意：0x1000 → CALL → 0x0ff8；真实序言由编译器决定。图为简化教学模型，非设备测量。</figcaption></figure>
+<p>以常见 System V AMD64 ABI 的普通近调用为例，调用点应满足 <code>rsp mod 16=0</code>。CPU 执行 <code>call</code> 时压入 8 字节返回地址，因此刚到被调用者入口时 <code>rsp mod 16=8</code>。这并非“栈不对齐”，而是 ABI 调用约定的组成部分。</p>
+<table class="deep-table"><thead><tr><th>动作</th><th>示意 rsp</th><th>余数</th><th>解释</th></tr></thead><tbody><tr><td>caller 的 call 前</td><td>0x1000</td><td>0</td><td>满足调用点对齐</td></tr><tr><td>callee 入口</td><td>0x0ff8</td><td>8</td><td>返回地址占 8 B</td></tr><tr><td>示例：再减 8</td><td>0x0ff0</td><td>0</td><td>可在此状态进行下一次普通调用</td></tr></tbody></table>
+<p>第三行仅是便于计算的例子，不代表每个函数都执行 <code>subq $8,%rsp</code>。保存被调用者保留寄存器、为局部变量分配空间、开启优化及省略帧指针都会改变具体序言。某些用户态叶子函数可使用 System V 定义的 128 字节 red zone，而 Windows x64 和内核代码不能照搬此假设。</p>
+<pre><code>cc -std=c11 -O0 -fno-omit-frame-pointer -S examples/olah-ch06-procedures.c -o /tmp/call-O0.s
+cc -std=c11 -O2 -S examples/olah-ch06-procedures.c -o /tmp/call-O2.s
+# 对比 call、push、sub、ret；它们并非必须逐条相同</code></pre>
+<p>运行 <code>python3 examples/deep-ch05-12.py 06</code> 验证调用前后模运算。详细 ABI 边界参见 <a href="https://gitlab.com/x86-psABIs/x86-64-ABI/">System V AMD64 psABI</a>。</p></section>
 <section class="chapter-section" id="references">
 <h2 id="chapter-section-06-6">查证与下一步</h2>
 <p>当函数调用不再是黑盒，就能看懂“局部数组写出边界”为什么可能破坏邻近内存——但不应武断假定邻近的恰好是返回地址。下一章通过数组和结构体的真实地址布局，连到有界输入和栈保护。</p>
