@@ -23,7 +23,7 @@ for (const n of ['05','06','07']) {
     assert.match(page, /href="index.html"/);
     assert.match(page, /href="olah-ch05-07.css"/);
     assert.ok((page.match(/role="status" aria-live="polite"/g) || []).length >= 1);
-    assert.equal((page.match(/<figcaption\b/g) || []).length, 2);
+    assert.equal((page.match(/<figcaption\b/g) || []).length, 3);
     const images = [...page.matchAll(/<img src="(assets\/chapters\/[^"]+\.svg)"/g)];
     assert.equal(images.length, 2);
     for (const [, filename] of images) {
