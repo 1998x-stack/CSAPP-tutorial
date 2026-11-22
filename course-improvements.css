@@ -28,3 +28,16 @@
 /* The 28-link sidebar becomes a horizontally scrollable chapter rail on narrow screens. */
 @media(max-width:900px){body.olah-lesson .sidebar{max-height:none!important;overflow:visible!important}body.olah-lesson .sidebar .chapter-list{display:flex!important;columns:auto!important;gap:.4rem;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:thin;padding-bottom:.4rem}body.olah-lesson .sidebar .chapter-list li{flex:0 0 auto}body.olah-lesson .sidebar .chapter-list a{white-space:nowrap;display:block}body.olah-lesson .sidebar .chapter-list a.active{outline:2px solid #73a99c;outline-offset:-2px}}
 @media print{.site-topic-toc{display:none}.concept-bridge{break-inside:avoid;background:#fff;box-shadow:none}.lesson-extension{break-inside:avoid}}
+
+/* Prevent the 28-entry mobile chapter rail from contributing its intrinsic width
+   to the CSS grid; only the rail itself should scroll horizontally. */
+@media(max-width:900px){
+  body.olah-lesson .double-border{max-width:100%;min-width:0}
+  body.olah-lesson .container{grid-template-columns:minmax(0,1fr);min-width:0;max-width:100%}
+  body.olah-lesson .sidebar{width:100%;min-width:0;max-width:100%;overflow:hidden!important}
+  body.olah-lesson .sidebar .chapter-list{
+    width:100%;min-width:0;max-width:100%;
+    overflow-x:auto!important;overflow-y:hidden!important;
+  }
+  body.olah-lesson .main-content{min-width:0;max-width:100%}
+}
