@@ -19,7 +19,7 @@ for (const n of ['05','06','07']) {
     assert.match(page, /<article class="olah-lesson">/);
     assert.match(page, /<nav class="reading-map"/);
     assert.match(page, /<details class="mobile-chapters"/);
-    assert.ok((page.match(/<h2>/g) || []).length >= 5);
+    assert.ok((page.match(/<h2\b[^>]*>/g) || []).length >= 5);
     assert.match(page, /href="index.html"/);
     assert.match(page, /href="olah-ch05-07.css"/);
     assert.ok((page.match(/role="status" aria-live="polite"/g) || []).length >= 1);
