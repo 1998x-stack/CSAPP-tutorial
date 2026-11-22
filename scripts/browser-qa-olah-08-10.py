@@ -18,7 +18,14 @@ def verify(page, chapter: int, width: int) -> dict:
     page.evaluate("document.fonts.ready")
     assert page.locator("main h1").count() == 1
     assert page.locator("main svg[role='img']").count() == 2
-    assert page.locator("main figcaption").count() == 2
+    assert page.locator("main figcaption").count() == 3
+    deep_img = page.locator(f'main img[src="chapter-assets/{chapter:02}-deep.svg"]')
+    assert deep_img.count() == 1
+    deep_img.scroll_into_view_if_needed()  # The new image is intentionally lazy-loaded.
+    deep_img.evaluate("(img) => img.decode()")
+    page.evaluate("window.scrollTo(0, 0)")
+    image_ready = deep_img.evaluate("(img) => img.complete && img.naturalWidth > 0 && img.naturalHeight > 0")
+    assert image_ready, (chapter, width, "new SVG unavailable")
     svg_state = page.locator("main svg").evaluate_all(
         "(nodes) => nodes.map(x => ({width:x.getBoundingClientRect().width, height:x.getBoundingClientRect().height, title:x.querySelector('title')?.textContent, desc:x.querySelector('desc')?.textContent}))")
     assert all(x["width"] > 0 and x["height"] > 0 and x["title"] and x["desc"] for x in svg_state), svg_state

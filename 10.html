@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="从一段 hello.c 出发，理解字节、编译与链接、CPU、存储层次、操作系统抽象和 Amdahl 定律。">
+<meta name="description" content="从 CPE 测量、独立累加链到延迟和吞吐下界，解释代码优化的适用条件与实证验证。">
 <link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/10.html">
 <title>第 10 章 · 程序为什么慢？先看依赖链 | CSAPP</title>
 <link rel="stylesheet" href="theme.css">
@@ -103,6 +103,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visi
 @media print{body{background:white;font-size:11pt}.book-layout{display:block;box-shadow:none}.book-sidebar,.inline-toc,.trace-grid,.controls,.skip-link{display:none!important}.essay{padding:0}.article-body{max-width:none}.essay section{margin-top:24pt;break-inside:auto}.figure-card,.math-panel,.widget{break-inside:avoid;box-shadow:none}.math-scroll{overflow:visible}.math-scroll math[display=block]{font-size:1.15rem}.references a::after{content:" (" attr(href) ")";font-size:.75em}}
 .essay .figure-card svg{max-width:100%;height:auto}.essay .step-button:focus-visible{outline:3px solid #147f80;outline-offset:3px}.essay .step-button{min-height:45px}.essay .figure-card{overflow-x:auto}@media(max-width:580px){.essay .figure-card figure{min-width:640px}.essay .figure-card svg{min-width:0}}@media print{.essay .widget .trace-grid{display:none}}</style>
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-chapters.css">
 </head>
 <body>
 <a class="skip-link" href="#content">跳转到正文</a>
@@ -176,7 +177,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visi
 <p class="dek">从 CPE 的可信测量开始，区分编译器能做什么、指针别名阻碍了什么，以及循环展开何时真的缩短关键路径。</p>
 <div class="lede-line" aria-hidden="true"></div>
 <p>两个版本的求和循环可能拥有相同的时间复杂度，却在同一机器上显示不同的执行时间。原因可能是函数调用、访存、数据依赖、分支，也可能只是实验噪声。<strong>优化的第一步不是改代码，而是建立可重复的基线。</strong></p>
-<nav class="inline-toc" aria-label="本章阅读路径"><a href="#metric">如何测量</a><a href="#barriers">优化障碍</a><a href="#motion">代码移动</a><a href="#ilp">多路累加</a><a href="#bound">性能下界</a><a href="#lab">可运行实验</a></nav>
+<nav class="inline-toc" aria-label="本章阅读路径"><a href="#metric">如何测量</a><a href="#barriers">优化障碍</a><a href="#motion">代码移动</a><a href="#ilp">多路累加</a><a href="#bound">性能下界</a><a href="#lab">可运行实验</a><a href="#deep-10">深入推导</a></nav>
 </header>
 <section id="metric" aria-labelledby="metric-title"><span class="section-no">01 / MEASUREMENT</span><h2 id="metric-title">CPE 是直线的斜率，不是随口报出的常数</h2>
 <p>CPE（Cycles Per Element，每个处理元素所需周期）适合描述长度为 <code>n</code> 的数组循环。对不同规模测量总周期 <code>T(n)</code>，在输入足够大、运行条件相近且规模处于相同性能区间时，常用近似：</p>
@@ -310,6 +311,11 @@ int main(int argc, char **argv) {
 }</code></pre>
 <p class="small-note">执行：<code>gcc -O3 -std=c11 -Wall -Wextra sum.c -o sum && ./sum 1000000</code>。若使用 <code>-ffast-math</code> 或 <code>-Ofast</code>，浮点语义和优化空间会发生变化，不能与严格编译条件下的结果混为一谈。</p>
 </section>
+<section class="deep-study" id="deep-10" aria-labelledby="deep-10-title"><p class="deep-kicker">技术推导 · 10</p><h2 id="deep-10-title">多路累加为什么有极限？给 CPE 计算一个下界</h2><figure class="deep-diagram"><img src="chapter-assets/10-deep.svg" width="960" height="264" loading="lazy" alt="延迟界与吞吐界的相遇的三阶段独立推导示意"><figcaption>教学下界：CPE ≥ max(L/K, 1/R)，非任何具体芯片的实测值。这是明确条件下的教学模型。</figcaption></figure>
+<p>假设某个累加操作的<strong>相关结果延迟</strong>为 <code>L=4 cycles</code>，执行资源最多可持续提供 <code>R=2 operations/cycle</code>。使用 <code>K</code> 条真正独立、均衡的累加链，理论上的每元素周期下界由两道约束共同决定：<code>CPE ≥ max(L/K, 1/R)</code>。其中 1/R 还要求“每个元素恰有一次所计操作”；若每元素多个操作，则要按资源需求重算。</p>
+<table class="deep-table"><thead><tr><th>K 独立链</th><th>L/K（周期/元素）</th><th>1/R</th><th>下界</th></tr></thead><tbody><tr><td>1</td><td>4</td><td>0.5</td><td>4</td></tr><tr><td>2</td><td>2</td><td>0.5</td><td>2</td></tr><tr><td>4</td><td>1</td><td>0.5</td><td>1</td></tr><tr><td>8</td><td>0.5</td><td>0.5</td><td>0.5</td></tr></tbody></table>
+<p>因此单纯继续增加 K 并不会突破吞吐界。真实循环还含加载、寻址、分支、循环控制和寄存器压力，上式只是<strong>乐观的必要条件</strong>而不是运行时间预测。利用整数无符号模加法可以构造数值结果一致的多累加器实验；若对浮点和进行多路拆分，改变结合顺序通常会改变舍入结果，必须与严格浮点语义及应用误差容忍度一起审查。</p>
+<p>用 <code>python3 examples/deep-ch05-12.py 10</code> 验证所有下界值；编译器优化条件参考 <a href="https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html">GCC 优化选项</a>，具体微架构延迟和吞吐参数则应查 <a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel64-and-ia32-architectures-optimization.html">Intel Optimization Manual</a>或所用 CPU 文档。</p></section>
 <section id="references" class="references" aria-labelledby="references-title"><span class="section-no">REFERENCES</span><h2 id="references-title">参考与边界</h2>
 <ol><li>Bryant、O'Hallaron，《<a href="https://csapp.cs.cmu.edu/3e/">CS:APP 第三版</a>》第 5 章“Optimizing Program Performance”，CPE、代码移动与指令级并行。</li>
 <li><a href="https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html">GCC Optimize Options</a>：编译优化级别和浮点相关选项。</li>

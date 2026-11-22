@@ -110,6 +110,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visi
 @media(max-width:580px){.essay .figure-card svg{min-width:620px}.cache-trace{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-chapters.css">
 </head>
 <body>
 <a class="skip-link" href="#content">跳转到正文</a>
@@ -181,7 +182,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visi
 <main class="essay" id="content"><article class="article-body">
 <header><div class="eyebrow">CHAPTER 12 · CACHE MAPPING</div><h1>为什么缓存还有空位，却偏偏装不下两个数？</h1>
 <p class="dek">两个地址只相差 64 字节，在一个极小的直接映射缓存里也可能反复驱逐彼此。原因不是总容量用完，而是地址中的几位决定了它们必须去同一个组。</p>
-<div class="lede-line"></div><nav class="inline-toc" aria-label="本章导航"><a href="#address">地址拆分</a><a href="#associativity">动态追踪</a><a href="#misses">3C Miss</a><a href="#matrix">矩阵分块</a><a href="#practice">实验</a></nav></header>
+<div class="lede-line"></div><nav class="inline-toc" aria-label="本章导航"><a href="#address">地址拆分</a><a href="#associativity">动态追踪</a><a href="#misses">3C Miss</a><a href="#matrix">矩阵分块</a><a href="#practice">实验</a><a href="#deep-12">深入推导</a></nav></header>
 <section id="address"><span class="section-no">12.1 · 从一条缓存行开始</span><h2>容量不是一袋任意摆放的字节</h2>
 <p>经典教学模型的缓存由 <strong>S 组（sets）</strong>、每组 <strong>E 行（ways）</strong>及每行 <strong>B 字节（block/line）</strong>组成。数据容量 <code>C = S × E × B</code>；每行另有有效位、标签和实现相关的替换状态等元数据，<strong>C 不包含这些开销</strong>。若有 4 组、每组 2 行、每行 16 B，则数据容量为 128 B。</p>
 <div class="math-panel"><div class="math-scroll" tabindex="0" role="region" aria-label="缓存容量公式"><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><mrow><mi>C</mi><mo>=</mo><mi>S</mi><mo>×</mo><mi>E</mi><mo>×</mo><mi>B</mi><mo>=</mo><mn>4</mn><mo>×</mo><mn>2</mn><mo>×</mo><mn>16</mn><mo>=</mo><mn>128</mn><mtext> B</mtext></mrow></math></div><div class="math-label">教学模型只计算数据存储容量</div></div>
@@ -233,6 +234,12 @@ for (int i = 0; i &lt; N; ++i)
 # 应输出：naive and tiled results match</code></pre>
 <p>要做可信的性能比较，应针对多个矩阵规模、不同块大小、重复运行与稳定频率环境测量，并报告 CPU 型号、编译器、优化选项、数据对齐和采样方式。<code>perf</code> 的原始计数器也不总能直接区分前述 3C 原因。</p>
 <div class="callout"><p><strong>带走的模型：</strong>先按块号选择 set，再比较 tag，最后靠 offset 找到数据；组织结构限制了“可能保留什么”，而访问次序决定“是否真的复用它”。</p></div></section>
+<section class="deep-study" id="deep-12" aria-labelledby="deep-12-title"><p class="deep-kicker">技术推导 · 12</p><h2 id="deep-12-title">两种 128B Cache，为何同一访问序列一个全未命中？</h2><figure class="deep-diagram"><img src="chapter-assets/12-deep.svg" width="960" height="264" loading="lazy" alt="同容量但相联度不同的三阶段独立推导示意"><figcaption>0 与 128 的块号不同，但两种组织都映射到 set 0。这是明确条件下的教学模型。</figcaption></figure>
+<p>固定数据容量 <code>C=128B</code>、行大小 <code>B=16B</code>，先构造一个极简访问序列：地址 <code>0x00 → 0x80 → 0x00 → 0x80</code>。比较的不是两个容量不同的设备，而是<strong>同容量、不同相联度</strong>的两个教学缓存；初始均为空。</p>
+<table class="deep-table"><thead><tr><th>组织</th><th>S 组</th><th>E 路</th><th>组号的计算</th><th>访问结果</th></tr></thead><tbody><tr><td>直接映射</td><td>8</td><td>1</td><td><code>⌊addr/16⌋ mod 8</code></td><td>M M M M</td></tr><tr><td>两路组相联</td><td>4</td><td>2</td><td><code>⌊addr/16⌋ mod 4</code></td><td>M M H H</td></tr></tbody></table>
+<p>两个地址在两种组织中都选中 set 0：直接映射仅有 1 行容纳位置，所以两个标签相互驱逐，后两次仍是 miss；两路组相联有两行可分别存储两个标签，所以在无其他访问且没有失效的条件下，重复读取命中。此序列恰好只涉及两个不同数据块，<strong>第一轮两次 compulsory miss</strong>不能避免；后两次直接映射的额外 miss 属于 conflict miss，而非容量装不下。</p>
+<p>更高的相联度也不是无条件更快：需要比较更复杂的标签匹配及功耗、访问延迟、布局与替换策略。这里不把教学命中数直接套到真实 L1、L2 或多核一致性环境。</p>
+<p><code>python3 examples/deep-ch05-12.py 12</code> 使用明确的 LRU 置换模拟重放序列；教材依据见 <a href="https://csapp.cs.cmu.edu/3e/">CS:APP 3e 第 6 章</a>。继续阅读 <a href="25.html">Cache Lab</a>，用长访问轨迹检验组号、标签和替换规则。</p></section>
 <section id="references"><span class="section-no">参考与边界</span><h2>延伸阅读</h2><ol class="references"><li><a href="https://csapp.cs.cmu.edu/3e/">Bryant &amp; O'Hallaron, CS:APP（第 3 版官方站点）</a>，第 6 章 Caches、Writing Cache-Friendly Code。</li><li><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf">ISO C11 committee draft N1570</a>，数组布局与浮点语义。</li><li><a href="https://man7.org/linux/man-pages/man1/perf-stat.1.html">Linux perf-stat(1)</a>，硬件性能事件的计量工具与其局限。</li></ol></section>
 <nav class="footer-nav" aria-label="章节翻页"><a href="11.html">← 上一章</a><a href="index.html">返回目录</a><a href="13.html">下一章 →</a></nav>
 
