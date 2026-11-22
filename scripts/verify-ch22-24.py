@@ -44,7 +44,10 @@ def main():
         parser.feed(html)
         assert parser.count >= 2, f"{chapter}: no meaningful code"
         links = re.findall(r'<img\s+src="(chapter-assets/[^"]+\.svg)"', html)
-        assert len(links) == 2, (chapter, links)
+        expected = 3 if chapter in (22, 23) else 2
+        assert len(links) == expected, (chapter, links)
+        if chapter in (22, 23):
+            assert links[-1] == f"chapter-assets/{chapter}-deep.svg", (chapter, links)
         for rel in links:
             path = ROOT / rel
             svg = ET.parse(path).getroot()
@@ -69,7 +72,7 @@ def main():
             subprocess.run(["cc","-std=c11","-Wall","-Wextra","-Werror","-pedantic","-O2","-pthread",str(src),"-o",str(exe)], check=True, timeout=30)
             output = subprocess.check_output([str(exe)], text=True, timeout=30)
             assert marker in output, (chapter, output)
-        print(f"PASS chapter {chapter}: HTML, 2 SVGs, evidence, JS syntax, compiled C")
+        print(f"PASS chapter {chapter}: HTML, {expected} SVGs, evidence, JS syntax, compiled C")
 
 if __name__ == "__main__":
     main()
