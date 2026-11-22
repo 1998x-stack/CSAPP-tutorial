@@ -111,3 +111,22 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid #157b
 @media(max-width:370px){.stage-grid{grid-template-columns:1fr}.stage{min-height:0}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important}}
 @media print{.site-top,.top-nav,.hero-actions,.filters,.catalog-tools,.site-footer,.featured{display:none!important}.site-shell{width:100%}.hero{padding:0}.diagram{box-shadow:none}.chapter-grid{grid-template-columns:repeat(2,1fr)}.chapter-card{break-inside:avoid}.stage-grid{grid-template-columns:repeat(3,1fr)}}
+
+/* Causal cross-chapter learning paths, no JS dependency. */
+.trace-section{border-top:1px solid var(--line);background:#f3f6f0}
+.trace-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+.trace-card{min-width:0;border:1px solid #d6e3d9;border-radius:13px;background:var(--surface);padding:25px 23px;display:flex;flex-direction:column}
+.trace-label{font:800 .72rem/1.5 ui-monospace,monospace;color:#a56d32;letter-spacing:.1em}
+.trace-card h3{font-family:var(--serif);font-size:1.25rem;line-height:1.45;color:#234b45;margin:12px 0 4px}
+.trace-card>p:not(.trace-takeaway){font-size:.87rem;line-height:1.74;color:#5b7468;margin:7px 0 13px}
+.trace-steps{list-style:none;padding:0 0 0 11px;margin:0 0 17px 9px;border-left:2px solid #cbded1}
+.trace-steps li{position:relative;margin:0 0 8px 11px}
+.trace-steps li::before{content:"";position:absolute;left:-29px;top:16px;width:9px;height:9px;border-radius:50%;background:var(--teal);border:2px solid #f2f9f5}
+.trace-steps a{display:flex;gap:10px;align-items:baseline;text-decoration:none;padding:7px 9px;border-radius:6px;color:#21534b;font-size:.89rem;line-height:1.55}
+.trace-steps a span{font:750 .74rem ui-monospace,monospace;color:#a56d32}
+.trace-steps a:hover{background:#edf5ec;text-decoration:underline;text-underline-offset:3px}
+.trace-takeaway{margin:auto 0 0;padding:11px 0 0;border-top:1px solid #e5ebe2;color:#536c61;font-size:.82rem;line-height:1.7}
+.trace-takeaway strong{color:#22544d}
+@media(max-width:1000px){.trace-grid{grid-template-columns:1fr 1fr}.trace-card:last-child{grid-column:span 2}}
+@media(max-width:650px){.trace-grid{grid-template-columns:1fr}.trace-card:last-child{grid-column:auto}.trace-card{padding:20px}.trace-section{padding-top:35px}}
+@media print{.trace-grid{display:block}.trace-card{break-inside:avoid;margin-bottom:12px}}
