@@ -2,7 +2,7 @@
 
 > 28 章中文图解与可复现实验，从数据表示、机器级程序到操作系统与网络服务。**独立学习项目，非 CS:APP 官方译本。**
 
-**[在线阅读](https://1998x-stack.github.io/CSAPP-tutorial/)** · [从第 01 章开始](https://1998x-stack.github.io/CSAPP-tutorial/01.html) · [学习路线](docs/guides/learning-path.md) · [贡献指南](CONTRIBUTING.md)
+**[在线阅读](https://1998x-stack.github.io/CSAPP-tutorial/)** · [从第 01 章开始](https://1998x-stack.github.io/CSAPP-tutorial/01.html) · [跨章系统追踪](https://1998x-stack.github.io/CSAPP-tutorial/#traces) · [学习路线](docs/guides/learning-path.md) · [贡献指南](CONTRIBUTING.md)
 
 本项目按知识依赖关系重新组织 28 章，以原理解释、图解、代码示例和实验练习串联整套课程。章节编号是**本项目的教学编排**，不与《Computer Systems: A Programmer's Perspective》第三版原书章节一一对应。
 
@@ -13,6 +13,16 @@
 3. **动手练习：**阅读 `examples/` 中的独立示例，再到 `labs/` 尝试可编译的练习；记录编译器、系统及观察结果。
 
 > 首页通过 `fetch('courses.json')` 加载课程数据，因此不建议直接双击 `index.html` 使用 `file://` 打开。
+
+## 把章节串成一条系统因果链
+
+首页除了 28 章目录，还提供三个无需脚本即可访问的跨章阅读路线：
+
+- **从 Hello 到进程启动：**[01 程序的一生](01.html) → [13 静态链接](13.html) → [14 动态链接](14.html) → [15 进程与异常](15.html)。
+- **追踪一条访存指令：**[04 机器级表示](04.html) → [11 存储层次](11.html) → [12 Cache](12.html) → [17 地址翻译](17.html)。
+- **从字节到 HTTP 服务：**[19 系统 I/O](19.html) → [20 TCP socket](20.html) → [23 同步与线程池](23.html) → [28 综合服务器](28.html)。
+
+每个章节页底部有两条带具体问题的跨章链接，方便从一个概念追踪其系统级后果；移动端的章节目录按横向滚动方式访问。
 
 ## 学习路线与章节索引
 
@@ -90,7 +100,7 @@ python3 -m http.server 8000 -d dist
 # 打开 http://localhost:8000/
 ```
 
-单独执行：`npm run check:content`、`npm run check:links`、`npm run check:snippets`、`npm run check:linking`。GitHub Actions 的 `ci.yml` 校验内容并构建，`pages.yml` 在 `main` 更新后部署 `dist/`。浏览器截图、交互专项检查由独立工作流执行，不应仅凭 `npm test` 推定其结果。
+单独执行：`npm run check:content`、`npm run check:links`、`npm run check:snippets`、`npm run check:linking`。新增的全站元数据、锚点、跨章链接和缩放检查通过 `tests/content/course-wide.test.mjs` 随 `npm test` 执行。GitHub Actions 的 `ci.yml` 校验内容并构建，`pages.yml` 在 `main` 更新后部署 `dist/`。浏览器截图、交互专项检查由独立工作流执行，不应仅凭 `npm test` 推定其结果。
 
 ## 仓库目录
 
@@ -99,7 +109,9 @@ CSAPP-tutorial/
 ├── index.html                 # 正式首页（稳定的公开 URL）
 ├── 01.html … 28.html          # 正式章节页：保留已有链接
 ├── courses.json               # 唯一课程顺序和章节元数据
-├── *.css                      # 当前页面使用的共享与章节样式
+├── home.css / theme.css       # 首页 / 基础章节样式
+├── course-improvements.css    # 28 章统一导航、知识桥与移动端适配
+├── olah-*.css / chapter-olah.css  # 历史章节样式，渐进合并
 ├── assets/chapters/           # 第 05–07 章插图
 ├── chapter-assets/            # 多个图解章节现有插图
 ├── examples/                  # 独立 C / Python 教学示例
@@ -119,6 +131,12 @@ CSAPP-tutorial/
 **目录兼容说明：** 现有插图分布在 `assets/chapters/`、`chapter-assets/` 和 `docs/chapters/assets/`，是为了保持现有 HTML 的相对路径及 GitHub Pages 地址可用；不要在未同步页面、测试与构建脚本时直接搬迁。构建产物 `dist/` 由脚本生成，不是编辑源文件的位置。
 
 **版本边界：** 当前发布路径仍是原生 HTML。`docs/.vitepress/` 是未来 Markdown 迁移的预备结构，不能将其描述为现已上线的 VitePress 站点；迁移安排见 [章节说明](docs/chapters/README.md)。
+
+## 逐页检查与变更边界
+
+质量状态分为三层：**结构覆盖**（统一元数据、页面链接和移动端导航）、**专题精修**（新增具体推导或修订开场）与**浏览器验收**（需工作流实际运行）。本轮不能把 28 页的结构覆盖等同于每篇技术断言都已完全复核，具体清单与后续专项任务见 [逐页复核矩阵](docs/guides/chapter-review-matrix.md)。
+
+保留 `01.html`–`28.html` 的公开路径和原有 SVG 资源路径；不将 `docs/.vitepress/` 误写为当前发布入口。正式站点由 `scripts/build-static.mjs` 根据 `courses.json` 打包。
 
 ## 内容可靠性、贡献与授权
 

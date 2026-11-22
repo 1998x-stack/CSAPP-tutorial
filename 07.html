@@ -2,8 +2,10 @@
 <html lang="zh-CN">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="用数组偏移公式、结构体填充示意和安全 C 代码理解数据布局与边界检查。">
+<link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/07.html">
 <title>第 7 章：程序的机器级表示——数据与进阶 · CSAPP 中文教程</title>
-<link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="olah-ch05-07.css"></head>
+<link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="olah-ch05-07.css"><link rel="stylesheet" href="course-improvements.css">
+</head>
 <body class="olah-body"><a class="skip-link" href="#main">跳转至正文</a>
 <div class="double-border olah-shell"><div class="container olah-grid">
 <aside class="sidebar olah-sidebar"><a class="site-title" href="index.html">CSAPP 中文教程<small>COMPUTER SYSTEMS · 28 讲</small></a><p class="nav-hint">课程目录</p><nav aria-label="全部章节"><ul class="chapter-list">
@@ -73,8 +75,9 @@
 <p class="dek">数组、结构体和联合体让我们按名字组织数据；CPU 却只看地址与字节。本章从行优先布局推导地址公式，再看字段对齐如何产生 padding，最后解释为什么有界输入才是缓冲区安全的第一道防线。</p>
 <nav class="reading-map" aria-label="本章阅读路径"><strong>阅读路线</strong><a href="#arrays">数组</a><a href="#structs">结构体</a><a href="#unions">联合体</a><a href="#bounds">边界</a><a href="#defense">防御实验</a></nav>
 </header>
+<nav class="site-topic-toc" aria-label="本章小节导航"><strong>快速定位</strong><a href="#chapter-section-07-1">01 · 数组下标的本质，是基址加字节偏移</a><a href="#chapter-section-07-2">02 · 结构体大小为什么不是字段大小简单相加？</a><a href="#chapter-section-07-3">03 · 联合体复用存储，但不能忽略类型语义</a><a href="#chapter-section-07-4">04 · 越界不是“踩到下一格”，而是未定义行为</a><a href="#chapter-section-07-5">05 · 安全边界：源头检查，再加纵深防御</a><a href="#chapter-section-07-6">查证与下一步</a></nav>
 <section class="chapter-section" id="arrays">
-<h2>01 · 数组下标的本质，是基址加字节偏移</h2>
+<h2 id="chapter-section-07-1">01 · 数组下标的本质，是基址加字节偏移</h2>
 <p>设一个数组以地址 <code>base</code> 开始，元素类型 <code>T</code> 的大小为 <code>sizeof(T)</code>。对合法下标 <code>i</code>，<code>&amp;a[i]</code> 的地址是 <code>base + i × sizeof(T)</code>，而不是简单加 <code>i</code> 个字节。</p>
 <pre><code>long a[4] = {10, 20, 30, 40};
 long x = a[2];  /* 常见 LP64 平台 sizeof(long) == 8
@@ -101,7 +104,7 @@ long x = a[2];  /* 常见 LP64 平台 sizeof(long) == 8
 <div class="insight"><p><strong>数组与指针不是完全同义：</strong>在多数表达式中数组会转换成指向首元素的指针，但 <code>sizeof a</code>（对真正数组对象）取得整个数组的大小；函数形参 <code>int a[]</code> 会调整为指针类型，此时 <code>sizeof a</code> 只得到指针的大小。</p></div>
 </section>
 <section class="chapter-section" id="structs">
-<h2>02 · 结构体大小为什么不是字段大小简单相加？</h2>
+<h2 id="chapter-section-07-2">02 · 结构体大小为什么不是字段大小简单相加？</h2>
 <p>字段不仅占有字节，还可能有对齐要求。编译器保留声明的字段顺序，但为了满足每个成员的对齐，可能在字段间及末尾加入填充。</p>
 <pre><code>struct S1 { char c; int i; char d; };
 struct S2 { int i; char c; char d; };
@@ -124,7 +127,7 @@ int main(void) {
 <div class="caution"><p><strong>不是越紧凑越好：</strong>重排字段可能降低内存占用，但更改公共 ABI、序列化格式或与硬件共享的布局会破坏兼容性。不要无条件套用 <code>packed</code>；未对齐访问在不同架构上可能更慢甚至发生异常。</p></div>
 </section>
 <section class="chapter-section" id="unions">
-<h2>03 · 联合体复用存储，但不能忽略类型语义</h2>
+<h2 id="chapter-section-07-3">03 · 联合体复用存储，但不能忽略类型语义</h2>
 <p><code>union</code> 的成员共享同一块存储区，整个联合体需要满足<strong>最大成员的尺寸和对齐</strong>，必要时仍会有额外填充；因此不能把它的大小简单写死为“最大字段大小”。</p>
 <pre><code>union Number {
     unsigned u;
@@ -146,7 +149,7 @@ void examine_float(void) {
 <p>上面的 <code>memcpy</code> 仅复制对象表示，并不假定所有 C 平台都使用 IEEE 754 二进制32。使用不同类型的联合体成员解释同一组字节，需要区分语言标准、编译器扩展和对象表示约束。</p>
 </section>
 <section class="chapter-section" id="bounds">
-<h2>04 · 越界不是“踩到下一格”，而是未定义行为</h2>
+<h2 id="chapter-section-07-4">04 · 越界不是“踩到下一格”，而是未定义行为</h2>
 <p>C 数组提供连续布局，却不自动检查每次访问是否越界。对 <code>char buf[8]</code> 来说，作为 C 字符串时最多可存 7 个普通字符，最后一个字节留给 <code>'\0'</code>。如果输入长度不受限制，写出数组边界就会造成未定义行为；结果可能是崩溃、静默损坏，或者在特定内存布局下影响控制数据。</p>
 <pre><code>#include &lt;stdio.h&gt;
 
@@ -174,7 +177,7 @@ int copy_name(char *dst, size_t capacity, const char *src) {
 }</code></pre>
 </section>
 <section class="chapter-section" id="defense">
-<h2>05 · 安全边界：源头检查，再加纵深防御</h2>
+<h2 id="chapter-section-07-5">05 · 安全边界：源头检查，再加纵深防御</h2>
 <p>现代系统有多层防护，但没有哪一层能把越界写入变成正确行为：</p>
 <ol>
 <li><strong>有界 API 与长度检查：</strong>以实际目标对象容量为依据，给字符串预留 NUL 字节；处理长行、截断与错误。</li>
@@ -195,7 +198,7 @@ cc -O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 \
 <p class="mini-note">两个构建命令用途不同：sanitizer 主要用于调试/测试，保护选项用于部署前评估；实际效果与 libc、编译器、链接方式和平台相关。这里只提供安全输入示例，不构造利用载荷。</p>
 </section>
 <section class="chapter-section" id="references">
-<h2>查证与下一步</h2>
+<h2 id="chapter-section-07-6">查证与下一步</h2>
 <p>到这里可以用一条链贯穿本系列：<strong>源语言表达式 → 地址计算 → 内存访问 → 可能的边界失效</strong>。对数组与栈都应先推导条件与约定，再查看机器码；这比背诵某种固定内存图更可靠。</p>
 <ul class="source-links">
 <li><a href="https://csapp.cs.cmu.edu/3e/">CS:APP 第三版官方资源</a>：程序机器级表示、数据布局与存储器基础。</li>
@@ -204,7 +207,9 @@ cc -O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 \
 <li><a href="https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html">GCC Instrumentation Options</a>：地址检查器及栈保护编译选项。</li>
 </ul>
 <div class="footer-nav"><a href="06.html">← 第 6 章</a><a href="index.html">返回课程目录</a><a href="08.html">第 8 章 →</a></div>
-</section></article></main>
+</section>
+<aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 07</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="18.html"><small>延伸到第 18 章</small><span>结构体布局为什么影响内存分配？</span><b aria-hidden="true">↗</b></a><a href="24.html"><small>延伸到第 24 章</small><span>如何用反汇编检查边界访问？</span><b aria-hidden="true">↗</b></a></div></aside>
+</article></main>
 </div></div><script>
 (() => {
   const row = document.querySelector('#row-index');

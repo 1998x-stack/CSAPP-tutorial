@@ -2,10 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>第3章 信息的表示与处理——浮点数 — 深入理解计算机系统（CSAPP）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="CSAPP 中文实践教程第 3 章 · 信息的表示与处理——浮点数。从「为什么浮点数不是“带小数点的整数”？」出发，理解原理、图解、实验及适用边界。">
+<link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/03.html">
+<title>第3章 信息的表示与处理——浮点数 — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
+<link rel="stylesheet" href="course-improvements.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳转至正文</a>
@@ -120,8 +123,16 @@ int nearly_equal(double a, double b,
 <p>这是方便学习的比较策略，不能不经分析就套用到任意数值算法。特别是求差本身可能溢出、阈值可能产生上溢，严谨的数值库需要更完整的边界处理。货币与会计系统通常选择按最小单位缩放的整数或明确舍入规则的十进制类型；不是因为“每笔交易必然丢一分钱”，而是因为需要可审计的十进制语义。</p>
 <div class="exercise"><h3>自测</h3><p>为什么 binary32 的“23 位小数字段”却能拥有 24 位有效精度？当 exponent 全为 0 时，这条推导还能用吗？</p><details><summary>查看答案</summary><p>正规格化数隐含一个最高位 <code>1</code>，因此 23 个显式位加 1 个隐含位，总计 24 位；次正规数的隐含最高位变成 <code>0</code>，因此靠近零时有效精度逐步降低。</p></details></div>
 </section>
+<section id="c3-ulp" class="lesson-extension"><h2>再推一步：两个结果相差多少个 ULP？</h2><p><em>ULP</em>（unit in the last place）表示某个数值附近相邻可表示浮点数之间的间距。对通常采用 IEEE 754 binary64 和最近值舍入的 Python 环境，<code>0.1 + 0.2</code> 比字面量 <code>0.3</code> 大<strong>恰好一个 ULP</strong>；它并非运算「随机不稳定」，而是两次舍入路径产生了不同的相邻数。</p><pre><code>import math
+computed = 0.1 + 0.2
+literal = 0.3
+print(computed.hex())   # 0x1.3333333333334p-2
+print(literal.hex())    # 0x1.3333333333333p-2
+print((computed - literal) / math.ulp(literal))  # 1.0</code></pre><div class="extension-track" role="img" aria-label="二进制64位表示中，0.3 和 0.1+0.2 是两格相邻浮点数"><span>0.3 的 binary64 表示</span><strong>→ 1 ULP →</strong><span>0.1 + 0.2 的 binary64 表示</span></div><p>ULP 不是通用的误差容忍度：接近零、跨数量级、含 NaN 或涉及累计舍入时，应按问题尺度设计绝对误差与相对误差测试。</p></section>
 <section id="c3-summary"><h2>带走什么？</h2><p>浮点数用指数换取动态范围，用有效位预算限定相对精度；在零附近靠次正规数提供渐进过渡；每次舍入都可能改变后续运算。下一章进入 x86-64，看看这些数值与操作如何被机器指令搬运和计算。</p>
 <h3>资料与边界</h3><p>参阅 <a href="https://csapp.cs.cmu.edu/3e/students.html">CS:APP 3e 学生资源（第 2 章）</a>、<a href="https://dlmf.nist.gov/3.1">NIST DLMF §3.1：浮点格式与误差</a> 与 <a href="https://www.intel.com/content/www/us/en/docs/dpcpp-cpp-compiler/developer-guide-reference/2026-2/intel-ieee-754-2008-binary-float-conform-lib-use.html">Intel IEEE 754 舍入说明</a>。课程自己的“第 3 章”对应教材第 2 章的浮点部分。</p></section>
+
+<aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 03</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="10.html"><small>延伸到第 10 章</small><span>数值误差与性能优化如何权衡？</span><b aria-hidden="true">↗</b></a><a href="12.html"><small>延伸到第 12 章</small><span>相同数据布局为何影响访存成本？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article>
 </main>
 <script>

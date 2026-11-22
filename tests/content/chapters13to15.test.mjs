@@ -16,7 +16,8 @@ for (const [number, svgName, expectedHeads] of chapters) {
     const asset = read("../../docs/chapters/assets/" + svgName);
     const ledger = JSON.parse(read("../../docs/evidence/" + number + ".json"));
     assert.equal((html.match(/<h1\b/g) || []).length, 1);
-    assert.equal((html.match(/<h2\b/g) || []).length, expectedHeads);
+    assert.equal((html.match(/<h2\b/g) || []).length, expectedHeads + 1, 'article sections plus cross-chapter heading');
+    assert.equal((html.match(/<aside class="concept-bridge"/g) || []).length, 1);
     assert.match(html, /<html lang="zh-CN">/);
     assert.match(html, /<main id="content"><article class="chapter-olah">/);
     assert.match(html, /href="chapter-olah\.css"/);

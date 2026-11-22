@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="从数组访问顺序出发，理解 SRAM、DRAM、局部性、Memory Mountain 和 SSD FTL 的数据移动代价。">
+<link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/11.html">
 <title>第 11 章：存储器层次与局部性 · CSAPP 中文教程</title>
 <link rel="stylesheet" href="theme.css">
 <style>
@@ -106,6 +107,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visi
 .memory-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:middle}
 @media(max-width:580px){.essay .figure-card svg{min-width:600px}.essay .compact-figure svg{min-width:500px}}
 </style>
+<link rel="stylesheet" href="course-improvements.css">
 </head>
 <body>
 <a class="skip-link" href="#content">跳转到正文</a>
@@ -232,6 +234,8 @@ int main(void) {
 <div class="callout"><p><strong>带走的模型：</strong>存储层次不是“越快越好”的简单排序，而是数据在各级间被移动、保留和再次使用的过程；局部性决定了这些搬运有多值得。</p></div></section>
 <section id="references"><span class="section-no">参考与边界</span><h2>延伸阅读</h2><ol class="references"><li><a href="https://csapp.cs.cmu.edu/3e/">Bryant &amp; O'Hallaron, Computer Systems: A Programmer's Perspective（第 3 版官方站点）</a>，第 6 章 Memory Hierarchy；本教程的第 11、12 讲对其内容作重新编排。</li><li><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf">ISO C11 committee draft N1570</a>，数组和对象布局；代码示例针对 C11。</li><li><a href="https://man7.org/linux/man-pages/man8/fstrim.8.html">Linux fstrim(8)</a>，discard/TRIM 的使用条件与注意事项。</li></ol></section>
 <nav class="footer-nav" aria-label="章节翻页"><a href="10.html">← 上一章</a><a href="index.html">返回目录</a><a href="12.html">下一章 →</a></nav>
+
+<aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 11</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="12.html"><small>延伸到第 12 章</small><span>一次访问究竟命中哪一组 Cache？</span><b aria-hidden="true">↗</b></a><a href="17.html"><small>延伸到第 17 章</small><span>页表和 TLB 怎样参与地址翻译？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article></main></div>
 <script>
 (() => {

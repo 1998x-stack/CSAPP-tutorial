@@ -2,10 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>第4章 程序的机器级表示——基础 — 深入理解计算机系统（CSAPP）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="CSAPP 中文实践教程第 4 章 · 程序的机器级表示——基础。从「一行 C 代码，CPU 到底做了什么？」出发，理解原理、图解、实验及适用边界。">
+<link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/04.html">
+<title>第4章 程序的机器级表示——基础 — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
+<link rel="stylesheet" href="course-improvements.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳转至正文</a>
@@ -124,8 +127,15 @@ objdump -dr machine.o</code></pre>
 <p>对照三份结果观察：参数在哪里？数组元素如何寻址？<code>O0</code> 与 <code>O2</code> 是否产生相同数量的指令？实际输出随编译器、平台和版本而不同，<strong>你自己的反汇编结果才是对应环境的证据</strong>。在非 x86-64 架构上会看到另一套指令集，这不代表源代码不正确。</p>
 <div class="exercise"><h3>自测</h3><p>如果 <code>%rdi = 0x2000</code>、<code>%rsi = 5</code>，那么 <code>leaq 16(%rdi,%rsi,8), %rax</code> 后 <code>%rax</code> 是多少？会不会读取这个地址上的内存？</p><details><summary>查看推导</summary><p>有效地址为 <code>0x2000 + 16 + 5×8 = 0x2038</code>；<code>lea</code> 不读取该地址上的内存。</p></details></div>
 </section>
+<section id="c4-address-proof" class="lesson-extension"><h2>再推一步：LEA 计算的究竟是地址还是内容？</h2><p>考察 <code>long *slot(long *base, long i)</code>，若 <code>sizeof(long)==8</code> 且使用 System V AMD64 ABI，那么基址、下标通常分别到达 <code>%rdi</code>、<code>%rsi</code>。计算 <code>&amp;base[i]</code> 的地址可用下述指令表达，<strong>并不读取该地址内的 8 字节</strong>。</p><pre><code>long *slot(long *base, long i) { return &amp;base[i]; }
+/* 语义等价的 AT&amp;T 风格示意（并非指定编译器唯一输出）：
+   leaq (%rdi,%rsi,8), %rax
+   ret
+*/</code></pre><div class="extension-compare"><div><strong>LEA：有效地址</strong><p><code>%rax = %rdi + 8 × %rsi</code>，不解引用。</p></div><div><strong>MOV：访问内容</strong><p><code>movq (%rdi,%rsi,8), %rax</code> 会从算出的地址读取 8 字节。</p></div></div><p>地址计算还必须服从 C 的指针规则：<code>&amp;base[i]</code> 仅在同一数组对象内（或合法的一端越界位置）才有相应的指针运算语义；能写出汇编地址公式，不代表任意下标都有效。</p></section>
 <section id="c4-summary"><h2>带走什么？</h2><p>阅读 x86-64 的有效次序是：先认出寄存器角色，再判断源/目的和宽度，随后把 <code>D(Rb,Ri,S)</code> 翻译成地址公式，最后区分“计算地址”和“访问内存”。下一章会在这些基础上继续看条件码、分支与循环。</p>
 <h3>资料与边界</h3><p>参阅 <a href="https://csapp.cs.cmu.edu/3e/students.html">CS:APP 3e 学生资源（教材第 3 章）</a>、<a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel® 64/IA-32 软件开发手册</a> 与 <a href="https://gitlab.com/x86-psABIs/x86-64-ABI">System V AMD64 psABI</a>。本课程第 4 章是教材机器级表示内容的上半部分；Windows x64、不同编译器与调试符号有各自约定。</p></section>
+
+<aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 04</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="05.html"><small>延伸到第 05 章</small><span>比较和条件跳转从哪里来？</span><b aria-hidden="true">↗</b></a><a href="07.html"><small>延伸到第 07 章</small><span>数组下标如何变成地址表达式？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article>
 </main>
 <script>

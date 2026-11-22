@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="深入理解计算机系统（CSAPP）中文学习地图。28 章，从数据表示、机器指令、存储器到系统编程、并发与经典实验。按阶段探索、搜索知识点并直接阅读章节。">
   <meta name="theme-color" content="#f8f7f2">
+  <link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/">
+  <meta property="og:title" content="CSAPP 中文学习地图 · 28 章系统课程">
+  <meta property="og:description" content="以三条系统追踪路线与 28 章原理、实验和图解，从 Hello 程序走向网络与并发。">
   <title>CSAPP 中文学习地图 · 28 章系统课程</title>
   <link rel="stylesheet" href="home.css">
 </head>
@@ -14,7 +17,7 @@
   <div class="site-shell top-inner">
     <a class="brand" href="index.html" aria-label="CSAPP 学习地图首页"><span class="brand-mark" aria-hidden="true">&gt;_</span><span>CSAPP</span><span class="brand-note">中文学习地图</span></a>
     <nav class="top-nav" aria-label="首页导航">
-      <a href="#roadmap">学习路线</a><a href="#start-here">从哪里开始</a><a href="#catalog">全部章节</a>
+      <a href="#roadmap">学习路线</a><a href="#start-here">从哪里开始</a><a href="#traces">跨章追踪</a><a href="#catalog">全部章节</a>
       <a class="repo-link" href="https://github.com/1998x-stack/CSAPP-tutorial" rel="noopener noreferrer">GitHub 仓库 ↗</a>
     </nav>
   </div>
@@ -100,10 +103,56 @@
       <a class="featured-card" href="24.html"><span class="tag">喜欢动手验证 · 24</span><strong>把理论放进经典 Lab。</strong><p>从 Data、Bomb 到 Attack Lab，学习由现象追溯到位与指令的证据链。</p><span class="go">进入第 24 章 ↗</span></a>
     </div>
   </section>
+  <section class="trace-section section" id="traces" aria-labelledby="traces-heading">
+    <div class="site-shell">
+      <div class="section-heading">
+        <div><p class="section-kicker">03 · Follow a real system</p><h2 id="traces-heading">不只是按章节读：跟踪一个问题穿越系统。</h2>
+          <p class="section-desc">同一个现象常常横跨源代码、机器指令、硬件与操作系统。下面三条链路提供可解释的跨章节入口；每一步都可以独立打开。</p></div>
+      </div>
+      <div class="trace-grid">
+        <article class="trace-card">
+          <span class="trace-label">TRACE 01 · EXECUTION</span>
+          <h3>从一行 Hello 到进程启动</h3>
+          <p>源码如何得到可执行文件，又如何成为内存中运行的进程？</p>
+          <ol class="trace-steps">
+            <li><a href="01.html"><span>01</span>源程序经过编译</a></li>
+            <li><a href="13.html"><span>13</span>链接器解析符号</a></li>
+            <li><a href="14.html"><span>14</span>共享库装载与重定位</a></li>
+            <li><a href="15.html"><span>15</span>进程与内核协作</a></li>
+          </ol>
+          <p class="trace-takeaway"><strong>最终能解释：</strong>为什么“编译成功”和“运行成功”不是同一件事。</p>
+        </article>
+        <article class="trace-card">
+          <span class="trace-label">TRACE 02 · MEMORY</span>
+          <h3>一条访存指令为何要等待</h3>
+          <p>有效地址是怎么形成的？Cache、TLB 和地址翻译分别做什么？</p>
+          <ol class="trace-steps">
+            <li><a href="04.html"><span>04</span>指令计算有效地址</a></li>
+            <li><a href="11.html"><span>11</span>存储层次与局部性</a></li>
+            <li><a href="12.html"><span>12</span>Cache 组、行、缺失</a></li>
+            <li><a href="17.html"><span>17</span>虚拟地址与页表翻译</a></li>
+          </ol>
+          <p class="trace-takeaway"><strong>最终能解释：</strong>缓存未命中与 TLB 未命中不是一回事。</p>
+        </article>
+        <article class="trace-card">
+          <span class="trace-label">TRACE 03 · SERVER</span>
+          <h3>一次 HTTP 请求如何安全完成</h3>
+          <p>读到几个字节并不等于读完一条请求；并发又引入了生命周期问题。</p>
+          <ol class="trace-steps">
+            <li><a href="19.html"><span>19</span>短读短写与文件描述符</a></li>
+            <li><a href="20.html"><span>20</span>TCP 字节流与消息边界</a></li>
+            <li><a href="23.html"><span>23</span>队列、线程池和同步</a></li>
+            <li><a href="28.html"><span>28</span>事件驱动与连接状态机</a></li>
+          </ol>
+          <p class="trace-takeaway"><strong>最终能解释：</strong>为什么高并发首先要保证报文完整性和所有权。</p>
+        </article>
+      </div>
+    </div>
+  </section>
   <section class="catalog section" id="catalog" aria-labelledby="catalog-heading">
     <div class="site-shell">
       <div class="section-heading">
-        <div><p class="section-kicker">03 · All chapters</p><h2 id="catalog-heading">所有知识，终将连成一张网。</h2>
+        <div><p class="section-kicker">04 · All chapters</p><h2 id="catalog-heading">所有知识，终将连成一张网。</h2>
         <p class="section-desc">28 章原有入口全部保留；按阶段或关键词缩小范围，点击即可阅读正文。</p></div>
       </div>
       <div class="catalog-tools" id="catalog-tools" hidden>

@@ -2,10 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>第23章 并发编程——高阶模式 — 深入理解计算机系统（CSAPP）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="CSAPP 中文实践教程第 23 章 · 并发编程——高阶模式。从「更多线程，为什么可能让服务更慢？」出发，理解原理、图解、实验及适用边界。">
+<link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/23.html">
+<title>第23章 并发编程——高阶模式 — 深入理解计算机系统（CSAPP）</title>
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
+<link rel="stylesheet" href="course-improvements.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳转至正文</a>
@@ -133,6 +136,8 @@ run(task);                                 /* 一定在锁外 */</code></pre>
 <div class="insight"><strong>带走的模型：</strong>读写锁规范兼容访问；线程池规范任务流动；关闭协议规范生命周期；锁顺序规范资源依赖。并发性能评估应在正确性成立之后，再用真实负载测量。</div>
 <h3>资料与范围</h3><p>参阅 <a href="https://pubs.opengroup.org/onlinepubs/9699919799/functions/pthread_rwlock_rdlock.html">POSIX pthread_rwlock_rdlock</a>、<a href="https://man7.org/linux/man-pages/man3/pthread_cond_wait.3.html">pthread_cond_wait(3)</a> 与 <a href="https://clang.llvm.org/docs/ThreadSanitizer.html">ThreadSanitizer 使用说明</a>。等待公平性、吞吐量与检测开销均与平台/负载有关。</p>
 </section>
+
+<aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 23</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="22.html"><small>延伸到第 22 章</small><span>共享状态里的竞争条件怎么证明？</span><b aria-hidden="true">↗</b></a><a href="28.html"><small>延伸到第 28 章</small><span>线程池与 Reactor 的职责怎么划分？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article>
 </main>
 <script>

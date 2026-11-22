@@ -2,8 +2,10 @@
 <html lang="zh-CN">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="从 call/ret、栈帧、System V ABI 和递归实验理解 x86-64 过程调用。">
+<link rel="canonical" href="https://1998x-stack.github.io/CSAPP-tutorial/06.html">
 <title>第 6 章：程序的机器级表示——过程与栈 · CSAPP 中文教程</title>
-<link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="olah-ch05-07.css"></head>
+<link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="olah-ch05-07.css"><link rel="stylesheet" href="course-improvements.css">
+</head>
 <body class="olah-body"><a class="skip-link" href="#main">跳转至正文</a>
 <div class="double-border olah-shell"><div class="container olah-grid">
 <aside class="sidebar olah-sidebar"><a class="site-title" href="index.html">CSAPP 中文教程<small>COMPUTER SYSTEMS · 28 讲</small></a><p class="nav-hint">课程目录</p><nav aria-label="全部章节"><ul class="chapter-list">
@@ -73,8 +75,9 @@
 <p class="dek">一个 <code>call</code> 可能改变两件事：控制流转去被调用函数，返回地址被保存在栈上。把这个最小机制看清后，再讨论参数、寄存器所有权、16 字节对齐和递归栈帧，就不会把“典型编译结果”误以为“所有函数都一样”。</p>
 <nav class="reading-map" aria-label="本章阅读路径"><strong>阅读路线</strong><a href="#call">call / ret</a><a href="#stack">栈帧</a><a href="#abi">调用约定</a><a href="#recursion">递归</a><a href="#experiment">实验</a></nav>
 </header>
+<nav class="site-topic-toc" aria-label="本章小节导航"><strong>快速定位</strong><a href="#chapter-section-06-1">01 · 一次调用：先记住来路，再跳向目标</a><a href="#chapter-section-06-2">02 · 栈帧是约定出来的空间，不是固定模板</a><a href="#chapter-section-06-3">03 · ABI：两段机器代码事先约好的规则</a><a href="#chapter-section-06-4">04 · 递归为什么会“层层返回”？</a><a href="#chapter-section-06-5">05 · 用 gdb 把返回地址与栈顶对上号</a><a href="#chapter-section-06-6">查证与下一步</a></nav>
 <section class="chapter-section" id="call">
-<h2>01 · 一次调用：先记住来路，再跳向目标</h2>
+<h2 id="chapter-section-06-1">01 · 一次调用：先记住来路，再跳向目标</h2>
 <p>想象 <code>main</code> 正在执行 <code>call square</code>。对常见的 x86-64 近调用而言，处理器先把<strong>调用指令后面那条指令的地址</strong>压到栈顶，然后把指令指针改为 <code>square</code> 的入口。<code>ret</code> 则从栈中取回地址，继续执行调用者的后续指令。</p>
 <figure class="diagram"><img src="assets/chapters/06-call.svg" width="760" height="300" alt="call 将后继地址保存在栈顶后跳到 callee，ret 取回地址后回到 caller 的下一条指令"><figcaption>图 6-1 · <code>call</code>/<code>ret</code> 的核心约定是“保存去向 / 恢复去向”。图省略了栈指针的字节级更新及间接调用等变体。</figcaption></figure>
 <pre><code>long square(long x) { return x * x; }
@@ -90,14 +93,14 @@ long twice_square(long x) {
 <p>在 64 位近调用的典型情形，<code>call</code> 让 <code>%rsp</code> 减少 8 并写入返回地址；<code>ret</code> 读取该地址并让 <code>%rsp</code> 增加 8。实际程序还可能有栈帧调整、寄存器保存和硬件控制流保护，不应把“压入 8 字节”误当作完整函数开销。</p>
 </section>
 <section class="chapter-section" id="stack">
-<h2>02 · 栈帧是约定出来的空间，不是固定模板</h2>
+<h2 id="chapter-section-06-2">02 · 栈帧是约定出来的空间，不是固定模板</h2>
 <p>x86-64 用户态程序常用向<strong>低地址增长</strong>的栈。每次函数调用都拥有自己的动态执行上下文，但编译器未必为每个函数分配传统意义上显式的栈帧。寄存器足够时，叶子函数甚至不必调整 <code>%rsp</code>；优化时也可能省略帧指针 <code>%rbp</code>。</p>
 <div class="insight"><p><strong>区分硬件与编译器：</strong><code>call</code> 保存返回地址是机器指令的行为；保存 <code>%rbp</code>、为局部变量开空间、保存 <code>%rbx</code> 等则依赖 ABI 要求和实际生成代码，不能由源代码中的大括号推断。</p></div>
 <p>在需要存栈的函数里，可以用下图的抽象层次理解递归调用。<strong>这不是精确内存偏移图</strong>，并不保证每个局部变量与返回地址按固定顺序相邻。</p>
 <figure class="diagram"><img src="assets/chapters/06-stack.svg" width="760" height="315" alt="递归 factorial(3) 调 factorial(2) 再调 factorial(1)，栈向低地址增长，返回顺序相反"><figcaption>图 6-2 · 每层尚未返回的调用都必须保留其后续计算所需信息。图示强调<strong>调用关系和生命周期</strong>，而非未经验证的栈布局字节偏移。</figcaption></figure>
 </section>
 <section class="chapter-section" id="abi">
-<h2>03 · ABI：两段机器代码事先约好的规则</h2>
+<h2 id="chapter-section-06-3">03 · ABI：两段机器代码事先约好的规则</h2>
 <p>本教程示例采用 <strong>Linux 等 Unix-like 环境常用的 System V AMD64 ABI</strong>，主要讨论普通整数/指针参数。它与 Windows x64 ABI 不同；结构体、浮点、可变参数及特殊返回值有更复杂的分类规则。</p>
 <div class="table-scroll"><table><thead><tr><th>角色</th><th>常见寄存器</th><th>谁负责保留原值</th></tr></thead><tbody>
 <tr><td>整数/指针参数 1–6</td><td><code>rdi, rsi, rdx, rcx, r8, r9</code></td><td>调用者不能假定调用后仍保持不变</td></tr>
@@ -118,7 +121,7 @@ long twice_square(long x) {
 <div class="caution"><p><strong>重要边界：</strong>“所有参数走寄存器”“每个函数都有 <code>push %rbp</code>”“递归一定比迭代慢一个固定纳秒数”都不成立。结构体返回、可变参数、优化、内联、尾调用与目标平台会改变实际形态。</p></div>
 </section>
 <section class="chapter-section" id="recursion">
-<h2>04 · 递归为什么会“层层返回”？</h2>
+<h2 id="chapter-section-06-4">04 · 递归为什么会“层层返回”？</h2>
 <p>递归的关键不是神秘的“自己调用自己”，而是<strong>每一层还有未完成的工作</strong>。对于 <code>factorial(3)</code>，计算 3 倍结果之前，必须先知道 <code>factorial(2)</code>；后者又先等待 <code>factorial(1)</code>。</p>
 <pre><code>#include &lt;stdint.h&gt;
 /* 只在 n &lt;= 20 时使用；更大 n 会溢出 uint64_t */
@@ -136,7 +139,7 @@ uint64_t factorial(unsigned n) {
 <p>如果计算在递归调用<strong>之后</strong>还要乘以 <code>n</code>，就不是尾调用；反之，真正的尾调用在某些编译器/选项下可以复用栈帧。不过 C 语言不保证尾调用优化，调试时必须以实际汇编为准。</p>
 </section>
 <section class="chapter-section" id="experiment">
-<h2>05 · 用 gdb 把返回地址与栈顶对上号</h2>
+<h2 id="chapter-section-06-5">05 · 用 gdb 把返回地址与栈顶对上号</h2>
 <p>把上面的函数存为 <code>calls.c</code>，另写一个 <code>main</code> 调用它。为了更容易观察栈帧，使用不代表最终发行构建的调试选项：</p>
 <pre><code>cc -g -O0 -fno-omit-frame-pointer calls.c -o calls
 gdb ./calls
@@ -152,7 +155,7 @@ bt</code></pre>
 <div class="insight"><p><strong>三个可检查的不变量：</strong>调用前的栈对齐、被调用者保存寄存器的恢复、以及返回地址对应调用点的下一条指令。对具体二进制做断言之前，还要确定目标 ABI 和编译选项。</p></div>
 </section>
 <section class="chapter-section" id="references">
-<h2>查证与下一步</h2>
+<h2 id="chapter-section-06-6">查证与下一步</h2>
 <p>当函数调用不再是黑盒，就能看懂“局部数组写出边界”为什么可能破坏邻近内存——但不应武断假定邻近的恰好是返回地址。下一章通过数组和结构体的真实地址布局，连到有界输入和栈保护。</p>
 <ul class="source-links">
 <li><a href="https://refspecs.linuxfoundation.org/elf/x86_64-SysV-psABI.pdf">System V AMD64 ABI（x86-64 supplement）</a>：寄存器所有权、参数分类、栈与对齐约定。</li>
@@ -160,7 +163,9 @@ bt</code></pre>
 <li><a href="https://csapp.cs.cmu.edu/3e/">CS:APP 第三版官方站点</a>：程序机器级表示背景；本教程第 6 讲仍属该主题的站内拆分。</li>
 </ul>
 <div class="footer-nav"><a href="05.html">← 第 5 章</a><a href="index.html">返回课程目录</a><a href="07.html">第 7 章 →</a></div>
-</section></article></main>
+</section>
+<aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 06</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="15.html"><small>延伸到第 15 章</small><span>进程控制流与函数调用有什么不同？</span><b aria-hidden="true">↗</b></a><a href="22.html"><small>延伸到第 22 章</small><span>线程为什么共享堆却有各自的栈？</span><b aria-hidden="true">↗</b></a></div></aside>
+</article></main>
 </div></div><script>
 (() => {
   const slider = document.querySelector('#factorial-n');
