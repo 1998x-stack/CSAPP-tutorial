@@ -90,6 +90,26 @@
 | [28 · 综合项目：手写高性能Web服务器](28.html) | epoll事件驱动架构、线程池+任务队列 |
 
 
+## 19–23 章：从字节流到正确的并发服务
+
+这五篇独立 HTML 文章各增加一组有输入、状态、推导、失败边界与源码断言的深度讲解，并配原创 SVG：
+
+- [19 短 I/O 与 EOF](19.html#deep-19)：管道写入 3 字节，`read(...,7)` 仅返回 3，下一次返回 0；逐项解释正数、EOF、`EINTR`、`EAGAIN`。
+- [20 TCP 字节流分帧](20.html#deep-20)：4 字节网络序长度 `5` + `HELLO`，累计读取、不信任超大长度以及 EOF 截断。
+- [21 就绪事件](21.html#deep-21)：`poll` 在对端关闭后可报告可处理事件，但 `read` 可以返回 EOF；状态机区分读、处理、待写和关闭。
+- [22 线程同步](22.html#deep-22)：逻辑丢失更新与 C 数据竞争未定义行为的区别；四线程共享互斥计数器，每个累加 10,000 次。
+- [23 条件变量与有界队列](23.html#deep-23)：`count≤2`、生产/消费谓词、`while` 重新验证、关闭广播与排空任务。
+
+验证使用可独立编译的 **真实 POSIX C** 和确定性 Python 模型，不需要外部网络或猜测调度：
+
+```bash
+python3 examples/deep-ch19-23-models.py all
+cc -std=c11 -Wall -Wextra -Werror -pedantic -pthread examples/deep-ch19-23.c -o /tmp/deep-io
+for mode in short-read frame readiness mutex queue; do /tmp/deep-io "$mode"; done
+```
+
+来源、适用条件和不可推广的结论见 [19–23 专项复核账本](docs/evidence/19-23-deep-review.md)。Chromium QA 对 5 章 × 1440/390/360px 检查 SVG、旧交互、焦点、整页溢出与打印可见性；是否通过应以工作流实际结果为准。
+
 ## 13–18 章：从 ELF 到内存分配的第二轮系统推演
 
 这 6 篇章节在保留原有章节、源码和交互的基础上新增了<strong>明确边界的完整推演</strong>和自绘的 SVG 图解：
