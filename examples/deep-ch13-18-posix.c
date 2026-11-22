@@ -18,16 +18,45 @@ static void on_signal(int signo) {
 }
 
 static int test_fork(void) {
+    /* The shared open-file description includes its current file offset.
+       A pipe handshake fixes the read order; the scheduler need not. */
+    char filename[] = "/tmp/csapp-deep-fork-XXXXXX";
+    int file = mkstemp(filename);
+    if (file < 0) { perror("mkstemp"); return 1; }
+    if (unlink(filename) != 0 || write(file, "ABCD", 4) != 4 ||
+        lseek(file, 0, SEEK_SET) != 0) {
+        perror("prepare file"); close(file); return 1;
+    }
+    int ack[2];
+    if (pipe(ack) == -1) { perror("pipe"); close(file); return 1; }
+
     pid_t child = fork();
-    if (child < 0) { perror("fork"); return 1; }
-    if (child == 0) _exit(7);
+    if (child < 0) { perror("fork"); close(file); close(ack[0]); close(ack[1]); return 1; }
+    if (child == 0) {
+        close(ack[0]);
+        char first[2];
+        if (read(file, first, 2) != 2 || first[0] != 'A' || first[1] != 'B')
+            _exit(10);
+        if (write(ack[1], "x", 1) != 1) _exit(11);
+        close(ack[1]);
+        close(file);
+        _exit(7);
+    }
+    close(ack[1]);
+    char token = 0, last[2];
+    int valid = read(ack[0], &token, 1) == 1 && token == 'x';
+    if (valid) {
+        valid = read(file, last, 2) == 2 && last[0] == 'C' && last[1] == 'D';
+    }
+    close(ack[0]);
+    close(file);
     int status = 0;
     pid_t got;
     do {
         got = waitpid(child, &status, 0);
     } while (got == (pid_t)-1 && errno == EINTR);
-    if (got != child || !WIFEXITED(status) || WEXITSTATUS(status) != 7) {
-        fputs("waitpid status mismatch\n", stderr);
+    if (!valid || got != child || !WIFEXITED(status) || WEXITSTATUS(status) != 7) {
+        fputs("fork/shared-offset/waitpid mismatch\n", stderr);
         return 1;
     }
     puts("fork-ok");

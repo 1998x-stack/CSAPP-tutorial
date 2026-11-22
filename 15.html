@@ -185,7 +185,7 @@ child exit=0</code></pre>
 <p><code>fork()</code> 为父子创建两个执行上下文。子进程在 <code>fork</code> 返回值上看到 <code>0</code>，父进程看到子进程的 PID；两者随后可能以任意调度顺序运行。用户态的普通可写内存表现为<strong>相互独立</strong>，Linux 常借助写时复制（COW）优化开始阶段的页框共享，直到某方写入才分开。</p>
 <p>但文件描述符不是完全相同的复制方式：父进程和子进程各自拥有描述符表，继承的表项可指向<strong>同一个内核 open file description</strong>。于是文件的当前偏移是共享状态；一方 <code>read()</code> 改变偏移，另一方随后的读取通常从新的偏移继续。这不意味着两者共享用户态的 <code>FILE*</code> 缓冲状态，也不意味着每个打开方式都表现得像普通可定位文件。</p>
 <table class="deep-table"><thead><tr><th>状态</th><th>fork 后关系</th><th>可观察结果</th></tr></thead><tbody><tr><td>普通用户态变量</td><td>逻辑值相同、修改相互独立</td><td>child 将整数改成 99，parent 仍看到 7</td></tr><tr><td>描述符号码</td><td>两个表可以有相同 fd 整数</td><td>对应引用同一个 open file description</td></tr><tr><td>普通文件的偏移</td><td>由共享 open file description 维护</td><td>先读 2 字节，再读 2 字节，位置从 0→2→4</td></tr><tr><td>退出状态</td><td>由父方通过 wait 取得并回收</td><td><code>WIFEXITED(status)</code> 与 <code>WEXITSTATUS</code> 辨认正常退出码</td></tr></tbody></table>
-<p>不要用父子输出的先后顺序“验证”这个性质，因为调度是不确定的。仓库中的 POSIX 小程序先 <code>fork</code>，子进程通过 <code>_exit(7)</code> 退出，父进程循环处理 <code>waitpid</code> 的 <code>EINTR</code> 并检查退出码，从而<strong>不依赖打印顺序</strong>。文件偏移可另外通过带同步协议的文件实验验证；模型脚本只检查描述符/OFD 的引用关系，不伪装内核对象快照。</p>
+<p>不要用父子输出的先后顺序“验证”这个性质，因为调度是不确定的。仓库中的 POSIX 小程序先 <code>fork</code>，子进程通过 <code>_exit(7)</code> 退出，父进程循环处理 <code>waitpid</code> 的 <code>EINTR</code> 并检查退出码，从而<strong>不依赖打印顺序</strong>。同一 C 程序还通过 pipe 协调读取顺序：子进程从共享普通文件读取 AB，父进程随后必定从同一个 open file description 的偏移处读取 CD；模型脚本另外检查描述符/OFD 的引用关系。</p>
 <pre><code>cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pedantic examples/deep-ch13-18-posix.c -o /tmp/deep-posix
 /tmp/deep-posix fork
 python3 examples/deep-ch13-18-models.py 15</code></pre>
