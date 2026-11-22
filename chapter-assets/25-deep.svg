@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 340" role="img" aria-labelledby="t25 desc25">
+<title id="t25">三个 Lab 的状态机共享同一条不变量</title>
+<desc id="desc25">Cache、Shell、Malloc 三条状态机并列。Cache 的状态是 valid/tag/最近使用次序，事件是访问，动作是命中或填充并在整组满时驱逐。Shell 的状态是作业表的 PID/PGID 与前后台，事件是 SIGCHLD 与用户输入，动作是在屏蔽 SIGCHLD 的保护区内 fork 后登记作业。Malloc 的状态是块头、分配位与空闲链表，事件是 malloc/free，动作是在堆边界内分割或合并。三者底部共享同一条不变量：状态更新必须原子可见并保持合法。</desc>
+<rect width="960" height="340" rx="15" fill="#f8fbfb"/>
+<text x="22" y="36" font-size="20" font-weight="700" fill="#1f4a52">事件 → 状态更新 → 不变量：三条状态机，同一类错误</text>
+<rect x="22" y="58" width="292" height="180" rx="11" fill="#e7f2f2" stroke="#bfd7d5"/>
+<text x="36" y="86" font-size="18" font-weight="700" fill="#1f4a52">Cache</text>
+<text x="36" y="114" font-size="14" fill="#2c5257">状态：valid / tag / 最近使用次序</text>
+<text x="36" y="140" font-size="14" fill="#2c5257">事件：一次读写访问</text>
+<text x="36" y="166" font-size="14" fill="#2c5257">动作：命中则用；否则填充</text>
+<text x="36" y="192" font-size="14" fill="#2c5257">整组已满才驱逐</text>
+<text x="36" y="220" font-size="14" font-weight="700" fill="#1f4a52">只能在所属组内替换</text>
+<rect x="334" y="58" width="292" height="180" rx="11" fill="#f6efe2" stroke="#bfd7d5"/>
+<text x="348" y="86" font-size="18" font-weight="700" fill="#1f4a52">Shell</text>
+<text x="348" y="114" font-size="14" fill="#2c5257">状态：作业表 PID / PGID / 前后台</text>
+<text x="348" y="140" font-size="14" fill="#2c5257">事件：SIGCHLD 与用户输入</text>
+<text x="348" y="166" font-size="14" fill="#2c5257">动作：屏蔽信号 → fork</text>
+<text x="348" y="192" font-size="14" fill="#2c5257">→ addjob → 恢复屏蔽</text>
+<text x="348" y="220" font-size="14" font-weight="700" fill="#1f4a52">登记与内核状态一致</text>
+<rect x="646" y="58" width="292" height="180" rx="11" fill="#eceff7" stroke="#bfd7d5"/>
+<text x="660" y="86" font-size="18" font-weight="700" fill="#1f4a52">Malloc</text>
+<text x="660" y="114" font-size="14" fill="#2c5257">状态：块头 / 分配位 / 空闲链表</text>
+<text x="660" y="140" font-size="14" fill="#2c5257">事件：malloc / free / realloc</text>
+<text x="660" y="166" font-size="14" fill="#2c5257">动作：分割或合并空闲块</text>
+<text x="660" y="192" font-size="14" fill="#2c5257">更新相邻边界与链表</text>
+<text x="660" y="220" font-size="14" font-weight="700" fill="#1f4a52">块不重叠且恰好覆盖堆</text>
+<path d="M314 148 H330" stroke="#2c8075" stroke-width="2.5"/>
+<path d="M626 148 H642" stroke="#2c8075" stroke-width="2.5"/>
+<rect x="22" y="256" width="916" height="62" rx="10" fill="#e9f3f2" stroke="#bfd7d5"/>
+<text x="38" y="282" font-size="15" font-weight="700" fill="#1f4a52">共享不变量：状态更新必须原子可见，并在每一次事件后依然合法</text>
+<text x="38" y="305" font-size="14" fill="#2c5257">不一致的根源不是算法，而是“更新发生在什么时候、由谁保证”没有被明确。</text>
+</svg>

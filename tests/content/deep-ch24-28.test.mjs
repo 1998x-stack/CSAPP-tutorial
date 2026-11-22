@@ -8,7 +8,7 @@ const root = resolve(import.meta.dirname, '../..');
 const read = p => readFileSync(join(root, p), 'utf8');
 
 // Chapters that ship an independent deep-dive section, keyed by chapter number.
-const implemented = { 24: '24-deep.svg' };
+const implemented = { 24: '24-deep.svg', 25: '25-deep.svg' };
 
 test('lab/systems deep dives keep a section, TOC link, standalone SVG and CSS', () => {
   for (const [id, svg] of Object.entries(implemented)) {

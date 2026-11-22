@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-labs.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳到正文</a>
@@ -57,7 +58,7 @@
 <p class="lede">Cache Lab 追踪一条缓存行的状态；Shell Lab 追踪一个作业的状态；Malloc Lab 追踪一块堆内存的状态。对象完全不同，故障却都来自同一个问题：<strong>状态更新发生在什么时候，谁保证它始终合法？</strong></p>
 <p class="chapter-scope">本章按 CS:APP3e 常见实验组织；具体接口、评分与输入轨迹以你拿到的 handout 为准。示例是教学模型，不是官方 Lab 答案。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c25-map">01 三种状态机</a><a href="#c25-cache">02 Cache Lab</a><a href="#c25-shell">03 Shell Lab</a><a href="#c25-malloc">04 Malloc Lab</a><a href="#c25-check">05 验证清单</a></nav>
+<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c25-map">01 三种状态机</a><a href="#c25-cache">02 Cache Lab</a><a href="#c25-shell">03 Shell Lab</a><a href="#c25-malloc">04 Malloc Lab</a><a href="#c25-check">05 验证清单</a><a href="#deep-25">深入推导</a></nav>
 <section id="c25-map">
 <h2>25.1 从现象出发：正确性不只取决于算法</h2>
 <p>想象一次缓存访问发生在替换之前、一个子进程在登记前就退出，或者两个相邻空闲块在释放后没有合并。这些问题看似不相干，却可以统一为：<strong>事件、状态、必须维持的不变量</strong>。</p>
@@ -128,6 +129,21 @@ if (pid == 0) {
 <div class="exercise"><h3>自测</h3><p>为什么“一把全局锁”或“永远阻塞 SIGCHLD”虽可能暂时避免竞态，却不构成正确的系统设计？</p><details><summary>查看思路</summary><p>保护范围必须匹配不变量；无限阻塞阻断子进程状态回收，过粗的互斥又可能阻止必要进度。正确做法是让关键更新原子可见，同时确保后续事件仍可被处理。</p></details></div>
 <h3>资料与适用范围</h3>
 <p>官方实验边界参阅 <a href="https://csapp.cs.cmu.edu/3e/labs.html">CS:APP3e Labs</a>；POSIX 作业控制与进程组可对照 <a href="https://man7.org/linux/man-pages/man2/setpgid.2.html">setpgid(2)</a> 与 <a href="https://man7.org/linux/man-pages/man2/waitpid.2.html">waitpid(2)</a>。本章是课程导学，不包含官方 handout 中的完整实现或标准答案。</p>
+</section>
+
+<section class="deep-study" id="deep-25" aria-labelledby="deep-25-title">
+<p class="deep-kicker">技术深描 · 25 / STATE INVARIANTS</p>
+<h2 id="deep-25-title">“状态不一致”到底指什么？用三个可复算的例子把它写清楚</h2>
+<figure class="deep-figure" tabindex="0" role="group" aria-label="可水平查看的因果图"><img src="chapter-assets/25-deep.svg" width="960" height="340" loading="lazy" alt="Cache、Shell、Malloc 三条状态机并列：Cache 在所属组内命中或填充并驱逐；Shell 用屏蔽 SIGCHLD 的保护区内 fork 后登记作业；Malloc 在堆边界内分割或合并空闲块。底部共享同一条不变量：状态更新必须原子可见并保持合法。"><figcaption>三个 Lab 的对象不同，故障却来自同一条不变量：事件发生与状态登记之间必须原子可见。该图是教学因果图，不表示真实的缓存几何或某个分配器的具体内存布局。</figcaption></figure>
+<p>把“不一致”拆成可检验的断言后，三个 Lab 就可以用同一套检查：<strong>一次事件后，被更新的字段是否仍在合法范围，且与世界真值一致？</strong>下面用三个确定性例子演示。</p>
+<table class="deep-table"><thead><tr><th>对象</th><th>事件</th><th>必须原子完成的更新</th><th>违反后的可观察现象</th></tr></thead><tbody>
+<tr><td>Cache（教学参数 <code>s=1,E=1,b=3</code>）</td><td>地址 <code>0x00,0x08,0x00,0x10</code> 依次访问</td><td>命中判定与行填充必须基于同一有效位与 tag</td><td>计数不是 <code>hit 1 / miss 3 / eviction 1</code></td></tr>
+<tr><td>Shell 作业表</td><td>子进程可能在 <code>fork</code> 后立即退出并产生 SIGCHLD</td><td>屏蔽 SIGCHLD 的区间内完成 <code>fork</code> 与 <code>addjob</code></td><td>作业表里出现已被回收的 PID，或信号丢失</td></tr>
+<tr><td>Malloc 堆</td><td><code>free</code> 一个相邻空闲块</td><td>合并后同步更新相邻边界与空闲链表</td><td>堆检查发现相邻空闲块未合并或块重叠</td></tr>
+</tbody></table>
+<div class="deep-math"><strong>不变量：∀ 事件 e，更新 done(e) 后，状态 s 仍满足合法谓词 P(s)；且 done(e) 对其余执行流原子可见</strong><span>Cache 的 P 是“命中匹配有效位与 tag”；Shell 的 P 是“作业表项与内核子进程状态一致”；Malloc 的 P 是“所有块不重叠且恰好覆盖堆”。</span></div>
+<pre><code>python3 examples/deep-ch24-28-models.py 25</code></pre>
+<p>该模型只用标准库：一个直接映射缓存对四次访问重放，断言恰好得到 <code>1/3/1</code> 的命中/缺失/驱逐；随后在一块相邻块阵列上做即时合并，断言“两个相邻空闲块算作一段”“释放块 0 后仍是一段”“全部释放后整堆合并为一”。它检查的是终态不变量，而不是日志顺序。性能与碎片指标仍需用真实 trace 实测，不在此断言。</p>
 </section>
 
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 25</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="11.html"><small>延伸到第 11 章</small><span>局部性实验与存储层次如何相连？</span><b aria-hidden="true">↗</b></a><a href="15.html"><small>延伸到第 15 章</small><span>为什么 shell 必须管理进程状态？</span><b aria-hidden="true">↗</b></a></div></aside>
