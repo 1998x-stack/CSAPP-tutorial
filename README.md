@@ -89,6 +89,29 @@
 | [27 · 现代系统新趋势](27.html) | RISC-V开放指令集、GPU异构计算CUDA |
 | [28 · 综合项目：手写高性能Web服务器](28.html) | epoll事件驱动架构、线程池+任务队列 |
 
+
+## 13–18 章：从 ELF 到内存分配的第二轮系统推演
+
+这 6 篇章节在保留原有章节、源码和交互的基础上新增了<strong>明确边界的完整推演</strong>和自绘的 SVG 图解：
+
+- [13 ELF 重定位](13.html#deep-13)：PC-relative 相对位移 `S+A-P`、4 字节机器码字段和 `readelf`/`objdump` 观察范围。
+- [14 动态装载](14.html#deep-14)：`R_X86_64_RELATIVE` 的 `B+A` 与导入符号的 GOT/PLT 绑定分工。
+- [15 进程与文件描述符](15.html#deep-15)：`fork` 的内存独立性、共享 open file description 偏移、`waitpid` 退出状态与协调实验。
+- [16 信号安全](16.html#deep-16)：丢失唤醒的竞态时序，以及 `sigprocmask` 与 `sigsuspend` 的原子边界。
+- [17 页表遍历](17.html#deep-17)：48 位规范虚拟地址拆成四组 9 位索引和 12 位偏移，区分 TLB miss 与 page fault。
+- [18 分配器碎片](18.html#deep-18)：固定池的最大连续块、合并前后变化、`realloc` 保留旧指针及乘法溢出检查。
+
+```bash
+python3 examples/deep-ch13-18-models.py all
+cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pedantic \
+    examples/deep-ch13-18-posix.c -o /tmp/deep-posix
+/tmp/deep-posix fork
+/tmp/deep-posix signal
+/tmp/deep-posix realloc
+```
+
+每个算例的假设、参考规范、可验证范围与不能外推的结论，见 [13–18 章专项复核账本](docs/evidence/13-18-deep-review.md)。网站使用自动化浏览器在 1440、390、360 像素下检查图像、滚动、交互与打印语义，测试是否通过以 GitHub Actions 实际运行结果为准。
+
 ## 05–12 章：逐步推演与可执行自检
 
 第 05–12 章各增加一篇独立的深度推导和一张可访问的 SVG 因果图：条件码与 signed/unsigned 分支、System V 栈对齐、结构体 padding、Y86-64 存储指令、load-use 停顿、CPE 两种理论下界、Cache/TLB 工作集以及缓存相联度冲突。
