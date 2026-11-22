@@ -73,8 +73,11 @@ def check_illustrated_chapters() -> None:
         if "<math " not in html:
             raise AssertionError(f"chapter {chapter}: MathML missing")
         assets = re.findall(r'<img\s+src="(chapter-assets/[^"]+\.svg)"', html)
-        if len(assets) != 3:
-            raise AssertionError(f"chapter {chapter}: expected 3 original SVGs")
+        expected = 4 if chapter in (16, 17, 18) else 3
+        if len(assets) != expected:
+            raise AssertionError(f"chapter {chapter}: expected {expected} SVGs")
+        if chapter in (16, 17, 18) and assets[-1] != f"chapter-assets/{chapter}-deep.svg":
+            raise AssertionError(f"chapter {chapter}: original three figures must precede the deep diagram")
         for name in assets:
             svg = ROOT / name
             tree = ET.parse(svg)
@@ -108,5 +111,5 @@ if __name__ == "__main__":
     check_html()
     check_illustrated_chapters()
     check_c()
-    print("Snippet checks passed: 28 chapter code sections, 18 SVGs and 8 compiled C examples")
+    print("Snippet checks passed: 28 chapter code sections, 21 SVGs and 8 compiled C examples")
 
