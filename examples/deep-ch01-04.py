@@ -75,7 +75,30 @@ def ch04():
     assert 4 * 8 == 32  # Windows x64 shadow space is four 8-byte slots
 
 
-cases = {"02": ch02, "03": ch03, "04": ch04}
+def ch01():
+    """Build vs load: section file-backing and link-time resolution."""
+    # (virtual size, file-backed?, writable?)
+    segments = {
+        "text": (0x1000, True, False),
+        "rodata": (0x0200, True, False),
+        "data": (0x0100, True, True),
+        "bss": (0x0400, False, True),
+    }
+    assert segments["bss"][1] is False and segments["bss"][2] is True
+    assert segments["data"][1] is True and segments["data"][2] is True
+    file_bytes = sum(s for s, back, _ in segments.values() if back)
+    mem_bytes = sum(s for s, _, _ in segments.values())
+    assert file_bytes < mem_bytes
+    assert mem_bytes - file_bytes == segments["bss"][0]
+
+    defined = {"main"}
+    referenced = {"printf", "puts"}
+    assert referenced - defined  # still unresolved after a single object file
+    libc = {"printf", "puts", "malloc"}
+    assert (referenced - (defined | libc)) == set()
+
+
+cases = {"01": ch01, "02": ch02, "03": ch03, "04": ch04}
 if __name__ == "__main__":
     selected = list(cases) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
     for chapter in selected:

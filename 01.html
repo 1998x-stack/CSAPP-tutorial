@@ -103,6 +103,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visi
 @media print{body{background:white;font-size:11pt}.book-layout{display:block;box-shadow:none}.book-sidebar,.inline-toc,.trace-grid,.controls,.skip-link{display:none!important}.essay{padding:0}.article-body{max-width:none}.essay section{margin-top:24pt;break-inside:auto}.figure-card,.math-panel,.widget{break-inside:avoid;box-shadow:none}.math-scroll{overflow:visible}.math-scroll math[display=block]{font-size:1.15rem}.references a::after{content:" (" attr(href) ")";font-size:.75em}}
 </style>
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-chapters.css">
 </head>
 <body>
 <a class="skip-link" href="#content">跳转到正文</a>
@@ -185,7 +186,7 @@ int main(void) {
 }</code></pre>
   <p class="quote">理解系统，不是记住所有硬件名词，而是追问：<strong>这一次数据究竟经过了哪一层、为什么必须经过它？</strong></p>
   <nav class="inline-toc" aria-label="本章阅读路径">
-    <a href="#bits">字符与字节</a><a href="#compile">四段翻译</a><a href="#run">如何执行</a><a href="#memory">存储层次</a><a href="#os">操作系统</a><a href="#amdahl">性能上限</a><a href="#lab">动手验证</a>
+    <a href="#bits">字符与字节</a><a href="#compile">四段翻译</a><a href="#run">如何执行</a><a href="#memory">存储层次</a><a href="#os">操作系统</a><a href="#amdahl">性能上限</a><a href="#lab">动手验证</a><a href="#deep-01">深入推导</a>
   </nav>
 </header>
 
@@ -367,6 +368,35 @@ readelf -h hello                 # 查看 ELF 文件头
   <div class="callout"><p><strong>本章的收获：</strong>把“写代码 → 得到输出”分解成<strong>表示、翻译、执行、存储、抽象、测量</strong>六个可验证的问题。后续章节会逐层拆开这里暂时黑箱化的机制。</p></div>
 </section>
 
+<section class="deep-study" id="deep-01" aria-labelledby="deep-01-title">
+<p class="deep-kicker">技术深描 · 01 / 构建与加载</p>
+<h2 id="deep-01-title">同一条构建命令，为何换个平台产物就不同？</h2>
+<figure class="deep-diagram">
+<svg viewBox="0 0 880 270" role="img" aria-labelledby="d01t d01d" xmlns="http://www.w3.org/2000/svg">
+<title id="d01t">文件后端段与零填充段在加载时的区别</title>
+<desc id="d01d">可执行文件中的 .text、.rodata、.data 段有对应的文件字节；.bss 段在文件中不占字节，加载时在内存中补零。可执行文件格式在 Linux 为 ELF、macOS 为 Mach-O、Windows 为 PE。</desc>
+<rect width="880" height="270" fill="#fbfdf9"/>
+<text x="120" y="34" font-size="15" text-anchor="middle" fill="#24433f">磁盘上的文件字节</text>
+<text x="760" y="34" font-size="15" text-anchor="middle" fill="#24433f">进程内存映像</text>
+<rect x="40" y="52" width="160" height="42" rx="6" fill="#eef6f0" stroke="#147f80"/><text x="120" y="79" font-size="14" text-anchor="middle" fill="#24433f">.text</text>
+<rect x="40" y="100" width="160" height="42" rx="6" fill="#eef6f0" stroke="#147f80"/><text x="120" y="127" font-size="14" text-anchor="middle" fill="#24433f">.rodata</text>
+<rect x="40" y="148" width="160" height="42" rx="6" fill="#f3f6fb" stroke="#4a6fa5"/><text x="120" y="175" font-size="14" text-anchor="middle" fill="#27395a">.data</text>
+<rect x="680" y="52" width="160" height="42" rx="6" fill="#eef6f0" stroke="#147f80"/><text x="760" y="79" font-size="14" text-anchor="middle" fill="#24433f">.text</text>
+<rect x="680" y="100" width="160" height="42" rx="6" fill="#eef6f0" stroke="#147f80"/><text x="760" y="127" font-size="14" text-anchor="middle" fill="#24433f">.rodata</text>
+<rect x="680" y="148" width="160" height="42" rx="6" fill="#f3f6fb" stroke="#4a6fa5"/><text x="760" y="175" font-size="14" text-anchor="middle" fill="#27395a">.data</text>
+<rect x="680" y="196" width="160" height="42" rx="6" fill="none" stroke="#996537" stroke-dasharray="6 4"/><text x="760" y="223" font-size="14" text-anchor="middle" fill="#5a3d1f">.bss（补零）</text>
+<g stroke="#597b77" stroke-width="2" fill="none"><path d="M200 73 H676"/><path d="M200 121 H676"/><path d="M200 169 H676"/></g>
+<text x="120" y="223" font-size="13" fill="#7a5a33">文件中没有 .bss 字节</text>
+<text x="120" y="245" font-size="12" fill="#657b76">格式：Linux ELF · macOS Mach-O · Windows PE</text>
+</svg>
+<figcaption>图 01-4：<code>.text</code>/<code>.rodata</code>/<code>.data</code> 有对应的文件字节，<code>.bss</code> 只在内存中补零。同一份 C 源程序在不同平台会生成不同格式的可执行文件。图为教学示意。</figcaption>
+</figure>
+<p>构建与运行是两个阶段：链接器决定哪些节有文件字节、符号引用如何解析；加载器负责把文件后端段映射进地址空间，并为 <code>.bss</code> 补零。因此“可执行文件大小”与“进程占用内存”不是同一个量。</p>
+<p>可执行文件的格式随平台而变：Linux 用 ELF，macOS 用 Mach-O，Windows 用 PE。所以 <code>readelf</code>、<code>objdump</code> 的命令预期不能照搬到 macOS——那里通常用 <code>otool</code> 或直接 <code>file</code>。采用动态链接时，部分符号要到运行时才由动态链接器绑定，并不写死在链接时刻。</p>
+<div class="deep-math"><strong>文件后端段有文件字节；.bss 仅在内存中补零</strong><span>“未定义引用”在链接时若无法解析会报错；共享库符号则可能在装载或首次使用时才绑定。</span></div>
+<pre><code>python3 examples/deep-ch01-04.py 01</code></pre>
+<p>模型把段属性（是否有文件字节、是否可写）与符号解析写成显式断言，验证文件字节数小于内存占用，且差值恰为 <code>.bss</code> 大小。语料依据 CS:APP 关于目标文件与加载的讨论以及各平台工具手册；模型是教学示意，不覆盖具体链接脚本输出。</p>
+</section>
 <section id="references" aria-labelledby="references-title" class="references">
   <span class="section-no">REFERENCE / FURTHER READING</span>
   <h2 id="references-title">查证与继续阅读</h2>

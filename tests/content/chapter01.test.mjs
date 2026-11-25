@@ -12,8 +12,8 @@ test("chapter 01 has semantic headings, navigation, source links and original di
   assert.match(html, /<main\b[^>]*id="content"/);
   assert.match(html, /href="index\.html"/);
   assert.match(html, /href="02\.html"/);
-  assert.equal((html.match(/<svg\b/g) || []).length, 3);
-  assert.equal((html.match(/<figcaption\b/g) || []).length, 3);
+  assert.equal((html.match(/<svg\b/g) || []).length, 4);
+  assert.equal((html.match(/<figcaption\b/g) || []).length, 4);
   assert.match(html, /csapp\.cs\.cmu\.edu\/3e/);
   assert.match(html, /gcc\.gnu\.org\/onlinedocs/);
   assert.match(html, /man7\.org\/linux\/man-pages/);
@@ -25,7 +25,7 @@ test("chapter 01 has semantic headings, navigation, source links and original di
     "../../docs/chapters/assets/01-execution.svg"
   ];
   const inlineSvgs = [...html.matchAll(/<svg\b[\s\S]*?<\/svg>/g)].map(x => x[0]);
-  assert.equal(inlineSvgs.length, figurePaths.length);
+  assert.equal(inlineSvgs.length, figurePaths.length + 1, "three original diagrams plus the deep-dive figure");
   figurePaths.forEach((path, index) => {
     const asset = readFileSync(new URL(path, import.meta.url), "utf8");
     assert.match(asset, /^<\?xml version="1\.0"/);
@@ -34,6 +34,12 @@ test("chapter 01 has semantic headings, navigation, source links and original di
     assert.match(asset, /<title\b/);
     assert.match(asset, /<desc\b/);
   });
+  const deepSvg = inlineSvgs[figurePaths.length];
+  for (const token of ['viewBox=', 'role="img"', '<title', '<desc', 'aria-labelledby="d01t d01d"']) {
+    assert.ok(deepSvg.includes(token), 'deep-dive inline SVG ' + token);
+  }
+  assert.match(html, /id="deep-01"/);
+  assert.match(html, /examples\/deep-ch01-04\.py 01/);
   assert.ok(ledger.claims.length >= 6);
   assert.ok(ledger.claims.every(x => x.id && x.claim && x.kind && x.source_url && x.locator && x.status));
 });
