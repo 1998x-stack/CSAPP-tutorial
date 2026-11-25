@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-chapters.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳转至正文</a>
@@ -57,7 +58,7 @@
 <p class="lede">把 <code>11111111</code> 当作 8 位无符号数，它是 255；当作 8 位补码，它是 −1。硬件并没有改动一个比特，改变的是<strong>我们为这些比特指定的解释规则</strong>。从这个小小的分歧出发，就能看懂字节序、类型转换与溢出。</p>
 <p class="chapter-scope">本章采用 8 位玩具示例建立直觉，随后回到 C 的整数提升规则和真实的 32/64 位环境。示例中的宽度假设均明确标注。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c2-bytes">01 字节如何排列</a><a href="#c2-twos">02 比特如何解释</a><a href="#c2-convert">03 混合类型的陷阱</a><a href="#c2-overflow">04 运算何时越界</a><a href="#c2-lab">05 动手验证</a></nav>
+<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c2-bytes">01 字节如何排列</a><a href="#c2-twos">02 比特如何解释</a><a href="#c2-convert">03 混合类型的陷阱</a><a href="#c2-overflow">04 运算何时越界</a><a href="#c2-lab">05 动手验证</a><a href="#deep-02">深入推导</a></nav>
 <section id="c2-bytes">
 <h2>2.1 数字不变，内存中的字节顺序却可以不同</h2>
 <p>想象内存是一排带地址的信箱。一个 <code>uint32_t</code> 数值 <code>0x12345678</code> 需要四个信箱，但究竟先放 <code>0x12</code> 还是 <code>0x78</code>？这就是<strong>字节序</strong>问题。高有效字节在低地址叫大端；低有效字节在低地址叫小端。两者表示同一个数学数值。</p>
@@ -81,7 +82,7 @@ int main(void) {
 <section id="c2-twos">
 <h2>2.2 补码：给最高位一个负权重</h2>
 <p>无符号数的每一位都贡献非负权重。对宽度为 <em>w</em> 的补码数，最高位的权重由 <code>+2^(w−1)</code> 变为 <code>−2^(w−1)</code>；其余位仍然照常求和。于是同一串 <code>11111111</code> 在 8 位模型中成为 <code>−128 + 127 = −1</code>。</p>
-<div class="math-scroll" tabindex="0" role="group" aria-label="补码求值公式">
+<div class="math-scroll" tabindex="0" role="region" aria-label="补码求值公式">
 <math display="block" xmlns="http://www.w3.org/1998/Math/MathML" aria-label="B2T 下标 w 等于负的最高位乘以二的 w 减一次幂，加其余各位的加权求和"><mrow><msub><mi>B2T</mi><mi>w</mi></msub><mo>(</mo><mover><mi>x</mi><mo>→</mo></mover><mo>)</mo><mo>=</mo><mo>−</mo><msub><mi>x</mi><mrow><mi>w</mi><mo>−</mo><mn>1</mn></mrow></msub><msup><mn>2</mn><mrow><mi>w</mi><mo>−</mo><mn>1</mn></mrow></msup><mo>+</mo><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>0</mn></mrow><mrow><mi>w</mi><mo>−</mo><mn>2</mn></mrow></munderover><msub><mi>x</mi><mi>i</mi></msub><msup><mn>2</mn><mi>i</mi></msup></mrow></math>
 </div>
 <figure class="lesson-figure"><img src="chapter-assets/02-twos.svg" alt="8 位补码中最高位权重为负128，其余位依次是64、32、16、8、4、2、1。例子 11111111 的和是负1。" width="880" height="310"><figcaption>图 2-2：补码不是在原码前“贴一个负号”。负权重让加法器可以复用普通的二进制加法电路。</figcaption></figure>
@@ -143,6 +144,32 @@ int main(void) {
     x = (uint8_t)(x + 1);          /* 转回 uint8_t：模 256 */
     printf("%u\n", (unsigned)x);  /* 0 */
 }</code></pre><div class="extension-compare"><div><strong>位级模型</strong><p>固定 8 位寄存器只保存低 8 位，进位被舍弃。</p></div><div><strong>C 语言模型</strong><p>先依据整数提升和通常算术转换确定运算类型，随后才考虑赋值转换。</p></div></div><p>这一区别解释了为什么不能只凭变量声明为 <code>uint8_t</code>，就断言每个中间表达式都在 8 位上运算。与此相反，<code>int</code> 的有符号溢出不能用「一定回绕」推断。</p></section>
+<section class="deep-study" id="deep-02" aria-labelledby="deep-02-title">
+<p class="deep-kicker">技术深描 · 02 / 有符号溢出</p>
+<h2 id="deep-02-title">为什么 <code>a + b &lt; a</code> 不能检测有符号溢出？</h2>
+<figure class="deep-diagram">
+<svg viewBox="0 0 880 250" role="img" aria-labelledby="d02t d02d" xmlns="http://www.w3.org/2000/svg">
+<title id="d02t">有符号加法的三种结果对照</title>
+<desc id="d02d">输入 a 为 32 位 int 最大值、b 为 1。数学和超出有符号范围；固定宽度硬件回绕得到最小值；C 抽象机对有符号溢出不作规定。安全路径是在相加前先做范围判断。</desc>
+<rect width="880" height="250" fill="#fbfdf9"/>
+<rect x="16" y="16" width="848" height="56" rx="8" fill="#eef6f0" stroke="#147f80"/>
+<text x="32" y="40" font-size="15" fill="#24433f">数学和：2147483647 + 1 = 2147483648</text>
+<text x="32" y="60" font-size="13" fill="#53706a">超出 32 位有符号可表示范围（−2³¹ … 2³¹−1）</text>
+<rect x="16" y="88" width="848" height="56" rx="8" fill="#fdf4e8" stroke="#996537"/>
+<text x="32" y="112" font-size="15" fill="#5a3d1f">固定 32 位回绕：0x7FFFFFFF + 1 = 0x80000000 = −2147483648</text>
+<text x="32" y="132" font-size="13" fill="#7a5a33">固定宽度加法的进位被丢弃</text>
+<rect x="16" y="160" width="848" height="56" rx="8" fill="#f3f6fb" stroke="#4a6fa5"/>
+<text x="32" y="184" font-size="15" fill="#27395a">C 抽象机：有符号溢出是未定义行为，结果没有语言保证</text>
+<text x="32" y="204" font-size="13" fill="#4a6082">先算再比较的写法可能被优化器删除</text>
+</svg>
+<figcaption>图 02-4：同一对操作数在三种模型下的结果。硬件“回绕”并不等于 C 语言规定了回绕，把两者混为一谈正是危险来源。图为教学示意。</figcaption>
+</figure>
+<p>C 标准把有符号整数的溢出规定为<strong>未定义行为</strong>。因此编译器可以假设它不会发生：当 <code>b &gt; 0</code> 时，<code>a + b ≥ a</code> 可被当作恒真，把 <code>if (a + b &lt; a)</code> 这类“先算再查”的检查整个删掉，使它失效。</p>
+<p>可靠的做法是在加法之前用范围判断，或使用实现提供的检查接口。下面的模型穷举 8 位有符号的全部操作数，验证“先判断”谓词与“数学和是否落在范围内”完全一致，并给出一个“先算再比”漏报的具体例子。</p>
+<div class="deep-math"><strong>溢出 ⟺ a &gt; INT_MAX − b（b &gt; 0）或 a &lt; INT_MIN − b（b &lt; 0）</strong><span>判断必须在真正相加之前完成，并用不产生溢出的减法表达边界。</span></div>
+<pre><code>python3 examples/deep-ch01-04.py 02</code></pre>
+<p>语料依据 ISO C 对有符号溢出与优化的规定；GCC/Clang 可用 <code>-fsanitize=signed-integer-overflow</code> 观测真实实现的行为，但这属于实现扩展，不是标准接口。模型是教学示意，不是对某个编译器的复现。</p>
+</section>
 <section id="c2-summary"><h2>带走什么？</h2><p>字节序规定<strong>字节的排列</strong>；补码规定<strong>比特的数值意义</strong>；C 的转换规则规定<strong>表达式按哪种类型计算</strong>；溢出规则规定<strong>结果是否还具有语言保证</strong>。下一章我们会看到：浮点数把“表示范围”与“表示精度”拆成了两个不同的问题。</p>
 <h3>资料与边界</h3><p>本章的 8 位图示是教学模型，并非某种具体 ABI 的完整规定。参阅 <a href="https://csapp.cs.cmu.edu/3e/students.html">CS:APP 3e 学生资源（第 2 章）</a> 与 <a href="https://en.cppreference.com/w/c/language/conversion">C 语言类型转换规则</a>。具体 <code>int</code> 宽度、字节宽度与溢出诊断行为须以目标实现为准。</p></section>
 
