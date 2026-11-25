@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-chapters.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳转至正文</a>
@@ -57,11 +58,11 @@
 <p class="lede">在十进制里，<code>0.1</code> 是一个再普通不过的小数；在二进制里，它却像十进制的 <code>1/3</code> 一样无限循环。计算机必须在有限的比特里做出取舍：<strong>保留多大范围，又留下多少有效数字？</strong></p>
 <p class="chapter-scope">本章聚焦 IEEE 754 的 binary32 / binary64 和通常的最近值、偶数优先舍入；硬件环境、编译选项和非默认舍入模式可能影响实验表现。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c3-fields">01 拆开位布局</a><a href="#c3-special">02 看清边界</a><a href="#c3-round">03 理解舍入</a><a href="#c3-point-one">04 解释 0.1 + 0.2</a><a href="#c3-lab">05 实验与应用</a></nav>
+<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c3-fields">01 拆开位布局</a><a href="#c3-special">02 看清边界</a><a href="#c3-round">03 理解舍入</a><a href="#c3-point-one">04 解释 0.1 + 0.2</a><a href="#c3-lab">05 实验与应用</a><a href="#deep-03">深入推导</a></nav>
 <section id="c3-fields">
 <h2>3.1 一种科学记数法：符号、指数和有效数字</h2>
 <p>十进制的 <code>6.02 × 10²³</code> 把“有效数字”与“尺度”分开；二进制浮点采用同样思想。一个有限非零值由符号 <em>s</em>、有效数 <em>M</em> 与指数 <em>E</em> 描述：</p>
-<div class="math-scroll" tabindex="0" role="group" aria-label="二进制浮点数值公式"><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><mrow><mi>V</mi><mo>=</mo><msup><mrow><mo>(</mo><mo>−</mo><mn>1</mn><mo>)</mo></mrow><mi>s</mi></msup><mo>×</mo><mi>M</mi><mo>×</mo><msup><mn>2</mn><mi>E</mi></msup></mrow></math></div>
+<div class="math-scroll" tabindex="0" role="region" aria-label="二进制浮点数值公式"><math display="block" xmlns="http://www.w3.org/1998/Math/MathML" aria-label="V 等于负一的 s 次幂乘以 M 乘以二的 E 次幂"><mrow><mi>V</mi><mo>=</mo><msup><mrow><mo>(</mo><mo>−</mo><mn>1</mn><mo>)</mo></mrow><mi>s</mi></msup><mo>×</mo><mi>M</mi><mo>×</mo><msup><mn>2</mn><mi>E</mi></msup></mrow></math></div>
 <p>binary32 用 1 位存符号、8 位存阶码字段、23 位存小数字段；binary64 则分别是 1、11、52 位。它们的精度分别为<strong>24 位</strong>和<strong>53 位</strong>二进制有效位（正规格化数有一个隐含的前导 1），不要把“23 位小数字段”误说成“只有 23 位有效精度”。</p>
 <figure class="lesson-figure"><img src="chapter-assets/03-binary32.svg" alt="32位浮点从最高位至最低位依次是1位符号、8位指数、23位小数，0.15625的正规格化编码是 0 | 01111100 | 01000000000000000000000。" width="880" height="300"><figcaption>图 3-1：<code>0.15625 = 0.00101₂ = 1.01₂ × 2⁻³</code>。指数字段是 <code>−3 + 127 = 124</code>，整个 binary32 位串是 <code>0x3e200000</code>。</figcaption></figure>
 <table><thead><tr><th>格式</th><th>符号位</th><th>阶码位</th><th>小数字段</th><th>偏置 Bias</th><th>有效精度</th></tr></thead><tbody><tr><td>binary32</td><td>1</td><td>8</td><td>23</td><td>127</td><td>24 位</td></tr><tr><td>binary64</td><td>1</td><td>11</td><td>52</td><td>1023</td><td>53 位</td></tr></tbody></table>
@@ -129,6 +130,35 @@ literal = 0.3
 print(computed.hex())   # 0x1.3333333333334p-2
 print(literal.hex())    # 0x1.3333333333333p-2
 print((computed - literal) / math.ulp(literal))  # 1.0</code></pre><div class="extension-track" role="img" aria-label="二进制64位表示中，0.3 和 0.1+0.2 是两格相邻浮点数"><span>0.3 的 binary64 表示</span><strong>→ 1 ULP →</strong><span>0.1 + 0.2 的 binary64 表示</span></div><p>ULP 不是通用的误差容忍度：接近零、跨数量级、含 NaN 或涉及累计舍入时，应按问题尺度设计绝对误差与相对误差测试。</p></section>
+<section class="deep-study" id="deep-03" aria-labelledby="deep-03-title">
+<p class="deep-kicker">技术深描 · 03 / 精确值与边界</p>
+<h2 id="deep-03-title"><code>0.1</code> 在 binary64 里究竟等于哪个分数？</h2>
+<figure class="deep-diagram">
+<svg viewBox="0 0 880 250" role="img" aria-labelledby="d03t d03d" xmlns="http://www.w3.org/2000/svg">
+<title id="d03t">0.1 的 binary64 位布局与精确分数值</title>
+<desc id="d03d">符号位为 0，阶码字段 01111111011 等于 1019，指数为负 4，小数段是 52 位、由 0011 重复后按最近偶数进位得到的位串。整个编码精确等于分数 3602879701896397 除以 2 的 55 次幂。</desc>
+<rect width="880" height="250" fill="#fbfdf9"/>
+<rect x="16" y="16" width="70" height="40" rx="6" fill="#fdf4e8" stroke="#996537"/>
+<text x="28" y="42" font-size="14" fill="#5a3d1f">s = 0</text>
+<rect x="92" y="16" width="230" height="40" rx="6" fill="#eef6f0" stroke="#147f80"/>
+<text x="104" y="42" font-size="14" fill="#24433f">e = 01111111011₂ = 1019</text>
+<rect x="328" y="16" width="536" height="40" rx="6" fill="#f3f6fb" stroke="#4a6fa5"/>
+<text x="340" y="42" font-size="13" fill="#27395a">f = 100110011001…100110011010₂（52 位）</text>
+<text x="16" y="92" font-size="14" fill="#24433f">十进制：0.1 = 1/10 = 0.0001100110011…₂（0011 段无限循环）</text>
+<text x="16" y="120" font-size="14" fill="#24433f">指数：E = 1019 − 1023 = −4，有效数为 1.f</text>
+<rect x="16" y="140" width="848" height="90" rx="8" fill="#e9f3ed" stroke="#147f80"/>
+<text x="32" y="168" font-size="14" fill="#1a5a50">精确值 = 3602879701896397 / 2⁵⁵ ≈ 0.1000000000000000055511151231257827</text>
+<text x="32" y="194" font-size="13" fill="#516f65">与 1/10 的差约为 −5.55×10⁻¹⁸，绝对值小于此处半个 ULP（2⁻⁵⁷）。</text>
+<text x="32" y="216" font-size="13" fill="#516f65">末位按“最近值、中点取偶”进位，因此它不是简单的截断。</text>
+</svg>
+<figcaption>图 03-4：<code>0.1</code> 的 binary64 编码及其拆解。整数 3602879701896397 与分母 2⁵⁵ 是精确值，不是近似打印结果。图为教学示意。</figcaption>
+</figure>
+<p><code>1/10</code> 的二进制展开是无限循环小数，任何有限位宽都无法精确表示它。binary64 保留 53 位有效位，把 <code>0.1</code> 舍入到最近的可表示数，其编码为 <code>0x3FB999999999999A</code>，精确地等于分数 <code>3602879701896397 / 2⁵⁵</code>。</p>
+<p>它比 <code>1/10</code> 大约 <code>5.55×10⁻¹⁸</code>，但小于此处半个 ULP，所以确实是最近值。继续向零方向看：最小正规格化数是 <code>2⁻¹⁰²²</code>，比它更小的量由次正规数承担，最小正次正规数是 <code>2⁻¹⁰⁷⁴</code>；跨过这个边界后有效精度逐步下降。</p>
+<div class="deep-math"><strong>0.1 → 3602879701896397 / 2⁵⁵，误差 |δ| ≤ ½ ULP = 2⁻⁵⁷</strong><span>最大次正规数恰等于最小正规格化数减 <code>2⁻¹⁰⁷⁴</code>，两者在数值上连续衔接。</span></div>
+<pre><code>python3 examples/deep-ch01-04.py 03</code></pre>
+<p>模型只做纯标准库的分数运算：用位段解码还原精确值，断言其等于上述分数，并验证最大次正规数与最小正规格化数的衔接。语料依据 IEEE 754 binary64 编码与 Python <code>float.hex()</code> 的诚实输出；模型是教学示意，不是对某个硬件舍入单元的测量。</p>
+</section>
 <section id="c3-summary"><h2>带走什么？</h2><p>浮点数用指数换取动态范围，用有效位预算限定相对精度；在零附近靠次正规数提供渐进过渡；每次舍入都可能改变后续运算。下一章进入 x86-64，看看这些数值与操作如何被机器指令搬运和计算。</p>
 <h3>资料与边界</h3><p>参阅 <a href="https://csapp.cs.cmu.edu/3e/students.html">CS:APP 3e 学生资源（第 2 章）</a>、<a href="https://dlmf.nist.gov/3.1">NIST DLMF §3.1：浮点格式与误差</a> 与 <a href="https://www.intel.com/content/www/us/en/docs/dpcpp-cpp-compiler/developer-guide-reference/2026-2/intel-ieee-754-2008-binary-float-conform-lib-use.html">Intel IEEE 754 舍入说明</a>。课程自己的“第 3 章”对应教材第 2 章的浮点部分。</p></section>
 

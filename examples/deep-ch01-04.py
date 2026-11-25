@@ -34,7 +34,29 @@ def ch02():
     assert not (wrap8(a, b) < a)
 
 
-cases = {"02": ch02}
+def ch03():
+    """0.1's exact binary64 value and the subnormal boundary."""
+    def decode(bits):
+        e = (bits >> 52) & 0x7FF
+        f = bits & ((1 << 52) - 1)
+        if e == 0:
+            return Fraction(f, 1) * Fraction(2) ** -1074
+        return Fraction((1 << 52) | f, 1) * Fraction(2) ** (e - 1023 - 52)
+
+    bits = 0x3FB999999999999A
+    assert (bits >> 52) & 0x7FF == 0x3FB
+    exact = decode(bits)
+    assert exact == Fraction(3602879701896397, 2 ** 55)
+    ulp = Fraction(2) ** -56
+    assert abs(exact - Fraction(1, 10)) <= ulp / 2
+
+    smallest_normal = Fraction(1, 2 ** 1022)
+    assert decode(0x0010000000000000) == smallest_normal
+    assert decode(0x000FFFFFFFFFFFFF) == smallest_normal - Fraction(1, 2 ** 1074)
+    assert decode(0x0000000000000001) == Fraction(1, 2 ** 1074)
+
+
+cases = {"02": ch02, "03": ch03}
 if __name__ == "__main__":
     selected = list(cases) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
     for chapter in selected:

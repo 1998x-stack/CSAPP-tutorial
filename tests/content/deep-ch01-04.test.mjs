@@ -8,7 +8,7 @@ const root = resolve(import.meta.dirname, '../..');
 const read = p => readFileSync(resolve(root, p), 'utf8');
 
 // Chapters 01-04 carry an inline-SVG deep-dive section and a runnable model.
-const implemented = [2];
+const implemented = [2, 3];
 
 test('01-04 deep dives keep a section, TOC link, inline SVG and CSS', () => {
   for (const n of implemented) {
