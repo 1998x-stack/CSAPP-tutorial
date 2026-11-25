@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="olah-chapters.css">
 <link rel="stylesheet" href="course-improvements.css">
+<link rel="stylesheet" href="deep-chapters.css">
 </head>
 <body class="olah-lesson">
 <a href="#chapter-main" class="skip-link">跳转至正文</a>
@@ -57,7 +58,7 @@
 <p class="lede">假设有 <code>return a[i] + 7;</code>。人看见“数组取值，再加七”；x86-64 则要从寄存器里取出基址和下标，算出有效地址，访问内存，最后执行加法。<strong>汇编是理解这些数据路径的放大镜。</strong></p>
 <p class="chapter-scope">以下汇编统一采用 Linux/macOS 上常见的 System V AMD64 ABI 与 GNU AT&amp;T 语法，假定 <code>long</code> 为 64 位；Windows x64 的传参规则不同。示例是符合语义的教学译法，不声称所有编译器都生成完全相同的指令。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c4-regs">01 寄存器地图</a><a href="#c4-mov">02 搬运与计算</a><a href="#c4-addr">03 读懂地址公式</a><a href="#c4-arith">04 算术的边界</a><a href="#c4-lab">05 反汇编实验</a></nav>
+<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c4-regs">01 寄存器地图</a><a href="#c4-mov">02 搬运与计算</a><a href="#c4-addr">03 读懂地址公式</a><a href="#c4-arith">04 算术的边界</a><a href="#c4-lab">05 反汇编实验</a><a href="#deep-04">深入推导</a></nav>
 <section id="c4-regs">
 <h2>4.1 寄存器：CPU 里离运算最近的工作台</h2>
 <p>一个 x86-64 核心具有 16 个 64 位通用整数寄存器。它们不是“16 种不同用途的内存”，而是一组高速存储位置；ABI 决定了函数间怎样协作使用。对 System V AMD64 中的整数/指针参数，前六个常用寄存器按顺序是 <code>%rdi</code>、<code>%rsi</code>、<code>%rdx</code>、<code>%rcx</code>、<code>%r8</code>、<code>%r9</code>，返回值通常放入 <code>%rax</code>。</p>
@@ -81,7 +82,7 @@ leaq 8(%rdi), %rax       # 仅计算地址，不读内存</code></pre>
 <section id="c4-addr">
 <h2>4.3 地址计算：把数组访问拆成一条公式</h2>
 <p>典型的 AT&amp;T 内存寻址形式是 <code>D(Rb,Ri,S)</code>，有效地址等于位移 <em>D</em>、基址寄存器 <em>Rb</em> 和变址寄存器 <em>Ri</em> 乘比例因子 <em>S</em> 之和。比例只能选 <code>1, 2, 4, 8</code>；变址位置不能使用 <code>%rsp</code>。位移可以省略；<code>symbol(%rip)</code> 是常见的相对指令指针寻址形式。</p>
-<div class="math-scroll" tabindex="0" role="group" aria-label="有效地址计算公式"><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><mrow><mi>EA</mi><mo>=</mo><mi>D</mi><mo>+</mo><msub><mi>R</mi><mi>b</mi></msub><mo>+</mo><msub><mi>R</mi><mi>i</mi></msub><mo>×</mo><mi>S</mi></mrow></math></div>
+<div class="math-scroll" tabindex="0" role="region" aria-label="有效地址计算公式"><math display="block" xmlns="http://www.w3.org/1998/Math/MathML" aria-label="有效地址 EA 等于位移 D 加基址寄存器 Rb 加变址寄存器 Ri 乘比例因子 S"><mrow><mi>EA</mi><mo>=</mo><mi>D</mi><mo>+</mo><msub><mi>R</mi><mi>b</mi></msub><mo>+</mo><msub><mi>R</mi><mi>i</mi></msub><mo>×</mo><mi>S</mi></mrow></math></div>
 <p>假设 <code>long *a</code> 指向地址 <code>0x1000</code>，每个元素 8 字节，则 <code>a[3]</code> 位于 <code>0x1000 + 3×8 = 0x1018</code>。把公式交给 CPU 的地址生成逻辑：</p>
 <pre><code>/* System V AMD64：a 在 rdi，i 在 rsi */
 long read_item(const long *a, long i) {
@@ -132,6 +133,39 @@ objdump -dr machine.o</code></pre>
    leaq (%rdi,%rsi,8), %rax
    ret
 */</code></pre><div class="extension-compare"><div><strong>LEA：有效地址</strong><p><code>%rax = %rdi + 8 × %rsi</code>，不解引用。</p></div><div><strong>MOV：访问内容</strong><p><code>movq (%rdi,%rsi,8), %rax</code> 会从算出的地址读取 8 字节。</p></div></div><p>地址计算还必须服从 C 的指针规则：<code>&amp;base[i]</code> 仅在同一数组对象内（或合法的一端越界位置）才有相应的指针运算语义；能写出汇编地址公式，不代表任意下标都有效。</p></section>
+<section class="deep-study" id="deep-04" aria-labelledby="deep-04-title">
+<p class="deep-kicker">技术深描 · 04 / 调用约定</p>
+<h2 id="deep-04-title">同一段 C 代码，为何在 Windows x64 上参数落在不同寄存器？</h2>
+<figure class="deep-diagram">
+<svg viewBox="0 0 880 260" role="img" aria-labelledby="d04t d04d" xmlns="http://www.w3.org/2000/svg">
+<title id="d04t">System V AMD64 与 Windows x64 的整数参数寄存器对照</title>
+<desc id="d04d">System V 前六个整数参数依次使用 rdi、rsi、rdx、rcx、r8、r9；Windows x64 前四个使用 rcx、rdx、r8、r9，第五个及以后放在栈上，并由调用者预留 32 字节 shadow space。</desc>
+<rect width="880" height="260" fill="#fbfdf9"/>
+<rect x="16" y="16" width="416" height="228" rx="8" fill="#eef6f0" stroke="#147f80"/>
+<text x="32" y="42" font-size="15" fill="#24433f">System V AMD64（Linux / macOS）</text>
+<text x="32" y="74" font-size="14" fill="#304642">1 arg → rdi      2 arg → rsi</text>
+<text x="32" y="100" font-size="14" fill="#304642">3 arg → rdx      4 arg → rcx</text>
+<text x="32" y="126" font-size="14" fill="#304642">5 arg → r8       6 arg → r9</text>
+<text x="32" y="152" font-size="14" fill="#304642">第 7 个及以后 → 栈</text>
+<text x="32" y="186" font-size="13" fill="#53706a">返回值常见为 rax；无寄存器“阴影区”。</text>
+<text x="32" y="212" font-size="13" fill="#53706a">红区（red zone）允许叶子函数使用栈顶以下区域。</text>
+<rect x="448" y="16" width="416" height="228" rx="8" fill="#f3f6fb" stroke="#4a6fa5"/>
+<text x="464" y="42" font-size="15" fill="#27395a">Windows x64</text>
+<text x="464" y="74" font-size="14" fill="#33465f">1 arg → rcx      2 arg → rdx</text>
+<text x="464" y="100" font-size="14" fill="#33465f">3 arg → r8       4 arg → r9</text>
+<text x="464" y="126" font-size="14" fill="#33465f">第 5 个及以后 → 栈</text>
+<text x="464" y="152" font-size="14" fill="#33465f">调用者预留 32 字节 shadow space</text>
+<text x="464" y="186" font-size="13" fill="#4a6082">rcx 兼作第一参数与返回值位置。</text>
+<text x="464" y="212" font-size="13" fill="#4a6082">易失/非易失寄存器集合也不同。</text>
+</svg>
+<figcaption>图 04-4：同一份 C 函数的整数/指针参数在两个 ABI 下的落点。差异不只在寄存器名字，还包括栈上参数与 shadow space。图为教学示意。</figcaption>
+</figure>
+<p>ABI 是编译器、汇编器与操作系统之间关于“参数放哪、栈怎么对齐、谁负责保存”的契约。<strong>同一个 C 源文件可以编译成不同的机器指令序列</strong>，因为两份 ABI 把这些约定定成了不同规则；这并不意味着 C 语言语义发生了变化。</p>
+<p>因此读 x86-64 汇编前，第一步是确认目标平台与 ABI，而不是套用记忆中的寄存器表。系统调用约定又是另一套规则，不能与函数调用约定混用。</p>
+<div class="deep-math"><strong>SysV：rdi rsi rdx rcx r8 r9；Win64：rcx rdx r8 r9 + 32 字节 shadow space</strong><span>超出寄存器数量的整数参数在两个 ABI 中都放到栈上，但起始位置与对齐要求不同。</span></div>
+<pre><code>python3 examples/deep-ch01-04.py 04</code></pre>
+<p>模型把两份 ABI 的整数参数落点写成显式映射并断言其关系：Windows 的前四个寄存器是 System V 第 3、4、5、6 个寄存器的重排，两者都从第某个参数开始转向栈。语料依据 x86-64 System V psABI 与 Microsoft x64 调用约定文档；模型是教学示意，不覆盖浮点/向量参数。</p>
+</section>
 <section id="c4-summary"><h2>带走什么？</h2><p>阅读 x86-64 的有效次序是：先认出寄存器角色，再判断源/目的和宽度，随后把 <code>D(Rb,Ri,S)</code> 翻译成地址公式，最后区分“计算地址”和“访问内存”。下一章会在这些基础上继续看条件码、分支与循环。</p>
 <h3>资料与边界</h3><p>参阅 <a href="https://csapp.cs.cmu.edu/3e/students.html">CS:APP 3e 学生资源（教材第 3 章）</a>、<a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel® 64/IA-32 软件开发手册</a> 与 <a href="https://gitlab.com/x86-psABIs/x86-64-ABI">System V AMD64 psABI</a>。本课程第 4 章是教材机器级表示内容的上半部分；Windows x64、不同编译器与调试符号有各自约定。</p></section>
 

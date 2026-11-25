@@ -56,7 +56,26 @@ def ch03():
     assert decode(0x0000000000000001) == Fraction(1, 2 ** 1074)
 
 
-cases = {"02": ch02, "03": ch03}
+def ch04():
+    """Integer argument register mapping under two x86-64 ABIs."""
+    sysv = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
+    win = ["rcx", "rdx", "r8", "r9"]
+    assert sysv[:4] != win
+    # Windows' first four are a reordering of SysV's 3rd..6th registers.
+    assert win == [sysv[3], sysv[2], sysv[4], sysv[5]]
+
+    def home(abi, index):
+        regs = sysv if abi == "sysv" else win
+        return regs[index] if index < len(regs) else "stack"
+
+    assert home("sysv", 0) == "rdi" and home("sysv", 5) == "r9"
+    assert home("sysv", 6) == "stack"
+    assert home("win", 0) == "rcx" and home("win", 3) == "r9"
+    assert home("win", 4) == "stack"
+    assert 4 * 8 == 32  # Windows x64 shadow space is four 8-byte slots
+
+
+cases = {"02": ch02, "03": ch03, "04": ch04}
 if __name__ == "__main__":
     selected = list(cases) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
     for chapter in selected:
