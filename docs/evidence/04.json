@@ -36,6 +36,15 @@
       "locator": "Volume 2, IDIV and SAR",
       "status": "verified",
       "notes": "Example for x86-64 machine instructions"
+    },
+    {
+      "id": "c4-abi-args",
+      "claim": "System V AMD64 前六个整数参数用 rdi/rsi/rdx/rcx/r8/r9；Windows x64 前四个用 rcx/rdx/r8/r9 加 32 字节阴影区",
+      "kind": "abi",
+      "source_url": "https://gitlab.com/x86-psABIs/x86-64-ABI",
+      "locator": "System V AMD64 psABI, integer argument registers",
+      "status": "verified",
+      "notes": "Windows x64 依据 Microsoft 调用约定文档；模型 examples/deep-ch01-04.py 04"
     }
   ]
 }

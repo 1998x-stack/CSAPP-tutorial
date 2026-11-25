@@ -20,6 +20,10 @@
 
 新增 5 套逐章技术推导和原创 SVG、一个纯标准库的确定性模型脚本 `examples/deep-ch24-28-models.py`，以及内容回归测试 `tests/content/deep-ch24-28.test.mjs`。重点是容量契约不变量、状态不变量、HTTP/1.1 报文定界、RV64I 字段解码与非阻塞双游标。来源与错误边界见 [24–28 复核账本](../evidence/24-28-deep-review.md)。本批未新增独立 workflow，浏览器验收以本地运行日志为准，未执行时记为未验证。
 
+## 2026-11-22 · 第 01–04 章基础章深度推演
+
+为第 01–04 章补充与 05–28 一致的 `deep-study` 独立推导：原创内联 SVG 与纯标准库确定性模型 `examples/deep-ch01-04.py`，回归测试 `tests/content/deep-ch01-04.test.mjs`。四节分别处理可执行文件段与 `.bss` 的文件后端差异、有符号溢出的相加前边界判断、`0.1` 的 binary64 精确分数与次正规边界、以及 System V 与 Windows x64 的整数参数寄存器差异。来源见各章 `docs/evidence/NN.json`；浏览器验收以仓库内真实 HTTP 服务的本地运行日志为准，未执行时记为未验证。
+
 ## 当前页面工程基线
 
 - 入口：`index.html` 与 `01.html`–`28.html`；顺序和元数据由 `courses.json` 约束。
@@ -31,10 +35,10 @@
 
 | 章 | 本轮内容工作 | 下一轮优先逐条核对 |
 | --- | --- | --- |
-| 01 | 统一元数据、跨章桥；原交互与路线保留 | 编译/加载/运行示例的命令预期与平台差异 |
-| 02 | 新增整数提升和 uint8_t 中间表达式推导 | C 标准/编译器选项下有符号溢出诊断 |
-| 03 | 新增 binary64 ULP 可运行计算 | 舍入模式与非规格化边界 |
-| 04 | 新增 LEA 与 MOV 的地址/解引用对照 | System V ABI 与 Windows x64 差别 |
+| 01 | 统一元数据、跨章桥；原交互与路线保留；新增段/`.bss` 文件后端 deep-study（`examples/deep-ch01-04.py 01`） | 编译/加载/运行示例的命令预期与平台差异 |
+| 02 | 新增整数提升和 uint8_t 中间表达式推导；新增有符号溢出相加前判断 deep-study（`examples/deep-ch01-04.py 02`） | C 标准/编译器选项下有符号溢出诊断 |
+| 03 | 新增 binary64 ULP 可运行计算；新增 `0.1` 精确分数与次正规边界 deep-study（`examples/deep-ch01-04.py 03`） | 舍入模式与非规格化边界 |
+| 04 | 新增 LEA 与 MOV 的地址/解引用对照；新增 System V 与 Windows x64 参数寄存器 deep-study（`examples/deep-ch01-04.py 04`） | System V ABI 与 Windows x64 差别 |
 | 05 | 新增页内目录、跨章桥 | 条件码、cmov 与未定义行为案例 |
 | 06 | 新增页内目录、跨章桥 | 栈对齐、红区与变参 |
 | 07 | 新增页内目录、跨章桥 | 对齐与边界检查、ROP 安全讨论 |

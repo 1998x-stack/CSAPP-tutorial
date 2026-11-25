@@ -36,6 +36,15 @@
       "locator": "Chapter 2 floating-point representations",
       "status": "derived",
       "notes": "Reproducible C11 smoke example; subject to evaluation mode"
+    },
+    {
+      "id": "c3-exact-fraction",
+      "claim": "binary64 的 0.1 精确等于 3602879701896397 / 2^55，误差小于半个 ULP",
+      "kind": "derived",
+      "source_url": "https://dlmf.nist.gov/3.1",
+      "locator": "IEEE 754 binary64 encoding; unit in the last place",
+      "status": "derived",
+      "notes": "位段解码模型见 examples/deep-ch01-04.py 03"
     }
   ]
 }

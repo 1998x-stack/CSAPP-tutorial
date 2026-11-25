@@ -36,6 +36,15 @@
       "locator": "Overflows",
       "status": "verified",
       "notes": "8-bit signed demonstration is an abstract model"
+    },
+    {
+      "id": "c2-signed-overflow-check",
+      "claim": "C 有符号溢出为未定义行为，应在相加前用范围判断，而非事后比较回绕结果",
+      "kind": "technical",
+      "source_url": "https://en.cppreference.com/w/c/language/operator_arithmetic",
+      "locator": "Overflow; undefined behavior",
+      "status": "verified",
+      "notes": "模型穷举 8 位操作数，examples/deep-ch01-04.py 02"
     }
   ]
 }

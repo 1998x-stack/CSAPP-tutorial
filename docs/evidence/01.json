@@ -74,6 +74,15 @@
       "locator": "GCC overall options",
       "status": "illustrative",
       "notes": "没有把模拟或人工编造的输出当成实验结果"
+    },
+    {
+      "id": "ch01-segments-bss",
+      "claim": "可执行文件中 .text/.rodata/.data 有对应文件字节，.bss 不占文件字节、加载时补零",
+      "kind": "derived",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 7 linking, sections and loadable segments",
+      "status": "derived",
+      "notes": "教学示意；具体链接脚本与段划分随工具链变化；模型见 examples/deep-ch01-04.py 01"
     }
   ]
 }
