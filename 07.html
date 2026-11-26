@@ -74,7 +74,7 @@
 <p class="eyebrow">CSAPP · 07 / DATA LAYOUT &amp; SAFETY</p>
 <h1>一个数组下标，最后变成了哪个地址？</h1>
 <p class="dek">数组、结构体和联合体让我们按名字组织数据；CPU 却只看地址与字节。本章从行优先布局推导地址公式，再看字段对齐如何产生 padding，最后解释为什么有界输入才是缓冲区安全的第一道防线。</p>
-<nav class="reading-map" aria-label="本章阅读路径"><strong>阅读路线</strong><a href="#arrays">数组</a><a href="#structs">结构体</a><a href="#unions">联合体</a><a href="#bounds">边界</a><a href="#defense">防御实验</a><a href="#deep-07">深入推导</a></nav>
+<nav class="reading-map" aria-label="本章阅读路径"><strong>阅读路线</strong><a href="#arrays">数组</a><a href="#structs">结构体</a><a href="#unions">联合体</a><a href="#bounds">边界</a><a href="#defense">防御实验</a><a href="#deep-07">深入推导</a><a href="#deep-07b">深入推导②</a></nav>
 </header>
 <nav class="site-topic-toc" aria-label="本章小节导航"><strong>快速定位</strong><a href="#chapter-section-07-1">01 · 数组下标的本质，是基址加字节偏移</a><a href="#chapter-section-07-2">02 · 结构体大小为什么不是字段大小简单相加？</a><a href="#chapter-section-07-3">03 · 联合体复用存储，但不能忽略类型语义</a><a href="#chapter-section-07-4">04 · 越界不是“踩到下一格”，而是未定义行为</a><a href="#chapter-section-07-5">05 · 安全边界：源头检查，再加纵深防御</a><a href="#chapter-section-07-6">查证与下一步</a></nav>
 <section class="chapter-section" id="arrays">
@@ -89,8 +89,8 @@ long x = a[2];  /* 常见 LP64 平台 sizeof(long) == 8
    是一种可能的读取方式；真实寄存器分配由编译器决定。 */</code></pre>
 <p>二维数组 <code>int matrix[3][4]</code> 在 C 中是“3 个元素组成的数组，每个元素又是 4 个 int 的数组”。它采用<strong>行优先</strong>布局：一整行的四个 <code>int</code> 连续存储，随后紧跟下一行。</p>
 <figure class="diagram"><img src="assets/chapters/07-matrix.svg" width="760" height="300" alt="3 行 4 列的 int 数组按行连续存储，matrix[2][1] 的元素序号为 9，若 int 为4字节则偏移36字节"><figcaption>图 7-1 · 第 <code>i</code> 行前面有 <code>i×4</code> 个元素，列内还要走 <code>j</code> 个元素。示例限定 <code>sizeof(int)=4</code>。</figcaption></figure>
-<div class="equation" tabindex="0" role="group" aria-label="二维数组地址公式">
-<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+<div class="equation math-scroll" tabindex="0" role="region" aria-label="二维数组地址公式">
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="行主序偏移等于行下标 i 乘以列数 C 加列下标 j 再乘以元素大小">
 <mrow><mi>offset</mi><mo>(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo>)</mo><mo>=</mo><mo>(</mo><mi>i</mi><mo>×</mo><mi>C</mi><mo>+</mo><mi>j</mi><mo>)</mo><mo>×</mo><mi>sizeof</mi><mo>(</mo><mi>T</mi><mo>)</mo></mrow>
 </math></div>
 <div class="lab-widget" aria-labelledby="matrix-title">
@@ -210,6 +210,32 @@ int main(void) {
         offsetof(struct Record, enabled), sizeof(struct Record));
 }</code></pre>
 <p>这只是<strong>特定实现假设下</strong>的示例，运行输出可能不同。填充字节的值不能被当作有效字段；不能假设将结构体整块 <code>memcmp</code> 就能实现可靠的逻辑相等比较，更不能直接把原始内存布局当作跨平台协议。运行 <code>python3 examples/deep-ch05-12.py 07</code> 检查假设布局；进一步用 <a href="https://man7.org/linux/man-pages/man3/offsetof.3.html">offsetof(3)</a> 验证目标平台。</p></section>
+<section class="deep-study" id="deep-07b" aria-labelledby="deep-07b-title">
+<p class="deep-kicker">技术深描 · 07 / 边界检查</p>
+<h2 id="deep-07b-title">为什么一次无符号比较就能挡住负下标？</h2>
+<figure class="deep-diagram">
+<svg viewBox="0 0 880 270" role="img" aria-labelledby="d07bt d07bd" xmlns="http://www.w3.org/2000/svg">
+<title id="d07bt">有符号与无符号越界检查的判定差异</title>
+<desc id="d07bd">对下标 i = −1，有符号比较 −1 与 10 为真，于是放过越界访问；把 i 重解释为无符号 0xFFFFFFFF 后与 10 比较为假，从而拒绝。若把 64 位下标截成 32 位，判定又会失真。</desc>
+<rect width="880" height="270" fill="#fbfdf9"/>
+<text x="24" y="30" font-size="15" fill="#24433f">同一下标 i = −1（位模式 0xFFFFFFFF）的两种边界检查</text>
+<text x="24" y="82" font-size="14" fill="#8a2b2b">有符号：i &lt; 10</text>
+<rect x="220" y="60" width="180" height="40" rx="6" fill="#fdeeee" stroke="#b23b3b"/><text x="310" y="85" font-size="14" text-anchor="middle" fill="#7a2626">−1 &lt; 10 → 真</text>
+<rect x="480" y="60" width="220" height="40" rx="6" fill="#fdeeee" stroke="#b23b3b"/><text x="590" y="85" font-size="14" text-anchor="middle" fill="#7a2626">判定通过 → a[i] 越界</text>
+<text x="24" y="162" font-size="14" fill="#147f80">无符号：(unsigned)i &lt; 10</text>
+<rect x="220" y="140" width="180" height="40" rx="6" fill="#eef6f0" stroke="#147f80"/><text x="310" y="165" font-size="14" text-anchor="middle" fill="#24433f">0xFFFFFFFF &lt; 10 → 假</text>
+<rect x="480" y="140" width="220" height="40" rx="6" fill="#eef6f0" stroke="#147f80"/><text x="590" y="165" font-size="14" text-anchor="middle" fill="#24433f">判定拒绝 → 不访问</text>
+<g stroke="#597b77" stroke-width="2" fill="none"><path d="M400 80 H476"/><path d="M400 160 H476"/></g>
+<text x="24" y="228" font-size="13" fill="#7a5a33">教学示意：判定还依赖下标与长度类型一致；64 位值被截成 32 位会改变结果。</text>
+</svg>
+<figcaption>图 07-6：把下标按无符号重解释后，同一个 <code>&lt;</code> 同时排除负值与上界越界。图为教学示意。</figcaption>
+</figure>
+<p>数组边界检查要同时挡住两类错误：下标为负，以及下标达到或超过长度。只写 <code>if (i &lt; n)</code> 只处理后者：当 <code>i</code> 为 −1 时 <code>−1 &lt; n</code> 仍为真，于是构造出一个指向数组之前的地址。</p>
+<p>把下标按无符号重解释再比较，一次判断即可覆盖两者：负值的位模式在无符号下变成很大的正数，必然不小于 <code>n</code>。这正是标准库中常见形状，例如以 <code>size_t</code> 比较的拷贝长度或散列桶下标。</p>
+<div class="deep-math"><strong>(unsigned)(−1) = 4294967295 ≥ n</strong><span>条件依赖 C 的通常算术转换；它不会让越界指针本身变得合法，只是把判定缺口补上。</span></div>
+<pre><code>python3 examples/deep-ch05-08-b.py 07b</code></pre>
+<p>模型枚举下标验证“无符号比较”与“两个有符号条件”判定一致，并给出边界反例：当 64 位下标被截成 32 位时，超过 2 的 32 次方的值会被误判为合法。故该写法要求下标与长度宽度一致、且长度小于 <code>UINT_MAX</code>。相关规则参见 CERT C ARR30-C 与 CS:APP 3e 的数组与代码安全讨论；模型是教学示意，不对未定义行为给出保证。</p>
+</section>
 <section class="chapter-section" id="references">
 <h2 id="chapter-section-07-6">查证与下一步</h2>
 <p>到这里可以用一条链贯穿本系列：<strong>源语言表达式 → 地址计算 → 内存访问 → 可能的边界失效</strong>。对数组与栈都应先推导条件与约定，再查看机器码；这比背诵某种固定内存图更可靠。</p>

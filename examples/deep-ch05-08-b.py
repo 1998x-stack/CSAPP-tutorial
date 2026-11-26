@@ -66,7 +66,29 @@ def ch06b():
     assert al_count(0, 10) == 8
 
 
-cases = {"05b": ch05b, "06b": ch06b}
+def ch07b():
+    """A single unsigned comparison replaces two signed bounds tests.
+
+    Reinterpreting a signed index as unsigned turns every negative value into
+    a large one, so ``(unsigned)i < N`` rejects negative and out-of-range
+    subscripts at once. The trick relies on both sides sharing a width.
+    """
+    N = 10
+
+    def unsigned_ok(i):                      # int -> unsigned 32-bit view
+        return (i & 0xffffffff) < N
+
+    for i in range(-3, 13):
+        assert unsigned_ok(i) == (0 <= i < N)
+    assert (-1 < N) is True                  # the signed test alone is wrong
+    assert unsigned_ok(-1) is False
+
+    # If a 64-bit index is truncated to 32 bits the verdict is wrong again.
+    idx = 0x100000000 + 3
+    assert idx >= N and (idx & 0xffffffff) == 3
+
+
+cases = {"05b": ch05b, "06b": ch06b, "07b": ch07b}
 if __name__ == "__main__":
     selected = list(cases) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
     for chapter in selected:

@@ -43,6 +43,16 @@
           "locator": "Instrumentation Options"
         }
       ]
+    },
+    {
+      "claim": "把下标按无符号重解释后一次比较即可挡住负值与上界越界；但下标与长度宽度不一致时，64 位值被截成 32 位会改变判定",
+      "sources": [
+        {
+          "url": "https://wiki.sei.cmu.edu/confluence/display/c/ARR30-C.+Do+not+form+or+use+out-of-bounds+pointers+or+array+subscripts",
+          "locator": "ARR30-C, out-of-bounds array subscripts"
+        }
+      ],
+      "notes": "依赖 C 的通常算术转换；模型见 examples/deep-ch05-08-b.py 07b"
     }
   ],
   "figures": [
