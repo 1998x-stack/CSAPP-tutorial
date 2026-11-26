@@ -164,6 +164,20 @@ python3 examples/deep-ch05-12.py 09    # 仅检查流水线时序
 
 这些脚本验证数学/状态模型，不会伪装成真实硬件性能实验。核验清单和技术来源见 [05–12 深度复核记录](docs/evidence/05-12-deep-review.md)。
 
+## 09–12、19–21 章：第四轮机制深描
+
+在保留原有段落、SVG 与交互的基础上，09、10、11、12 各追加一节 `deep-NNb` 深描、一张外链 SVG 与确定模型；19、20、21 各追加一节 `deep-NNb` 深描与一张内联 SVG：
+
+- 转发优先级（选最新在途生产者）、向量宽度下的 CPE 下界、写策略的内存流量、LRU 替换轨迹；
+- 非阻塞输出游标、HTTP/1.1 报文定界（RFC 9112 §6）、LT/ET 就绪语义。
+
+```bash
+python3 examples/deep-ch09-12-b.py all   # 09b 10b 11b 12b
+python3 examples/deep-ch19-23-b.py all   # 19b 20b 21b
+```
+
+均为教学模型与代数推导，不是实测性能。来源与不能外推的边界见 [09–12 账本](docs/evidence/09-12-deep-review.md) 与 [19–21 账本](docs/evidence/19-21-deep-review.md)。
+
 ## 在本地验证与构建
 
 依赖：**Node.js 22+、Python 3.10+、C11 编译器（GCC/Clang）**。常规静态构建不需要安装 npm 包。
