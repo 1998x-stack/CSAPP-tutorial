@@ -88,8 +88,29 @@ int main(void) {
 <section id="c18-frag"><h2>18.3 总空闲空间够了，为什么还放不下一块？</h2>
 <p><strong>内部碎片</strong>是已分配块内因对齐、块尺寸或管理开销而未用于负载的部分；<strong>外部碎片</strong>是空闲空间被切成相互分离的小块，使大请求无法放进单个连续空闲块。注意：这是<strong>一个固定池的教学例子</strong>，不能据此断定现实中的 <code>malloc</code> 必然失败——真实分配器可能扩展堆或申请新的映射。</p>
 <figure class="lesson-figure"><img src="chapter-assets/18-fragmentation.svg" alt="固定内存池中的空闲块为64、32、64字节，中间穿插已分配块；总空闲160字节但最大连续空闲块仅64字节，因此96字节请求在这个池里无法满足。" width="880" height="300"><figcaption>图 18-3：固定池中空闲块分别为 64、32、64 字节（合计 160 字节），但最大连续空闲块只有 64 字节。</figcaption></figure>
-<div class="math-scroll" tabindex="0" role="group" aria-label="外部碎片造成的可用空间不足">
-<math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><mrow><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mn>3</mn></munderover><msub><mi>F</mi><mi>i</mi></msub><mo>=</mo><mn>160</mn><mo>≥</mo><mn>96</mn><mo>,</mo><mspace width="0.8em"/><mrow><mi>max</mi><mo>(</mo><msub><mi>F</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><mn>64</mn><mo>&lt;</mo><mn>96</mn></mrow></math></div>
+<div class="math-scroll" tabindex="0" role="region" aria-label="外部碎片造成的可用空间不足">
+<math display="block" xmlns="http://www.w3.org/1998/Math/MathML" aria-label="三个空闲块大小之和 160 字节大于等于 96，但最大空闲块 64 字节小于 96"><mrow><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mn>3</mn></munderover><msub><mi>F</mi><mi>i</mi></msub><mo>=</mo><mn>160</mn><mo>≥</mo><mn>96</mn><mo>,</mo><mspace width="0.8em"/><mrow><mi>max</mi><mo>(</mo><msub><mi>F</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><mn>64</mn><mo>&lt;</mo><mn>96</mn></mrow></math></div>
+<figure class="lesson-figure"><div style="max-width:100%;overflow-x:auto"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220" role="img" aria-labelledby="d18t d18d" style="display:block;width:100%;min-width:560px;height:auto"><title id="d18t">隐式空闲链表里一个已分配块的字段布局</title><desc id="d18d">一个块由头部、有效载荷、可选填充和可选脚部组成；头部低三位存放标志位，其中最低位表示已分配或空闲，其余位与高位一起拼出块大小；块大小按对齐要求取整，因此低位可复用。</desc>
+<rect width="720" height="220" rx="14" fill="#f8faf7"/>
+<text x="24" y="32" font-size="17" font-weight="700" fill="#264942">一个已分配块的字段布局</text>
+<rect x="30" y="52" width="110" height="52" rx="6" fill="#147f80"/>
+<rect x="140" y="52" width="360" height="52" rx="6" fill="#2f7d6a"/>
+<rect x="500" y="52" width="80" height="52" rx="6" fill="#c9d6c2"/>
+<rect x="580" y="52" width="110" height="52" rx="6" fill="#147f80"/>
+<text x="85" y="76" font-size="12.5" fill="#ffffff" text-anchor="middle">头部 8 B</text><text x="85" y="93" font-size="11" fill="#d8ece9" text-anchor="middle">size | 标志位</text>
+<text x="320" y="82" font-size="13" fill="#ffffff" text-anchor="middle">有效载荷（malloc 返回的地址）</text>
+<text x="540" y="76" font-size="11.5" fill="#254b46" text-anchor="middle">填充</text><text x="540" y="93" font-size="11" fill="#3f574f" text-anchor="middle">≤ 15 B</text>
+<text x="635" y="76" font-size="12.5" fill="#ffffff" text-anchor="middle">脚部 8 B（可选）</text><text x="635" y="93" font-size="11" fill="#d8ece9" text-anchor="middle">size | 标志位</text>
+<text x="24" y="138" font-size="12.5" fill="#4b6b64">头部最低位：1 = 已分配，0 = 空闲；块大小按对齐要求取整，低位可复用存放标志</text>
+<rect x="30" y="156" width="300" height="34" rx="7" fill="#e7f2ec" stroke="#a9ccb9"/>
+<text x="180" y="178" font-size="12.5" fill="#1f5b4b" text-anchor="middle">块大小（高位）</text>
+<rect x="336" y="156" width="80" height="34" rx="7" fill="#f0e2c6" stroke="#cdb27a"/>
+<text x="376" y="178" font-size="12.5" fill="#7a5a17" text-anchor="middle">保留</text>
+<rect x="422" y="156" width="80" height="34" rx="7" fill="#f0e2c6" stroke="#cdb27a"/>
+<text x="462" y="178" font-size="12.5" fill="#7a5a17" text-anchor="middle">保留</text>
+<rect x="508" y="156" width="80" height="34" rx="7" fill="#f6e7e3" stroke="#d8a79c"/>
+<text x="548" y="178" font-size="12.5" fill="#8f3a28" text-anchor="middle">a (bit0)</text>
+</svg></div><figcaption>图 18-4：<strong>对齐使最低位可以复用</strong>。分配器把“块大小”和“已分配位”打包进同一个字。字段宽度与对齐要求属于具体实现，教材与真实分配器并不保证一致。</figcaption></figure>
 <div class="micro-lab"><h3>交互：这个固定池能否满足请求？</h3><div class="seg-buttons" role="group" aria-label="选择请求字节数">
 <button type="button" data-request="32" aria-pressed="true">申请 32 B</button>
 <button type="button" data-request="64" aria-pressed="false">申请 64 B</button>
