@@ -190,9 +190,9 @@ a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visi
 <section id="model" aria-labelledby="model-title"><span class="section-no">02 / MODEL</span><h2 id="model-title">写下模型，再谈“加速几倍”</h2>
 <p>假设五个阶段分别耗时 <code>t₁…t₅</code>，每个流水级额外付出开销 <code>δ</code>。没有停顿、分支失败或内存等待时，处理 <code>n</code> 条指令：</p>
 <div class="math-panel"><div class="math-scroll" tabindex="0" role="region" aria-label="顺序和流水线的简化时延公式">
-<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="顺序执行总时间 T-SEQ 约等于 n 乘五级时间之和">
 <mrow><msub><mi>T</mi><mtext>SEQ</mtext></msub><mo>≈</mo><mi>n</mi><mo>×</mo><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mn>5</mn></munderover><msub><mi>t</mi><mi>i</mi></msub></mrow>
-</math><math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+</math><math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="流水线总时间 T-PIPE 约等于 n 加 4 乘最慢级时间加寄存器开销">
 <mrow><msub><mi>T</mi><mtext>PIPE</mtext></msub><mo>≈</mo><mo>(</mo><mi>n</mi><mo>+</mo><mn>4</mn><mo>)</mo><mo>×</mo><mo>(</mo><munder><mo>max</mo><mi>i</mi></munder><msub><mi>t</mi><mi>i</mi></msub><mo>+</mo><mi>δ</mi><mo>)</mo></mrow>
 </math></div><p class="math-label">五级流水线的填充与排空成本为 4 个周期；此式忽略冒险与其他开销。</p></div>
 <p>例如每级 200 ps、寄存器额外开销 20 ps、共 8 条指令：SEQ 约 <code>8 × 1000 = 8000 ps</code>，PIPE 约 <code>(8 + 4) × 220 = 2640 ps</code>，理论加速约 <code>3.03×</code>，不是直接声称“5×”。真实值要看冒险、缓存与时钟频率。</p>
