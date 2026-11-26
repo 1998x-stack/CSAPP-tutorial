@@ -91,12 +91,29 @@ int main(void) {
     return 0;
 }</code></pre>
 <p><strong>参数所有权陷阱：</strong>把循环变量 <code>&amp;i</code> 传给所有线程并持续修改它，会产生未同步访问风险；单独的 <code>ids[i]</code> 只有在其内容不再被并发修改、且生命周期覆盖线程使用期时才安全。Pthreads 函数通常以<strong>返回值</strong>表示错误号，而不是统一通过 <code>errno</code>。编译应使用 <code>-pthread</code>，它比只写 <code>-lpthread</code> 更完整地配置编译与链接。</p>
+<figure class="lesson-figure"><div style="max-width:100%;overflow-x:auto"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 230" role="img" aria-labelledby="d22t d22d" style="display:block;width:100%;min-width:560px;height:auto"><title id="d22t">pthread_join 不仅是等待，还建立同步与可见性顺序</title><desc id="d22d">主线程先调用 pthread_create，工作线程随后开始并在稍后写入结果；主线程调用 pthread_join 阻塞，直到工作线程退出才返回，此时读取结果能观察到工作线程写入的值。虚线表示 join 建立的 happens-before 关系。</desc>
+<rect width="720" height="230" rx="14" fill="#f8faf7"/>
+<text x="24" y="32" font-size="17" font-weight="700" fill="#264942">join 既是等待，也是同步边界</text>
+<text x="30" y="90" font-size="13" font-weight="600" fill="#264942">主线程</text>
+<text x="30" y="176" font-size="13" font-weight="600" fill="#264942">工作线程</text>
+<line x1="120" y1="86" x2="700" y2="86" stroke="#cfd8d3" stroke-width="2"/>
+<line x1="120" y1="172" x2="700" y2="172" stroke="#cfd8d3" stroke-width="2"/>
+<circle cx="170" cy="86" r="6" fill="#147f80"/><text x="170" y="70" font-size="11.5" fill="#1f5b4b" text-anchor="middle">pthread_create</text>
+<circle cx="240" cy="172" r="6" fill="#2f7d6a"/><text x="240" y="196" font-size="11.5" fill="#1f5b4b" text-anchor="middle">线程开始</text>
+<circle cx="400" cy="172" r="6" fill="#2f7d6a"/><text x="400" y="196" font-size="11.5" fill="#1f5b4b" text-anchor="middle">写 result=42</text>
+<circle cx="470" cy="172" r="6" fill="#254b46"/><text x="470" y="196" font-size="11.5" fill="#254b46" text-anchor="middle">线程退出</text>
+<circle cx="500" cy="86" r="6" fill="#b45309"/><text x="500" y="70" font-size="11.5" fill="#8f3a28" text-anchor="middle">pthread_join 返回</text>
+<circle cx="620" cy="86" r="6" fill="#147f80"/><text x="620" y="70" font-size="11.5" fill="#1f5b4b" text-anchor="middle">读 result 得 42</text>
+<path d="M470 160 C 490 120, 500 110, 500 96" fill="none" stroke="#b45309" stroke-width="1.6" stroke-dasharray="5 4"/>
+<path d="M400 160 C 540 120, 600 110, 620 96" fill="none" stroke="#2f7d6a" stroke-width="1.6" stroke-dasharray="5 4"/>
+<text x="360" y="130" font-size="11.5" fill="#1f5b4b">虚线：join 将工作线程的写在主线程的读之前排序</text>
+</svg></div><figcaption>图 22-2：<strong>join 不只是“等一等”</strong>。当 join 成功返回，工作线程的写入与主线程随后读取之间建立了顺序关系；仍要遵守 Pthreads 的返回值与生命周期约定，不要靠打印先后猜调度。</figcaption></figure>
 </section>
 
 <section id="c22-race">
 <h2>22.3 读—改—写：丢失更新是怎样发生的？</h2>
 <p>想象两个执行流各自完成一次 <code>counter = counter + 1</code>。在抽象的读—计算—写序列里，它们可以先读到同一旧值，再分别写回相同新值。一次覆盖了另一次的更新。</p>
-<figure class="lesson-figure"><img src="chapter-assets/22-lost-update.svg" width="940" height="320" alt="计数器从 7 开始，线程 A 和 B 都读到 7，各算出 8 并先后写入，最后是 8 而非 9。"><figcaption>图 22-2：这是一条解释“更新丢失”的可能交错，不是声称编译器一定生成三条机器指令。</figcaption></figure>
+<figure class="lesson-figure"><img src="chapter-assets/22-lost-update.svg" width="940" height="320" alt="计数器从 7 开始，线程 A 和 B 都读到 7，各算出 8 并先后写入，最后是 8 而非 9。"><figcaption>图 22-3：这是一条解释“更新丢失”的可能交错，不是声称编译器一定生成三条机器指令。</figcaption></figure>
 <div class="micro-lab">
 <h3>交错顺序实验：只改变调度，不改变操作</h3>
 <p>从 <code>counter=7</code> 出发，两条线程各做一次“加一”。选择执行方式，比较结果与原因。</p>
