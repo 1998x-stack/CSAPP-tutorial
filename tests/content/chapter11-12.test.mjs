@@ -19,7 +19,7 @@ for (const [chapter, page] of Object.entries(pages)) {
     assert.match(html, /href="index\.html"/);
     assert.match(html, chapter === '11' ? /href="12\.html"/ : /href="13\.html"/);
     assert.equal((html.match(/<svg\b/g) || []).length, 3);
-    assert.equal((html.match(/<figcaption\b/g) || []).length, chapter === '11' ? 5 : 4);
+    assert.equal((html.match(/<figcaption\b/g) || []).length, 5);
     assert.ok(!/<script[^>]+src=["']https?:/i.test(html));
     assert.ok(!html.includes('原创图解 · 单文件离线 HTML'));
     const inline = [...html.matchAll(/<svg\b[\s\S]*?<\/svg>/g)].map(m => m[0]);

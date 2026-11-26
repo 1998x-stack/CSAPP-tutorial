@@ -85,7 +85,44 @@ def ch11b():
     assert write_through(128) == (0, 0, 128)
 
 
-cases = {"09b": ch09b, "10b": ch10b, "11b": ch11b}
+def ch12b():
+    """Address bits and LRU: reuse keeps a line, capacity pushes out the oldest.
+
+    Split a virtual address into tag | set index | block offset with
+    b = log2(B) offset bits and s = log2(S) set-index bits; the rest is tag.
+    Under LRU, a hit refreshes recency, so a line used long ago becomes the
+    next victim when the set is full. The trace below makes that visible:
+    after 0 is reused it survives while 1 is evicted by 2.
+    """
+    def field_bits(addr_bits, S, B):
+        def log2(x):
+            return x.bit_length() - 1
+        b, s = log2(B), log2(S)
+        return addr_bits - s - b, s, b          # (t, s, b)
+
+    def lru(S, E, B, trace):
+        sets = [[] for _ in range(S)]           # MRU first, LRU last
+        out = []
+        for addr in trace:
+            ways = sets[(addr // B) % S]
+            if addr in ways:
+                ways.remove(addr); ways.insert(0, addr)
+                out.append("H")
+            else:
+                out.append("M")
+                if len(ways) == E:
+                    ways.pop()                  # evict least-recently used
+                ways.insert(0, addr)
+        return "".join(out)
+
+    assert field_bits(32, 2, 1) == (31, 1, 0)
+    assert field_bits(32, 8, 16) == (25, 3, 4)  # 3 index + 4 offset bits
+    assert lru(1, 2, 1, [0, 1, 0, 2]) == "MMHM"
+    assert lru(1, 3, 1, [0, 1, 0, 2]) == "MMHM"
+    assert lru(2, 1, 1, [0, 2, 0, 2]) == "MMMM"  # direct-mapped thrashes
+
+
+cases = {"09b": ch09b, "10b": ch10b, "11b": ch11b, "12b": ch12b}
 if __name__ == "__main__":
     selected = list(cases) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
     for chapter in selected:

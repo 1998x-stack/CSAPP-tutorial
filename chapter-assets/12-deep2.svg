@@ -1,0 +1,27 @@
+<svg viewBox="0 0 880 300" role="img" aria-labelledby="d12bt d12bd" xmlns="http://www.w3.org/2000/svg">
+<title id="d12bt">两路组相联下 LRU 的复用与逐出轨迹</title>
+<desc id="d12bd">对 S=1、E=2、B=1 的教学缓存重放访问 0、1、0、2：0 未命中装入，1 未命中装入，0 命中把 0 刷新为最近使用，随后 2 未命中时组已满，逐出最近最少使用的 1。复用改变了谁成为牺牲者。</desc>
+<rect width="880" height="300" fill="#fbfdf9"/>
+<text x="24" y="30" font-size="16" fill="#24433f">S=1、E=2、B=1 重复访问 0 → 1 → 0 → 2</text>
+<g font-family="system-ui,sans-serif">
+<text x="60" y="72" font-size="13" fill="#55716f">地址</text>
+<text x="220" y="72" font-size="13" fill="#55716f">结果</text>
+<text x="360" y="72" font-size="13" fill="#55716f">组内内容（左=最近使用，右=最少使用）</text>
+<text x="60" y="112" font-size="15" fill="#27495c">0</text>
+<text x="222" y="112" font-size="15" fill="#7a2626">M</text>
+<text x="360" y="112" font-size="14" fill="#27495c">[0]</text>
+<text x="60" y="158" font-size="15" fill="#27495c">1</text>
+<text x="222" y="158" font-size="15" fill="#7a2626">M</text>
+<text x="360" y="158" font-size="14" fill="#27495c">[1, 0]</text>
+<text x="60" y="204" font-size="15" fill="#236b66">0</text>
+<text x="222" y="204" font-size="15" fill="#236b66">H</text>
+<text x="360" y="204" font-size="14" fill="#236b66">[0, 1] ← 0 被刷新为最近使用</text>
+<text x="60" y="250" font-size="15" fill="#27495c">2</text>
+<text x="222" y="250" font-size="15" fill="#7a2626">M</text>
+<text x="360" y="250" font-size="14" fill="#27495c">[2, 0]</text>
+<text x="470" y="250" font-size="13" fill="#8a2b2b">组满，逐出最少使用的 1</text>
+</g>
+<line x1="200" y1="60" x2="200" y2="262" stroke="#cdd9d6"/>
+<line x1="330" y1="60" x2="330" y2="262" stroke="#cdd9d6"/>
+<text x="360" y="286" font-size="13" fill="#55716f">若 0 未在第 3 步命中，逐出的将不是 1；复用顺序决定替换轨迹。</text>
+</svg>

@@ -74,6 +74,15 @@
       "locator": "DESCRIPTION and event selection",
       "status": "verified",
       "notes": "不由单一计数推断 3C miss 类型"
+    },
+    {
+      "id": "ch12b-lru-trace",
+      "claim": "LRU 下命中刷新最近使用；S=1,E=2,B=1 重放 0→1→0→2 得到 M M H M，第 4 步逐出最少使用的 1 而非 0",
+      "kind": "cache",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 6, set index/tag/offset and LRU replacement",
+      "status": "derived",
+      "notes": "deep-12b 位宽拆分与 LRU 重放模型 examples/deep-ch09-12-b.py 12b；仅覆盖 LRU"
     }
   ]
 }
