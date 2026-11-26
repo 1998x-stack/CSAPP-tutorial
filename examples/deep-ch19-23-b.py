@@ -36,7 +36,42 @@ def ch19b():
     assert data[:3] == b"HEL"                # accepted prefix is exact
 
 
-cases = {"19b": ch19b}
+def ch20b():
+    """HTTP/1.1 delimits messages by header rules, not by ``read until close``.
+
+    RFC 9112 section 6 fixes the order: Transfer-Encoding chunked wins; else
+    Content-Length; else a response ends at connection close. A chunked decoder
+    reads a hex size line, that many octets, then CRLF, repeating until the
+    zero-size last chunk. Mixing both framings is a security-relevant boundary.
+    """
+    def chunked(stream):
+        out, i = bytearray(), 0
+        while True:
+            j = stream.index(b"\r\n", i)
+            size = int(stream[i:j], 16)
+            i = j + 2
+            if size == 0:
+                return bytes(out)
+            out += stream[i:i + size]
+            i += size
+            assert stream[i:i + 2] == b"\r\n"
+            i += 2
+
+    def delimit(headers):
+        if headers.get("transfer-encoding", "").lower() == "chunked":
+            return "chunked"
+        if "content-length" in headers:
+            return "content-length"
+        return "read-to-close"
+
+    assert chunked(b"5\r\nHELLO\r\n0\r\n\r\n") == b"HELLO"
+    assert chunked(b"3\r\nfoo\r\n3\r\nbar\r\n0\r\n\r\n") == b"foobar"
+    assert delimit({"transfer-encoding": "chunked", "content-length": "5"}) == "chunked"
+    assert delimit({"content-length": "5"}) == "content-length"
+    assert delimit({}) == "read-to-close"
+
+
+cases = {"19b": ch19b, "20b": ch20b}
 if __name__ == "__main__":
     selected = list(cases) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
     for chapter in selected:

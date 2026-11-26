@@ -36,6 +36,15 @@
       "locator": "DESCRIPTION",
       "status": "verified",
       "notes": "Order platform-dependent"
+    },
+    {
+      "id": "ch20b-message-delim",
+      "claim": "HTTP/1.1 报文定界按 RFC 9112 §6 优先级：chunked 优先于 Content-Length，否则读到连接关闭；两者同时出现属错误",
+      "kind": "protocol",
+      "source_url": "https://www.rfc-editor.org/rfc/rfc9112.html",
+      "locator": "Section 6, Message Body Length",
+      "status": "derived",
+      "notes": "deep-20b chunked 解码与优先级模型 examples/deep-ch19-23-b.py 20b；未实现完整走私防御"
     }
   ]
 }

@@ -56,7 +56,7 @@
 <p class="lede">同样是文件描述符，socket 却没有“写一次、读一次”的天然对应关系。把地址解析、TCP 连接、字节流和 HTTP 消息边界分开看，才不会把正常的分段传输误判成程序故障。</p>
 <p class="chapter-scope">本章以 TCP 与 HTTP/1.1 的最小示例为主；真实 HTTPS 还包含 TLS，不能用纯 TCP 客户端假装完成 HTTPS 访问。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章导览"><strong>阅读路线</strong><a href="#c20-layers">分层</a><a href="#c20-sockets">连接</a><a href="#c20-stream">字节流</a><a href="#c20-http">HTTP</a><a href="#c20-addr">地址解析</a><a href="#c20-lab">实验与自测</a><a href="#deep-20">深入推导</a></nav>
+<nav class="chapter-toc" aria-label="本章导览"><strong>阅读路线</strong><a href="#c20-layers">分层</a><a href="#c20-sockets">连接</a><a href="#c20-stream">字节流</a><a href="#c20-http">HTTP</a><a href="#c20-addr">地址解析</a><a href="#c20-lab">实验与自测</a><a href="#deep-20">深入推导</a><a href="#deep-20b">深入推导②</a></nav>
 <section id="c20-layers"><h2>20.1 分层抽象：应用写的是字节，网络送的是分组</h2>
 <p>应用层定义内容语义（如 HTTP 请求）；传输层的 TCP 提供有序、可靠的<strong>字节流</strong>；网络层 IP 负责跨网络路由；链路层把分组封装成适合当前链路的帧。这是教学用的四层视图，并不意味着 DNS 属于 TCP、所有应用都使用 TCP，或一个应用写入一定对应一个 TCP 报文段。</p>
 <p>在浏览器打开 HTTPS 网址时，通常还要完成域名解析、建立传输连接并进行 TLS 协商，具体次序和传输方式取决于协议版本及连接复用；HTTP/3 使用 QUIC 而不是 TCP。因此本章的 TCP 演示不是所有现代 Web 连接的唯一形式。</p>
@@ -128,6 +128,39 @@ int main(int argc, char **argv) {
 /tmp/deep-io frame
 python3 examples/deep-ch19-23-models.py 20</code></pre>
 <p>真实 C 程序以 <code>socketpair(AF_UNIX, SOCK_STREAM)</code> 校验相同的字节流解析契约；它<strong>不是 TCP 的网络分段测量</strong>。HTTP/1.1 的消息定界还必须遵守首部、状态码、<code>Content-Length</code>、<code>Transfer-Encoding</code> 的具体优先和错误规则，不能把这套自定义 4 字节长度直接当成 HTTP 协议。参考 <a href="https://www.rfc-editor.org/rfc/rfc9112.html">RFC 9112 §6</a>及 <a href="https://man7.org/linux/man-pages/man7/tcp.7.html">tcp(7)</a>。</p></section>
+<section class="deep-study" id="deep-20b" aria-labelledby="deep-20b-title">
+<p class="deep-kicker">技术深描 · 20 / 定界</p>
+<h2 id="deep-20b-title">HTTP/1.1 的消息边界由首部决定，还是由连接关闭决定？</h2>
+<figure class="deep-figure" tabindex="0" role="group" aria-label="可滚动技术图解">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 300" role="img" aria-labelledby="d20bt d20bd" style="display:block;width:100%;height:auto">
+<title id="d20bt">chunked 解码与 HTTP/1.1 消息定界优先级</title>
+<desc id="d20bd">上半部分把字节流 5 CRLF HELLO CRLF 0 CRLF CRLF 解成正文 HELLO：先读十六进制块长，再读该长度的字节，再读 CRLF，直到零长度末块。下半部分按 RFC 9112 的优先级选择定界：有 Transfer-Encoding: chunked 就用 chunked，否则用 Content-Length，否则响应读到连接关闭。</desc>
+<rect width="880" height="300" fill="#fbfdf9"/>
+<text x="24" y="30" font-size="16" fill="#24433f">HTTP/1.1 消息定界的两种维度</text>
+<g font-family="system-ui,sans-serif" font-size="14">
+<text x="30" y="68" fill="#27495c">chunked 编码</text>
+<text x="190" y="68" fill="#55716f">5 CRLF | HELLO CRLF | 0 CRLF CRLF  →  正文 “HELLO”</text>
+<rect x="30" y="86" width="820" height="46" rx="8" fill="#e3f1eb" stroke="#83b3a6"/>
+<text x="50" y="114" fill="#236b66">块长（十六进制） → 正文该长度字节 → CRLF → 重复；块长为 0 即末块</text>
+<text x="30" y="176" fill="#27495c">定界优先级</text>
+<rect x="30" y="190" width="250" height="52" rx="8" fill="#f3f6fb" stroke="#4a6fa5"/>
+<text x="155" y="221" text-anchor="middle" fill="#27395a">Transfer-Encoding: chunked</text>
+<rect x="320" y="190" width="220" height="52" rx="8" fill="#f7eadf" stroke="#a55f42"/>
+<text x="430" y="221" text-anchor="middle" fill="#7a4a2c">Content-Length</text>
+<rect x="580" y="190" width="270" height="52" rx="8" fill="#ece8f6" stroke="#65539b"/>
+<text x="715" y="221" text-anchor="middle" fill="#4a3d78">否则：响应读到连接关闭</text>
+<text x="24" y="278" font-size="13" fill="#8a2b2b">同时出现 chunked 与 Content-Length、或重复且矛盾的 Content-Length，是必须拒绕的歧义边界，不可任选一种“猜”。</text>
+</g>
+</svg>
+<figcaption>图 20-2：chunked 用十六进制块长自定界；定界优先级决定用哪种规则。机制示意，非网络测量。</figcaption>
+</figure>
+<p>自定义 4 字节长度前缀只是<strong>一种</strong>定界方式。HTTP/1.1 不使用它：报文的边界由首部与连接状态共同决定，规则写在 <a href="https://www.rfc-editor.org/rfc/rfc9112.html">RFC 9112 §6</a>。发送方与接收方若对“报文到哪里结束”理解不一致，会把后面一条报文的首部当成当前报文的正文，这是请求/响应走私类问题的根源。</p>
+<p>规则有明确优先级：若存在 <code>Transfer-Encoding: chunked</code>，报文用 chunked 自定界，此时<code>Content-Length</code> 必须被忽略并视为错误；否则用 <code>Content-Length</code>；再否则，响应读到连接关闭为止。chunked 本身也不是“读到关闭”：它先读一行十六进制块长，再读该长度字节，再读 CRLF，重复，直到块长为 0 的末块，并可跟随 trailer 首部。</p>
+<table class="deep-table"><thead><tr><th>字节流（转义表示）</th><th>解码结果</th></tr></thead><tbody><tr><td><code>5\r\nHELLO\r\n0\r\n\r\n</code></td><td><code>HELLO</code></td></tr><tr><td><code>3\r\nfoo\r\n3\r\nbar\r\n0\r\n\r\n</code></td><td><code>foobar</code></td></tr></tbody></table>
+<div class="deep-math"><strong>chunked 优先于 Content-Length；两者同时出现属错误，不得静默取其一</strong><span>定界规则是安全边界，不是可调选项。</span></div>
+<pre><code>python3 examples/deep-ch19-23-b.py 20b</code></pre>
+<p>模型解码两段 chunked 字节流并断言定界优先级：有 chunked 用 chunked，否则用 Content-Length，再否则读到关闭。它不解析真实首部、不处理 transfer 参数（如分块扩展）、也不实现超时与请求走私的完整防御；这些属于 RFC 9112 与部署侧的更广话题。零长度正文是否合法、以及如何限制块长上限与总资源，是协议与实现的选择。</p>
+</section>
 
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 20</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="21.html"><small>延伸到第 21 章</small><span>流式协议如何支持并发服务？</span><b aria-hidden="true">↗</b></a><a href="26.html"><small>延伸到第 26 章</small><span>代理为什么不能依赖单次 read？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article></main>
