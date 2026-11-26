@@ -63,8 +63,27 @@
 <section id="c17-walk"><h2>17.2 拆解地址：页号与页内偏移</h2>
 <p>以 4 KiB = 2¹² 字节的页面为例，虚拟地址最低 12 位是<strong>页内偏移</strong>，其余部分决定虚拟页号（VPN）。在传统 x86-64 48 位分页模式中，地址的规范形式需要高 16 位复制 bit 47 的符号位；有效的 48 位部分由四组 9 位索引和 12 位偏移构成。</p>
 <figure class="lesson-figure"><img src="chapter-assets/17-page-walk.svg" alt="48位虚拟地址从高到低分为9位PML4、9位PDPT、9位PD、9位PT和12位偏移；CR3指向顶级页表，层层索引到物理页框，偏移保持不变。" width="880" height="300"><figcaption>图 17-2：顶层起点由当前地址空间的页表根决定；每层索引选一个表项，最后的页框号与原偏移组合成物理地址。大页可能提前结束遍历。</figcaption></figure>
-<div class="math-scroll" tabindex="0" role="group" aria-label="虚拟地址到物理地址的公式">
+<div class="math-scroll" tabindex="0" role="region" aria-label="虚拟地址到物理地址的公式">
 <math display="block" xmlns="http://www.w3.org/1998/Math/MathML" aria-label="在四KiB页面下物理地址等于物理页号乘2的12次方加页内偏移"><mrow><mi>PA</mi><mo>=</mo><mi>PPN</mi><mo>×</mo><msup><mn>2</mn><mn>12</mn></msup><mo>+</mo><mtext>offset</mtext></mrow></math></div>
+<figure class="lesson-figure"><div style="max-width:100%;overflow-x:auto"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 250" role="img" aria-labelledby="d17t d17d" style="display:block;width:100%;min-width:560px;height:auto"><title id="d17t">48 位有效地址的索引字段划分与规范地址规则</title><desc id="d17d">48 位有效地址被分为 9 位 PML4、9 位 PDPT、9 位 PD、9 位 PT 与 12 位页内偏移；高 16 位必须复制 bit 47。示例 0x00007f123456789a 的高位与 bit 47 一致，是规范地址；0x0001000000000000 高位不一致，会触发通用保护异常。</desc>
+<rect width="720" height="250" rx="14" fill="#f8faf7"/>
+<text x="24" y="32" font-size="18" font-weight="700" fill="#264942">48 位有效地址：4 × 9 位索引 + 12 位偏移</text>
+<rect x="30" y="56" width="124" height="44" rx="6" fill="#147f80"/>
+<rect x="154" y="56" width="124" height="44" rx="6" fill="#2f7d6a"/>
+<rect x="278" y="56" width="124" height="44" rx="6" fill="#4b8f5a"/>
+<rect x="402" y="56" width="124" height="44" rx="6" fill="#7aa86a"/>
+<rect x="526" y="56" width="164" height="44" rx="6" fill="#c9d6c2"/>
+<text x="92" y="76" font-size="12.5" fill="#ffffff" text-anchor="middle">PML4</text><text x="92" y="92" font-size="11" fill="#d8ece9" text-anchor="middle">47:39</text>
+<text x="216" y="76" font-size="12.5" fill="#ffffff" text-anchor="middle">PDPT</text><text x="216" y="92" font-size="11" fill="#d8ece9" text-anchor="middle">38:30</text>
+<text x="340" y="76" font-size="12.5" fill="#ffffff" text-anchor="middle">PD</text><text x="340" y="92" font-size="11" fill="#d8ece9" text-anchor="middle">29:21</text>
+<text x="464" y="76" font-size="12.5" fill="#ffffff" text-anchor="middle">PT</text><text x="464" y="92" font-size="11" fill="#d8ece9" text-anchor="middle">20:12</text>
+<text x="608" y="76" font-size="12.5" fill="#254b46" text-anchor="middle">页内偏移</text><text x="608" y="92" font-size="11" fill="#3f574f" text-anchor="middle">11:0</text>
+<text x="24" y="130" font-size="12.5" fill="#4b6b64">规范要求：bit 63:48 必须全部等于 bit 47；图中索引仅是位段，索引值需按小端字节解码</text>
+<rect x="30" y="148" width="660" height="40" rx="8" fill="#e7f2ec" stroke="#a9ccb9"/>
+<text x="44" y="173" font-size="12.5" fill="#1f5b4b">0x00007f123456789a → 高位 0 = bit 47 = 0（规范地址）</text>
+<rect x="30" y="196" width="660" height="40" rx="8" fill="#f6e7e3" stroke="#d8a79c"/>
+<text x="44" y="221" font-size="12.5" fill="#8f3a28">0x0001000000000000 → 高位 1 ≠ bit 47 = 0（非规范，通用保护异常）</text>
+</svg></div><figcaption>图 17-3：<strong>先判规范地址，再拆索引</strong>。高 16 位不是可忽略的填充；它们必须复制 bit 47。图示为 x86-64 48 位分页教学模型，实际物理页号取决于当前页表，普通进程无法直接观测。</figcaption></figure>
 <p>举个固定的<strong>教学映射</strong>：虚拟地址 <code>0x12345678</code> 的 VPN 为 <code>0x12345</code>，偏移 <code>0x678</code>。如果其页表映射到物理页框 <code>0x2a7</code>，物理地址就为 <code>0x2a7678</code>。这只是自定义映射示例，普通用户态代码无法据此推断真实的物理页号。</p>
 <div class="micro-lab"><h3>交互：拖动偏移，页号会变化吗？</h3><label for="page-offset">页内偏移（0–4095）</label><input id="page-offset" type="range" min="0" max="4095" value="1656" step="1">
 <output id="page-result" for="page-offset" aria-live="polite">VA 0x12345678 → VPN 0x12345，offset 0x678 → PA 0x2a7678</output>
@@ -73,7 +92,7 @@
 </section>
 <section id="c17-tlb"><h2>17.3 TLB miss 不等于 page fault</h2>
 <p>每次都遍历多级页表显然昂贵，因此处理器缓存近期翻译结果，这个硬件缓存叫 <strong>TLB</strong>。<strong>TLB 命中</strong>可省去页表遍历；<strong>TLB 未命中</strong>通常触发页表遍历。如果页表记录的映射有效且权限允许，遍历后填入 TLB 即可继续，<em>完全不需要内核处理缺页</em>。</p>
-<figure class="lesson-figure"><img src="chapter-assets/17-tlb-fault.svg" alt="虚拟地址先查TLB，命中直接翻译；未命中查页表，有有效映射则填入TLB，映射缺失或权限不符才可能触发缺页异常交内核处理。" width="880" height="310"><figcaption>图 17-3：<strong>TLB miss 是翻译缓存的事情；page fault 是页表状态或权限需要内核介入。</strong>两者不能按一个指标混为一谈。</figcaption></figure>
+<figure class="lesson-figure"><img src="chapter-assets/17-tlb-fault.svg" alt="虚拟地址先查TLB，命中直接翻译；未命中查页表，有有效映射则填入TLB，映射缺失或权限不符才可能触发缺页异常交内核处理。" width="880" height="310"><figcaption>图 17-4：<strong>TLB miss 是翻译缓存的事情；page fault 是页表状态或权限需要内核介入。</strong>两者不能按一个指标混为一谈。</figcaption></figure>
 <p>TLB 的效果还取决于工作集、局部性与页大小。例如 64 个独立 4 KiB 翻译最多覆盖 256 KiB；如果都对应 2 MiB 页面，理论覆盖可达 128 MiB。这仅是条目数与页大小的算术例子，<strong>不代表某款 CPU 真的用一组同样的 TLB 条目支持两类页面</strong>，也不能据此保证开启大页会提高某个程序的性能。</p>
 <p>也不要写“每次切换进程必须清空所有 TLB”：现代 x86 可用 PCID 等机制关联地址空间标识，部分条目可跨切换保留。修改映射或权限可能要求让相关 CPU 的旧翻译失效（TLB shootdown），但也不是“每一次上下文切换都会向所有核心广播 IPI”。</p>
 </section>
