@@ -88,7 +88,33 @@ def ch07b():
     assert idx >= N and (idx & 0xffffffff) == 3
 
 
-cases = {"05b": ch05b, "06b": ch06b, "07b": ch07b}
+def ch08b():
+    """Y86-64 popq: the explicit rsp update and the memory read into rA.
+
+    Write-back sets R[%rsp] = valE and then R[rA] = valM. When rA is %rsp the
+    popped value wins, so ``popq %rsp`` ends with the memory value, not with
+    rsp + 8 -- matching x86 pop semantics.
+    """
+    RSP = 4
+
+    def popq(rA, regs, mem):
+        rsp = regs[RSP]
+        valA = rsp
+        valE = valA + 8
+        valM = mem[valA]                     # read before any write-back
+        regs = dict(regs)
+        regs[RSP] = valE                     # first write-back
+        regs[rA] = valM                      # second (may target rsp)
+        return regs, valE, valM
+
+    regs, mem = {RSP: 0x1000, 1: 0}, {0x1000: 0xDEAD}
+    out, valE, valM = popq(1, regs, mem)
+    assert out[1] == 0xDEAD and out[RSP] == 0x1008
+    out, valE, valM = popq(RSP, regs, mem)   # rA == %rsp
+    assert valE == 0x1008 and valM == 0xDEAD and out[RSP] == 0xDEAD
+
+
+cases = {"05b": ch05b, "06b": ch06b, "07b": ch07b, "08b": ch08b}
 if __name__ == "__main__":
     selected = list(cases) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
     for chapter in selected:

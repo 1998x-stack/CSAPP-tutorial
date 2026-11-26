@@ -1,0 +1,14 @@
+<svg viewBox="0 0 880 280" role="img" aria-labelledby="d08bt d08bd" xmlns="http://www.w3.org/2000/svg">
+<title id="d08bt">Y86-64 popq 在 rA 等于 %rsp 时的写回</title>
+<desc id="d08bd">popq 由旧 %rsp 得 valA，并算出 valE=valA+8 与 valM=M8[valA]；写回阶段 R[%rsp]=valE，再写 R[rA]=valM，当 rA 与 %rsp 相同时最终 %rsp 取 valM（弹出值）。</desc>
+<rect width="880" height="280" fill="#fbfdf9"/>
+<text x="24" y="30" font-size="15" fill="#24433f">popq rA 的译码 / 执行 / 内存 与写回</text>
+<rect x="40" y="54" width="200" height="44" rx="6" fill="#eef6f0" stroke="#147f80"/><text x="140" y="81" font-size="14" text-anchor="middle" fill="#24433f">valA = R[%rsp]（旧）</text>
+<rect x="320" y="54" width="200" height="44" rx="6" fill="#f3f6fb" stroke="#4a6fa5"/><text x="420" y="81" font-size="14" text-anchor="middle" fill="#27395a">valE = valA + 8</text>
+<rect x="620" y="54" width="200" height="44" rx="6" fill="#fbf7ee" stroke="#996537"/><text x="720" y="81" font-size="14" text-anchor="middle" fill="#5a3d1f">valM = M8[valA]</text>
+<rect x="320" y="150" width="200" height="44" rx="6" fill="#eef6f0" stroke="#147f80"/><text x="420" y="177" font-size="14" text-anchor="middle" fill="#24433f">R[%rsp] = valE</text>
+<rect x="620" y="150" width="200" height="44" rx="6" fill="#fbf7ee" stroke="#996537"/><text x="720" y="177" font-size="14" text-anchor="middle" fill="#5a3d1f">R[rA] = valM（后写）</text>
+<g stroke="#597b77" stroke-width="2" fill="none"><path d="M240 72 H316"/><path d="M240 80 H280 V98 H720 V150"/><path d="M420 98 V146"/><path d="M720 98 V146"/></g>
+<text x="40" y="232" font-size="13" fill="#7a2626">rA = %rsp 时：valM 覆盖 valE，最终 %rsp = 从内存弹出的值</text>
+<text x="40" y="256" font-size="12" fill="#657b76">图为教学示意（Y86-64 小端、8 字节字），不代表真实 x86-64 的机器编码。</text>
+</svg>

@@ -65,6 +65,15 @@
       "locator": "Ratified RISC-V ISA specifications",
       "status": "illustrative",
       "notes": "定性比较，不含性能或指令总量排行"
+    },
+    {
+      "id": "ch08-popq-rsp",
+      "claim": "Y86-64 写回阶段先 R[%rsp]=valE，再 R[rA]=valM；当 rA 与 %rsp 相同时弹出值 valM 胜出，最终 %rsp 等于从内存读出的值",
+      "kind": "isa-semantics",
+      "source_url": "https://csapp.cs.cmu.edu/3e/figures.html",
+      "locator": "Chapter 4 Y86-64 instruction set and SEQ write-back stage",
+      "status": "derived",
+      "notes": "Y86-64 教学 ISA；真实 x86-64 的机器编码与微架构实现不同；模型见 examples/deep-ch05-08-b.py 08b"
     }
   ]
 }
