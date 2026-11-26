@@ -42,6 +42,16 @@
           "locator": "Code Generation Options"
         }
       ]
+    },
+    {
+      "claim": "System V AMD64 可变参数调用中，序言把 6 个整数寄存器与 8 个 SSE 寄存器降入 176 B 寄存器保存区，%al 给出使用过的 SSE 寄存器个数上界",
+      "sources": [
+        {
+          "url": "https://gitlab.com/x86-psABIs/x86-64-ABI/",
+          "locator": "Register save area; argument passing for variadic functions"
+        }
+      ],
+      "notes": "仅限于 System V AMD64；Windows x64 变参规则不同；模型见 examples/deep-ch05-08-b.py 06b"
     }
   ],
   "figures": [

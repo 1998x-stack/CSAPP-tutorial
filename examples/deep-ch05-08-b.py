@@ -40,7 +40,33 @@ def ch05b():
         raise AssertionError("cmov model must evaluate *p even when p is null")
 
 
-cases = {"05b": ch05b}
+def ch06b():
+    """System V AMD64 variadic calls: %al and the register save area.
+
+    A variadic callee does not know how many registers the caller used, so
+    the prologue spills all 6 integer and 8 SSE argument registers into a
+    176-byte register save area; %al carries an upper bound (0-8) on SSE use.
+    """
+    GP_SLOTS, FP_SLOTS = 6, 8
+    SAVE_AREA = GP_SLOTS * 8 + FP_SLOTS * 16          # 48 + 128 = 176 bytes
+    assert SAVE_AREA == 176
+
+    def va_place(named_gp, variadic_gp, named_fp, variadic_fp):
+        gp, fp = named_gp + variadic_gp, named_fp + variadic_fp
+        stack = 8 * max(0, gp - GP_SLOTS) + 16 * max(0, fp - FP_SLOTS)
+        return gp <= GP_SLOTS and fp <= FP_SLOTS, stack
+
+    assert va_place(1, 2, 0, 0) == (True, 0)          # stays in registers
+    assert va_place(1, 6, 0, 0) == (False, 8)         # 7th integer spills
+
+    def al_count(named_fp, variadic_fp):
+        return min(named_fp + variadic_fp, FP_SLOTS)   # upper bound, capped
+
+    assert al_count(0, 3) == 3
+    assert al_count(0, 10) == 8
+
+
+cases = {"05b": ch05b, "06b": ch06b}
 if __name__ == "__main__":
     selected = list(cases) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
     for chapter in selected:

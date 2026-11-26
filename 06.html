@@ -74,7 +74,7 @@
 <p class="eyebrow">CSAPP · 06 / PROCEDURES &amp; THE STACK</p>
 <h1>函数返回时，CPU 怎么知道该回哪里？</h1>
 <p class="dek">一个 <code>call</code> 可能改变两件事：控制流转去被调用函数，返回地址被保存在栈上。把这个最小机制看清后，再讨论参数、寄存器所有权、16 字节对齐和递归栈帧，就不会把“典型编译结果”误以为“所有函数都一样”。</p>
-<nav class="reading-map" aria-label="本章阅读路径"><strong>阅读路线</strong><a href="#call">call / ret</a><a href="#stack">栈帧</a><a href="#abi">调用约定</a><a href="#recursion">递归</a><a href="#experiment">实验</a><a href="#deep-06">深入推导</a></nav>
+<nav class="reading-map" aria-label="本章阅读路径"><strong>阅读路线</strong><a href="#call">call / ret</a><a href="#stack">栈帧</a><a href="#abi">调用约定</a><a href="#recursion">递归</a><a href="#experiment">实验</a><a href="#deep-06">深入推导</a><a href="#deep-06b">深入推导②</a></nav>
 </header>
 <nav class="site-topic-toc" aria-label="本章小节导航"><strong>快速定位</strong><a href="#chapter-section-06-1">01 · 一次调用：先记住来路，再跳向目标</a><a href="#chapter-section-06-2">02 · 栈帧是约定出来的空间，不是固定模板</a><a href="#chapter-section-06-3">03 · ABI：两段机器代码事先约好的规则</a><a href="#chapter-section-06-4">04 · 递归为什么会“层层返回”？</a><a href="#chapter-section-06-5">05 · 用 gdb 把返回地址与栈顶对上号</a><a href="#chapter-section-06-6">查证与下一步</a></nav>
 <section class="chapter-section" id="call">
@@ -112,10 +112,10 @@ long twice_square(long x) {
 <p>一个 ABI 约定带来实际效果：由不同源文件、编译器或语言实现的函数只要共同遵守同一 ABI，就可以正确传递参数并返回。多于六个普通整数参数时，溢出的参数按 ABI 规则放在栈上的参数区，而不是“第七个自动落在某个固定寄存器”。</p>
 <h3>为什么总强调 16 字节对齐？</h3>
 <p>在 System V AMD64 的常规调用边界，<strong>执行 <code>call</code> 之前</strong>，调用者按约定令栈指针满足 16 字节对齐。因为调用又压入 8 字节返回地址，被调用函数入口时通常是 <code>(%rsp + 8)</code> 可被 16 整除。</p>
-<div class="equation" tabindex="0" role="group" aria-label="调用边界的栈对齐公式">
-<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>rsp</mi><mo>≡</mo><mn>0</mn><mspace width="0.6em"/><mo>(</mo><mtext>mod</mtext><mspace width="0.2em"/><mn>16</mn><mo>)</mo></mrow></math>
+<div class="equation math-scroll" tabindex="0" role="region" aria-label="调用边界的栈对齐公式">
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="调用前 rsp 模 16 等于 0"><mrow><mi>rsp</mi><mo>≡</mo><mn>0</mn><mspace width="0.6em"/><mo>(</mo><mtext>mod</mtext><mspace width="0.2em"/><mn>16</mn><mo>)</mo></mrow></math>
 <p class="mini-note" style="text-align:center">caller 执行 <code>call</code> 之前</p>
-<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>rsp</mi><mo>+</mo><mn>8</mn><mo>≡</mo><mn>0</mn><mspace width="0.6em"/><mo>(</mo><mtext>mod</mtext><mspace width="0.2em"/><mn>16</mn><mo>)</mo></mrow></math>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="callee 入口 rsp 加 8 模 16 等于 0"><mrow><mi>rsp</mi><mo>+</mo><mn>8</mn><mo>≡</mo><mn>0</mn><mspace width="0.6em"/><mo>(</mo><mtext>mod</mtext><mspace width="0.2em"/><mn>16</mn><mo>)</mo></mrow></math>
 <p class="mini-note" style="text-align:center">callee 刚进入时</p>
 </div>
 <p>这是调用点的约定，不代表整个函数执行期间 <code>%rsp</code> 永远保持该模值。SysV 用户态还允许特定场景使用栈指针下方的 <strong>128 字节 red zone</strong>，例如不需要继续调用的叶子函数；不要把它照搬到内核或其它 ABI。</p>
@@ -163,6 +163,30 @@ bt</code></pre>
 cc -std=c11 -O2 -S examples/olah-ch06-procedures.c -o /tmp/call-O2.s
 # 对比 call、push、sub、ret；它们并非必须逐条相同</code></pre>
 <p>运行 <code>python3 examples/deep-ch05-12.py 06</code> 验证调用前后模运算。详细 ABI 边界参见 <a href="https://gitlab.com/x86-psABIs/x86-64-ABI/">System V AMD64 psABI</a>。</p></section>
+<section class="deep-study" id="deep-06b" aria-labelledby="deep-06b-title">
+<p class="deep-kicker">技术深描 · 06 / 可变参数</p>
+<h2 id="deep-06b-title">被调函数不知道有几个参数，为何仍能取到每一个？</h2>
+<figure class="deep-diagram">
+<svg viewBox="0 0 880 300" role="img" aria-labelledby="d06bt d06bd" xmlns="http://www.w3.org/2000/svg">
+<title id="d06bt">变参函数的寄存器保存区与溢出参数区</title>
+<desc id="d06bd">System V AMD64 中变参函数序言把 6 个整数寄存器与 8 个 SSE 寄存器降入 176 字节寄存器保存区；第 7 个整数参数或第 9 个浮点参数起由调用方放在栈上的溢出参数区，%al 给出使用过的 SSE 寄存器个数的上界。</desc>
+<rect width="880" height="300" fill="#fbfdf9"/>
+<text x="24" y="30" font-size="15" fill="#24433f">调用者放参数 → 变参函数按 ABI 取参数</text>
+<rect x="40" y="60" width="210" height="64" rx="6" fill="#eef6f0" stroke="#147f80"/><text x="145" y="88" font-size="14" text-anchor="middle" fill="#24433f">6 个整数寄存器 · 48 B</text><text x="145" y="110" font-size="12" text-anchor="middle" fill="#4c6b66">rdi rsi rdx rcx r8 r9</text>
+<rect x="40" y="160" width="210" height="64" rx="6" fill="#f3f6fb" stroke="#4a6fa5"/><text x="145" y="188" font-size="14" text-anchor="middle" fill="#27395a">8 个 SSE 寄存器 · 128 B</text><text x="145" y="210" font-size="12" text-anchor="middle" fill="#4c5a74">xmm0 … xmm7</text>
+<rect x="360" y="70" width="190" height="154" rx="6" fill="#fbf7ee" stroke="#996537"/><text x="455" y="120" font-size="14" text-anchor="middle" fill="#5a3d1f">寄存器保存区</text><text x="455" y="146" font-size="14" text-anchor="middle" fill="#5a3d1f">176 B</text>
+<rect x="650" y="100" width="190" height="100" rx="6" fill="#f4f4fb" stroke="#4a6fa5"/><text x="745" y="140" font-size="13" text-anchor="middle" fill="#27395a">栈上溢出参数区</text><text x="745" y="164" font-size="12" text-anchor="middle" fill="#4c5a74">第 7 个整数起</text>
+<g stroke="#597b77" stroke-width="2" fill="none"><path d="M250 92 H356"/><path d="M250 192 H340 V170 H356"/><path d="M550 140 H646"/></g>
+<text x="360" y="255" font-size="13" fill="#7a5a33">%al = 使用过的 SSE 寄存器个数（上界，0–8）</text>
+</svg>
+<figcaption>图 06-6：变参函数把参数寄存器降入 176 B 保存区；超出寄存器的参数留在栈上溢出区。图为教学示意（System V AMD64）。</figcaption>
+</figure>
+<p>调用点知道 <code>printf(fmt, a, b, c)</code> 传了哪些值，被调函数在编译时却不知道可变参数有几个、类型是什么。ABI 用一个统一入口解决这个信息缺口：凡可能以可变参数方式调用的函数，其序言在需要时把 6 个整数寄存器与 8 个 SSE 寄存器整体写入一块 176 字节的<strong>寄存器保存区</strong>。</p>
+<p>于是 <code>va_start</code>/<code>va_arg</code> 只要按序游走即可：先取寄存器保存区，寄存器用尽后转到调用者在栈上预留的<strong>溢出参数区</strong>。因为被调者无从得知调用者使用过几个 SSE 寄存器，调用点还必须在 <code>%al</code> 中给出这个个数的上界（0–8），供序言决定保存与否。</p>
+<div class="deep-math"><strong>寄存器保存区 = 6×8 B + 8×16 B = 176 B</strong><span>整数寄存器用尽后，第 7 个整数参数改由栈上的溢出参数区传递。</span></div>
+<pre><code>python3 examples/deep-ch05-08-b.py 06b</code></pre>
+<p>模型对“落在寄存器还是溢出到栈”和 <code>%al</code> 上界两条规则做断言。上述规则属 System V AMD64 可变参数约定（见 <a href="https://gitlab.com/x86-psABIs/x86-64-ABI/">System V AMD64 psABI</a> 的寄存器保存区与参数传递章节）；Windows x64 的变参传递不同，<code>%al</code> 也并非精确定数，故本图与结论不外推到其他 ABI。</p>
+</section>
 <section class="chapter-section" id="references">
 <h2 id="chapter-section-06-6">查证与下一步</h2>
 <p>当函数调用不再是黑盒，就能看懂“局部数组写出边界”为什么可能破坏邻近内存——但不应武断假定邻近的恰好是返回地址。下一章通过数组和结构体的真实地址布局，连到有界输入和栈保护。</p>
