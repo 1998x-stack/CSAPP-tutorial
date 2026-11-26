@@ -1,0 +1,28 @@
+<svg viewBox="0 0 880 300" role="img" aria-labelledby="d10bt d10bd" xmlns="http://www.w3.org/2000/svg">
+<title id="d10bt">向量宽度同时压低延迟界与吞吐界</title>
+<desc id="d10bd">在延迟 L=4、每周期 R=2 次向量操作的假设下，CPE 下界为 max(L/(K·V), 1/(R·V))。V=1 时单链受延迟界约束为 4，四链降到 1，八链触及吞吐底 0.5。V=4 时两条界同时除以 4，下界整体降到原来的四分之一。增加 K 无法突破吞吐底，增大 V 才继续降低地板。</desc>
+<rect width="880" height="300" fill="#fbfdf9"/>
+<text x="24" y="30" font-size="16" fill="#24433f">CPE 下界 = max(L/(K·V), 1/(R·V))，取 L=4、R=2</text>
+<g font-family="system-ui,sans-serif" stroke="#b9c9c5" stroke-width="1.5">
+<path d="M120 250 H800"/>
+<path d="M120 70 V250"/>
+<path d="M120 160 H800" stroke-dasharray="3 5"/>
+</g>
+<g font-family="system-ui,sans-serif" fill="#55716f" font-size="13">
+<text x="108" y="74" text-anchor="end">4</text>
+<text x="108" y="164" text-anchor="end">2</text>
+<text x="108" y="254" text-anchor="end">0</text>
+<text x="150" y="272" text-anchor="middle">1</text>
+<text x="340" y="272" text-anchor="middle">2</text>
+<text x="530" y="272" text-anchor="middle">4</text>
+<text x="720" y="272" text-anchor="middle">8</text>
+<text x="450" y="292" text-anchor="middle">独立累加链数 K</text>
+<text x="70" y="160" text-anchor="middle" transform="rotate(-90 70 160)">CPE 下界</text>
+</g>
+<polyline points="150,70 340,160 530,205 720,228" fill="none" stroke="#356c88" stroke-width="3"/>
+<polyline points="150,205 340,228 530,239 720,244" fill="none" stroke="#b23b3b" stroke-width="3"/>
+<g font-family="system-ui,sans-serif" font-size="13">
+<text x="735" y="224" fill="#356c88">V=1：触底 0.5</text>
+<text x="735" y="240" fill="#b23b3b">V=4：整体 ÷4</text>
+</g>
+</svg>

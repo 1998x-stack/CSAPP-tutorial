@@ -65,6 +65,15 @@
       "locator": "Optimization and code generation reference",
       "status": "illustrative",
       "notes": "不声称运行或测得性能；需 CI 编译/运行验证"
+    },
+    {
+      "id": "ch10b-vector-bound",
+      "claim": "向量宽度 V 使 CPE 下界变为 max(L/(K·V), 1/(R·V))：K 只能逼近吞吐底，加大 V 才能继续降低地板",
+      "kind": "model",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 5, lower-bound analysis extended to vector width",
+      "status": "derived",
+      "notes": "deep-10b 代数关系模型 examples/deep-ch09-12-b.py 10b；乐观必要条件，非实测"
     }
   ]
 }

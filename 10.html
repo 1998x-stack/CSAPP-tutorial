@@ -177,11 +177,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visi
 <p class="dek">从 CPE 的可信测量开始，区分编译器能做什么、指针别名阻碍了什么，以及循环展开何时真的缩短关键路径。</p>
 <div class="lede-line" aria-hidden="true"></div>
 <p>两个版本的求和循环可能拥有相同的时间复杂度，却在同一机器上显示不同的执行时间。原因可能是函数调用、访存、数据依赖、分支，也可能只是实验噪声。<strong>优化的第一步不是改代码，而是建立可重复的基线。</strong></p>
-<nav class="inline-toc" aria-label="本章阅读路径"><a href="#metric">如何测量</a><a href="#barriers">优化障碍</a><a href="#motion">代码移动</a><a href="#ilp">多路累加</a><a href="#bound">性能下界</a><a href="#lab">可运行实验</a><a href="#deep-10">深入推导</a></nav>
+<nav class="inline-toc" aria-label="本章阅读路径"><a href="#metric">如何测量</a><a href="#barriers">优化障碍</a><a href="#motion">代码移动</a><a href="#ilp">多路累加</a><a href="#bound">性能下界</a><a href="#lab">可运行实验</a><a href="#deep-10">深入推导</a><a href="#deep-10b">深入推导②</a></nav>
 </header>
 <section id="metric" aria-labelledby="metric-title"><span class="section-no">01 / MEASUREMENT</span><h2 id="metric-title">CPE 是直线的斜率，不是随口报出的常数</h2>
 <p>CPE（Cycles Per Element，每个处理元素所需周期）适合描述长度为 <code>n</code> 的数组循环。对不同规模测量总周期 <code>T(n)</code>，在输入足够大、运行条件相近且规模处于相同性能区间时，常用近似：</p>
-<div class="math-panel"><div class="math-scroll" tabindex="0" role="region" aria-label="总周期与每元素周期的线性关系"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>T</mi><mo>(</mo><mi>n</mi><mo>)</mo><mo>≈</mo><mi>C</mi><mo>+</mo><mi>n</mi><mo>×</mo><mi>CPE</mi></mrow></math></div><p class="math-label">C 是固定启动开销；CPE 是这一区间的拟合斜率，可能随工作集、指令与平台改变。</p></div>
+<div class="math-panel"><div class="math-scroll" tabindex="0" role="region" aria-label="总周期与每元素周期的线性关系"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="T(n) 约等于 C 加 n 乘 CPE"><mrow><mi>T</mi><mo>(</mo><mi>n</mi><mo>)</mo><mo>≈</mo><mi>C</mi><mo>+</mo><mi>n</mi><mo>×</mo><mi>CPE</mi></mrow></math></div><p class="math-label">C 是固定启动开销；CPE 是这一区间的拟合斜率，可能随工作集、指令与平台改变。</p></div>
 <div class="figure-card"><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 278" role="img" aria-labelledby="cpe-svg-title cpe-svg-desc">
 <title id="cpe-svg-title">通过不同输入规模估算 CPE 斜率</title>
 <desc id="cpe-svg-desc">横轴元素数 n，纵轴总周期 T，理论示意呈一条有固定开销 C 和斜率 CPE 的直线。数值并非实测。</desc>
@@ -263,7 +263,7 @@ void ascii_lower(char *s) {
 </section>
 <section id="bound" aria-labelledby="bound-title"><span class="section-no">05 / BOTTLENECK</span><h2 id="bound-title">延迟与吞吐上限，会在哪儿相遇？</h2>
 <p>一个<strong>仅用于直觉的模型</strong>：假定每个元素做一次同类操作，操作延迟为 <code>L</code> 周期，处理器每周期最多启动 <code>r</code> 次该操作，循环维护 <code>k</code> 条相互独立的累加链，忽略访存、分支与乱序窗口限制。则单元素平均周期的理论下界：</p>
-<div class="math-panel"><div class="math-scroll" tabindex="0" role="region" aria-label="延迟与吞吐下界的 MathML 表达式"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>CPE</mi><mo>≥</mo><mi>max</mi><mo>(</mo><mfrac><mi>L</mi><mi>k</mi></mfrac><mo>,</mo><mfrac><mn>1</mn><mi>r</mi></mfrac><mo>)</mo></mrow></math></div><p class="math-label">仅对该简化独立链模型成立；实际瓶颈可能是加载带宽、缓存未命中、前端或编译器优化。</p></div>
+<div class="math-panel"><div class="math-scroll" tabindex="0" role="region" aria-label="延迟与吞吐下界的 MathML 表达式"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="CPE 大于等于 max(L/k, 1/r)"><mrow><mi>CPE</mi><mo>≥</mo><mi>max</mi><mo>(</mo><mfrac><mi>L</mi><mi>k</mi></mfrac><mo>,</mo><mfrac><mn>1</mn><mi>r</mi></mfrac><mo>)</mo></mrow></math></div><p class="math-label">仅对该简化独立链模型成立；实际瓶颈可能是加载带宽、缓存未命中、前端或编译器优化。</p></div>
 <div class="widget" aria-labelledby="cpe-widget-title"><h3 id="cpe-widget-title">交互 · 增加独立累加器能降低多少理论下界？</h3>
 <div class="controls">
 <label for="cpe-l">操作延迟 L：<strong id="cpe-l-text">4</strong> 周期<input id="cpe-l" type="range" min="1" max="10" step="1" value="4"></label>
@@ -316,6 +316,20 @@ int main(int argc, char **argv) {
 <table class="deep-table"><thead><tr><th>K 独立链</th><th>L/K（周期/元素）</th><th>1/R</th><th>下界</th></tr></thead><tbody><tr><td>1</td><td>4</td><td>0.5</td><td>4</td></tr><tr><td>2</td><td>2</td><td>0.5</td><td>2</td></tr><tr><td>4</td><td>1</td><td>0.5</td><td>1</td></tr><tr><td>8</td><td>0.5</td><td>0.5</td><td>0.5</td></tr></tbody></table>
 <p>因此单纯继续增加 K 并不会突破吞吐界。真实循环还含加载、寻址、分支、循环控制和寄存器压力，上式只是<strong>乐观的必要条件</strong>而不是运行时间预测。利用整数无符号模加法可以构造数值结果一致的多累加器实验；若对浮点和进行多路拆分，改变结合顺序通常会改变舍入结果，必须与严格浮点语义及应用误差容忍度一起审查。</p>
 <p>用 <code>python3 examples/deep-ch05-12.py 10</code> 验证所有下界值；编译器优化条件参考 <a href="https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html">GCC 优化选项</a>，具体微架构延迟和吞吐参数则应查 <a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel64-and-ia32-architectures-optimization.html">Intel Optimization Manual</a>或所用 CPU 文档。</p></section>
+<section class="deep-study" id="deep-10b" aria-labelledby="deep-10b-title">
+<p class="deep-kicker">技术深描 · 10 / 向量宽度</p>
+<h2 id="deep-10b-title">把 K 路累加再乘上向量宽度，CPE 还能压到多低？</h2>
+<figure class="deep-diagram">
+<img src="chapter-assets/10-deep2.svg" width="880" height="300" loading="lazy" alt="CPE 下界随独立累加链数与向量宽度变化的折线示意">
+<figcaption>图 10-2：延迟界 L/(K·V) 与吞吐界 1/(R·V) 同时随向量宽度 V 下降；增大 K 只能逼近吞吐底。教学示意，非实测。</figcaption>
+</figure>
+<p>上一节给出标量循环的下界 <code>CPE ≥ max(L/K, 1/R)</code>。真实机器还能用一条向量指令同时处理 <code>V</code> 个元素。把每条累加链的“一次操作”重新定义为“一次向量操作”后，两道界都会除以 V：延迟界变成 <code>L/(K·V)</code>，吞吐界变成 <code>1/(R·V)</code>。</p>
+<div class="deep-math"><strong>CPE ≥ max( L/(K·V), 1/(R·V) )</strong><span>K 只能逼近吞吐底 1/(R·V)，继续缩小地板要靠更大的 V。</span></div>
+<table class="deep-table"><thead><tr><th>K \ V</th><th>V=1</th><th>V=2</th><th>V=4</th></tr></thead><tbody><tr><td>1</td><td>4</td><td>2</td><td>1</td></tr><tr><td>4</td><td>1</td><td>0.5</td><td>0.25</td></tr><tr><td>8</td><td>0.5</td><td>0.25</td><td>0.125</td></tr></tbody></table>
+<p>例如取 <code>L=4</code>、<code>R=2</code>：<code>K=8, V=1</code> 时下界是 0.5，恰为吞吐底；换成 <code>K=4, V=4</code> 后下界是 0.25，说明减少链数但加宽向量同样能压低地板。这是<strong>乐观的必要条件</strong>：它不计向量对齐、混洗、尾部残留元素、寄存器压力与频率变化，也不是对任何具体 CPU 的实测。</p>
+<pre><code>python3 examples/deep-ch09-12-b.py 10b</code></pre>
+<p>模型只验证“宽度同时缩放两道界”这一代数关系。真实向量化能否达成还取决于 ISA（如 AVX2/AVX-512、NEON/SVE 的具体宽度）、编译器自动向量化能力与浮点结合顺序；浮点情形改变结合顺序会改变舍入结果，须连同误差容忍一并审查。</p>
+</section>
 <section id="references" class="references" aria-labelledby="references-title"><span class="section-no">REFERENCES</span><h2 id="references-title">参考与边界</h2>
 <ol><li>Bryant、O'Hallaron，《<a href="https://csapp.cs.cmu.edu/3e/">CS:APP 第三版</a>》第 5 章“Optimizing Program Performance”，CPE、代码移动与指令级并行。</li>
 <li><a href="https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html">GCC Optimize Options</a>：编译优化级别和浮点相关选项。</li>
