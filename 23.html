@@ -99,6 +99,31 @@ signal(queue.not_full);
 unlock(queue.mu);
 run(task);                                 /* 一定在锁外 */</code></pre>
 <p>上段明确是<strong>伪代码</strong>，而非可直接编译的 C。真正的提交接口还应处理内存分配失败、拒绝已关闭任务、队列满时的等待或拒绝、任务参数所有权，以及回调异常退出后的资源回收。</p>
+<figure class="lesson-figure"><div style="max-width:100%;overflow-x:auto"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 210" role="img" aria-labelledby="d23t d23d" style="display:block;width:100%;min-width:560px;height:auto"><title id="d23t">条件变量等待循环：每次唤醒都用 while 重验谓词</title><desc id="d23d">加锁后，在 while 循环中当谓词不成立时调用 pthread_cond_wait，它在睡眠时原子释放锁，被唤醒返回前重新加锁，然后回到 while 重新检查谓词；只有谓词成立才进入临界区并在结束时解锁。</desc>
+<rect width="720" height="210" rx="14" fill="#f8faf7"/>
+<text x="24" y="32" font-size="17" font-weight="700" fill="#264942">等待循环：唤醒不等于谓词成立</text>
+<rect x="24" y="58" width="150" height="80" rx="8" fill="#147f80"/>
+<text x="99" y="88" font-size="11.5" fill="#ffffff" text-anchor="middle">pthread_mutex_lock</text>
+<text x="99" y="108" font-size="11.5" fill="#d8ece9" text-anchor="middle">（持有锁）</text>
+<rect x="196" y="58" width="196" height="80" rx="8" fill="#b45309"/>
+<text x="294" y="84" font-size="11.5" fill="#ffffff" text-anchor="middle">while (谓词不成立)</text>
+<text x="294" y="104" font-size="11.5" fill="#ffffff" text-anchor="middle">pthread_cond_wait</text>
+<text x="294" y="124" font-size="11" fill="#f4dcc2" text-anchor="middle">原子释放锁并睡眠</text>
+<rect x="414" y="58" width="150" height="80" rx="8" fill="#b45309"/>
+<text x="489" y="88" font-size="11.5" fill="#ffffff" text-anchor="middle">被唤醒</text>
+<text x="489" y="108" font-size="11.5" fill="#f4dcc2" text-anchor="middle">重新加锁 + 重验</text>
+<rect x="586" y="58" width="110" height="80" rx="8" fill="#147f80"/>
+<text x="641" y="88" font-size="11.5" fill="#ffffff" text-anchor="middle">谓词成立</text>
+<text x="641" y="108" font-size="11" fill="#d8ece9" text-anchor="middle">临界区 → unlock</text>
+<defs><marker id="d23ar" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6 z" fill="#5b6b66"/></marker><marker id="d23br" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6 z" fill="#2f7d6a"/></marker></defs>
+<line x1="176" y1="98" x2="194" y2="98" stroke="#5b6b66" stroke-width="1.6" marker-end="url(#d23ar)"/>
+<line x1="394" y1="98" x2="412" y2="98" stroke="#5b6b66" stroke-width="1.6" marker-end="url(#d23ar)"/>
+<line x1="566" y1="98" x2="584" y2="98" stroke="#5b6b66" stroke-width="1.6" marker-end="url(#d23ar)"/>
+<path d="M489 58 C 460 34, 330 34, 296 58" fill="none" stroke="#2f7d6a" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#d23br)"/>
+<text x="392" y="30" font-size="11" fill="#1f5b4b" text-anchor="middle">虚假唤醒/他人改条件 → 回去重验</text>
+<text x="24" y="170" font-size="12.5" fill="#4b6b64">谓词必须与同一把 mutex 下的共享状态绑定；notify 单独不能充当任务计数器</text>
+<text x="24" y="192" font-size="12.5" fill="#4b6b64">关闭时用 broadcast 唤醒所有等待者，并在同一谓词下区分“空队列”与“已关闭”</text>
+</svg></div><figcaption>图 23-3：<strong>唤醒只是“再去检查一次”的许可</strong>。<code>while</code> 循环连同共享谓词构成不变量；只写 <code>if</code> 就可能越过容量或消费空队列。</figcaption></figure>
 <div class="micro-lab">
 <h3>微型线程池状态机</h3>
 <p>用“一名工人、最多排队两项任务”的确定性模型推演：任务只在被领取后执行，关闭后不接新任务，但已接任务继续排空。</p>
