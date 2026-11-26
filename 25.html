@@ -108,6 +108,23 @@ if (pid == 0) {
 } else {
     sigprocmask(SIG_SETMASK, &amp;previous, NULL);
 }</code></pre>
+<figure class="lesson-figure"><div style="max-width:100%;overflow-x:auto"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 250" role="img" aria-labelledby="d25t d25d" style="display:block;width:100%;min-width:560px;height:auto"><title id="d25t">SIGCHLD 与 addjob 的先后顺序决定作业表是否正确</title><desc id="d25d">未屏蔽时，子进程退出可能先触发处理函数回收，父进程随后才把已不存在的 PID 登记回作业表；先屏蔽 SIGCHLD 后 fork、addjob，再解除屏蔽，可保证登记在递送之前完成。</desc>
+<rect width="720" height="250" rx="14" fill="#f8faf7"/>
+<text x="24" y="30" font-size="17" font-weight="700" fill="#264942">为什么必须先屏蔽 SIGCHLD</text>
+<text x="24" y="100" font-size="12" font-weight="600" fill="#8f3a28">错误：未屏蔽</text>
+<line x1="150" y1="100" x2="700" y2="100" stroke="#e6c8c0" stroke-width="2"/>
+<circle cx="200" cy="100" r="5" fill="#8f3a28"/><text x="200" y="84" font-size="11" fill="#8f3a28" text-anchor="middle">fork</text>
+<circle cx="320" cy="100" r="5" fill="#8f3a28"/><text x="320" y="120" font-size="11" fill="#8f3a28" text-anchor="middle">子进程退出</text>
+<circle cx="430" cy="100" r="5" fill="#8f3a28"/><text x="430" y="84" font-size="11" fill="#8f3a28" text-anchor="middle">handler 回收</text>
+<circle cx="560" cy="100" r="5" fill="#8f3a28"/><text x="560" y="120" font-size="11" fill="#8f3a28" text-anchor="middle">addjob（迟到）</text>
+<text x="24" y="190" font-size="12" font-weight="600" fill="#1f5b4b">正确：先屏蔽</text>
+<line x1="150" y1="190" x2="700" y2="190" stroke="#a9ccb9" stroke-width="2"/>
+<circle cx="190" cy="190" r="5" fill="#2f7d6a"/><text x="190" y="174" font-size="11" fill="#1f5b4b" text-anchor="middle">block</text>
+<circle cx="290" cy="190" r="5" fill="#2f7d6a"/><text x="290" y="210" font-size="11" fill="#1f5b4b" text-anchor="middle">fork</text>
+<circle cx="410" cy="190" r="5" fill="#2f7d6a"/><text x="410" y="174" font-size="11" fill="#1f5b4b" text-anchor="middle">addjob 登记</text>
+<circle cx="530" cy="190" r="5" fill="#b45309"/><text x="530" y="210" font-size="11" fill="#8f3a28" text-anchor="middle">unblock → 递送</text>
+<text x="24" y="236" font-size="11.5" fill="#4b6b64">屏蔽只延后递送，不丢弃信号；解除屏蔽后 pending 的 SIGCHLD 会在安全点被执行</text>
+</svg></div><figcaption>图 25-2：<strong>屏蔽信号等于给登记操作划出保护区</strong>。它不改变子进程速度，只是保证 <code>addjob</code> 在 <code>SIGCHLD</code> 处理函数运行之前完成。</figcaption></figure>
 <p>处理 <code>SIGCHLD</code> 时应循环 <code>waitpid(-1, &amp;status, WNOHANG | WUNTRACED | WCONTINUED)</code>，直到没有可立即报告的状态变化；对 <code>EINTR</code> 和 <code>ECHILD</code> 做区分。处理函数只使用异步信号安全操作，或采用信号屏蔽加主循环处理的设计；不能在处理函数里随意调用 <code>printf</code>、<code>malloc</code> 等接口。</p>
 <p>作业控制以<strong>进程组</strong>为单位。交互式完整 Shell 还需考虑 <code>tcsetpgrp</code> 交接终端控制权；Tiny Shell 的教学约束可能简化这一点。转发 Ctrl+C / Ctrl+Z 应针对前台作业进程组（如 <code>kill(-pgid, SIGINT)</code>），不要误杀 Shell 自身。</p>
 </section>
