@@ -251,8 +251,8 @@ $ cc -std=c11 -Wall -Wextra -fno-common main.c counter.c -o prog</code></pre>
 
 <h2 id="c13-reloc">13.5 重定位：从名字到位移</h2>
 <p>符号解析回答「调用谁」，重定位回答「机器码怎么指向它」。在 x86-64 ELF 中，<code>readelf -rW main.o</code> 能看到类似 <code>R_X86_64_PLT32</code> 的重定位记录；对应的 PC 相对重定位可写成：</p>
-<div class="equation" tabindex="0" aria-label="PC 相对重定位值等于 S 加 A 减 P">
-<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>R</mi><mo>=</mo><mi>S</mi><mo>+</mo><mi>A</mi><mo>−</mo><mi>P</mi></mrow></math>
+<div class="equation" tabindex="0" role="region" data-math-scroll="true" aria-label="PC 相对重定位值等于 S 加 A 减 P，可横向滚动">
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="PC 相对重定位值 R 等于符号地址 S 加上加数 A 减去重定位位置 P"><mrow><mi>R</mi><mo>=</mo><mi>S</mi><mo>+</mo><mi>A</mi><mo>−</mo><mi>P</mi></mrow></math>
 </div>
 <p>其中 <code>S</code> 是被引用符号地址，<code>A</code> 是记录中的加数，<code>P</code> 是重定位位置；不同重定位类型的精确定义和溢出规则应以目标架构 ABI 为准。静态链接后，链接器把计算结果写回相应字段。不要把所有重定位都当成绝对地址填充。</p>
 <pre><code>$ cc -std=c11 -O0 -c main.c -o main.o
