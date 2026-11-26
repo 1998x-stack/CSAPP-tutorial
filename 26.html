@@ -89,6 +89,21 @@ dequeue():
     unlock(mutex)
     post(slots)
     return fd</code></pre>
+<figure class="lesson-figure"><div style="max-width:100%;overflow-x:auto"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 240" role="img" aria-labelledby="d26t d26d" style="display:block;width:100%;min-width:560px;height:auto"><title id="d26t">环形队列的空位数与元素数是一对反向计数</title><desc id="d26d">容量 N=4 的环形队列中已存入两个元素；空位数 slots 等于 N 减 count，元素数 items 等于 count，始终满足 0 小于等于 count 小于等于 N；生产者等待空位、消费者等待元素，并在更新后唤醒对方。</desc>
+<rect width="720" height="240" rx="14" fill="#f8faf7"/>
+<text x="24" y="30" font-size="17" font-weight="700" fill="#264942">环形队列：空位与元素是两个反向计数</text>
+<rect x="30" y="58" width="88" height="54" rx="8" fill="#2f7d6a"/><text x="74" y="82" font-size="11.5" fill="#ffffff" text-anchor="middle">slot 0</text><text x="74" y="100" font-size="10.5" fill="#d8ece9" text-anchor="middle">item fd3</text>
+<rect x="124" y="58" width="88" height="54" rx="8" fill="#2f7d6a"/><text x="168" y="82" font-size="11.5" fill="#ffffff" text-anchor="middle">slot 1</text><text x="168" y="100" font-size="10.5" fill="#d8ece9" text-anchor="middle">item fd7</text>
+<rect x="218" y="58" width="88" height="54" rx="8" fill="#d7ddd6"/><text x="262" y="82" font-size="11.5" fill="#5b6b66" text-anchor="middle">slot 2</text><text x="262" y="100" font-size="10.5" fill="#7c8a85" text-anchor="middle">空</text>
+<rect x="312" y="58" width="88" height="54" rx="8" fill="#d7ddd6"/><text x="356" y="82" font-size="11.5" fill="#5b6b66" text-anchor="middle">slot 3</text><text x="356" y="100" font-size="10.5" fill="#7c8a85" text-anchor="middle">空</text>
+<text x="74" y="132" font-size="11" fill="#1f5b4b" text-anchor="middle">head</text>
+<text x="262" y="132" font-size="11" fill="#1f5b4b" text-anchor="middle">tail（下一个空位）</text>
+<rect x="430" y="54" width="260" height="30" rx="7" fill="#e7f2ec" stroke="#a9ccb9"/><text x="444" y="74" font-size="12" fill="#1f5b4b">slots = N − count = 2（空位）</text>
+<rect x="430" y="92" width="260" height="30" rx="7" fill="#e7f2ec" stroke="#a9ccb9"/><text x="444" y="112" font-size="12" fill="#1f5b4b">items = count = 2（元素）</text>
+<rect x="430" y="130" width="260" height="30" rx="7" fill="#f0e2c6" stroke="#cdb27a"/><text x="444" y="150" font-size="12" fill="#7a5a17">不变量：0 ≤ count ≤ N = 4</text>
+<text x="30" y="188" font-size="11.5" fill="#4b6b64">生产者：wait(slots) 占空位 → 入队 → post(items)</text>
+<text x="30" y="212" font-size="11.5" fill="#4b6b64">消费者：wait(items) 取元素 → 出队 → post(slots)</text>
+</svg></div><figcaption>图 26-2：<strong>空位与元素此消彼长，和恒为 N</strong>。生产者先占空位、消费者先等元素，两者在更新 head/tail 后才互相唤醒；锁只保护游标与槽位，不覆盖阻塞的 DNS 或源站连接。</figcaption></figure>
 <p>锁不应覆盖阻塞性的 DNS 查询、源站连接和响应转发。若队列已满，生产者等待 <code>slots</code> 属于<strong>背压</strong>；实际服务还必须规定工作线程、队列、fd 资源的上限，并有可控的退出流程。线程数越多并不必然越快，拥塞和锁竞争会改变最优值。</p>
 </section>
 <section id="c26-cache">
