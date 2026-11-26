@@ -177,7 +177,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,.math-scroll:focus-visi
 <p class="dek">流水线不让一条指令的工作消失，而是让多个指令的不同步骤重叠。理解它，要同时看清时间、依赖与恢复。</p>
 <div class="lede-line" aria-hidden="true"></div>
 <p>第 8 章的 SEQ 在一个较长的周期中完成一条指令。若把这条长组合路径分成五段，中间放入流水线寄存器，我们就能让第二条指令在第一条离开取指后立刻开始。<strong>吞吐率与延迟是不同的问题。</strong></p>
-<nav class="inline-toc" aria-label="本章阅读路径"><a href="#time">时间轴</a><a href="#model">性能模型</a><a href="#hazard">数据依赖</a><a href="#branch">分支恢复</a><a href="#precise">精确状态</a><a href="#practice">动手推演</a><a href="#deep-09">深入推导</a></nav>
+<nav class="inline-toc" aria-label="本章阅读路径"><a href="#time">时间轴</a><a href="#model">性能模型</a><a href="#hazard">数据依赖</a><a href="#branch">分支恢复</a><a href="#precise">精确状态</a><a href="#practice">动手推演</a><a href="#deep-09">深入推导</a><a href="#deep-09b">深入推导②</a></nav>
 </header>
 <section id="time" aria-labelledby="time-title"><span class="section-no">01 / TIME</span><h2 id="time-title">为什么五个工位能接连完成任务？</h2>
 <p>CS:APP 的 Y86-64 PIPE 分成五个阶段：<strong>取指 F、译码 D、执行 E、访存 M、写回 W</strong>。同名的 F/D/E/M/W 流水线寄存器保存对应阶段所需的状态；这里没有独立的第六个“PC 更新流水级”。</p>
@@ -255,6 +255,20 @@ print(schedule[(3, "W")])  # 8</code></pre>
 <p>硬件在第 4 周期<strong>保持 F/D</strong>，同时向 E 注入气泡；下一周期，消费者在 E 阶段使用可转发的已取得值。与此不同，简单 ALU 生产者往往在 E 阶段末就生成 <code>valE</code>，下一条指令可沿旁路获得，未必需要停顿。</p>
 <p>这只是教材 PIPE 的时序模型，不能用来宣称所有 x86 微架构的“load-use 永远多一周期”。真实处理器的多级缓存、乱序执行、访存延迟、调度宽度与依赖链均可能改变观测行为。</p>
 <p>通过 <code>python3 examples/deep-ch05-12.py 09</code> 检查时序的严格先后。交叉验证参照 <a href="https://csapp.cs.cmu.edu/3e/simguide.pdf">CS:APP3e 官方 Y86-64 模拟器指南</a>的 load-use bubble 和转发解释，以及 <a href="https://csapp.cs.cmu.edu/3e/figures.html">第 4 章 PIPE 图目录</a>。</p></section>
+<section class="deep-study" id="deep-09b" aria-labelledby="deep-09b-title">
+<p class="deep-kicker">技术深描 · 09 / 转发优先级</p>
+<h2 id="deep-09b-title">同一个寄存器被连续改写，转发该取哪一条指令的结果？</h2>
+<figure class="deep-diagram">
+<img src="chapter-assets/09-deep2.svg" width="880" height="288" loading="lazy" alt="W、M、E 三个流水级同时持有同一寄存器结果时，转发选择最新的在途生产者">
+<figcaption>图 09-2：W、M、E 可同时持有同一目的寄存器的结果；转发选择“最新匹配”。教学模型，非实机测量。</figcaption>
+</figure>
+<p>流水线里可能同时有多条指令写同一个寄存器。译码阶段的消费者若只按“谁写过”选择源，会读到<strong>较旧的</strong>值。控制逻辑的真正规则是：在所有已进入 E 或更晚阶段的匹配生产者中，选<strong>最新</strong>（离 E 最近）的那一个，因为它代表了程序中最后写入的值。</p>
+<div class="deep-math"><strong>新值优先：选最新的在途生产者，而不是最先或最旧的</strong><span>生产者可能同时来自 W、M、E 三个流水级。</span></div>
+<p>这条规则有一个重要推论。设 W 与 M 写出的都是 ALU 结果，而 E 是一条紧邻的 load，三者都写 <code>%rax</code>。消费者的正确来源是 E 的 load；但 load 的值要到 <strong>M 阶段末</strong>才产生。控制逻辑于是选中最新的生产者（E 的 load）并停顿一拍，而<strong>不能</strong>退回去取较旧的 ALU 转发值——那会读到过时的结果。</p>
+<table class="deep-table"><thead><tr><th>在途生产者（旧→新）</th><th>匹配</th><th>选择</th></tr></thead><tbody><tr><td>W: aluq → %rax</td><td>是</td><td>—</td></tr><tr><td>M: xorq → %rax</td><td>是</td><td>—</td></tr><tr><td>E: mrmovq → %rax（load）</td><td>是（最新）</td><td>选 E → 停顿 1 拍</td></tr></tbody></table>
+<pre><code>python3 examples/deep-ch09-12-b.py 09b</code></pre>
+<p>模型用“旧→新”的顺序遍历在途生产者，并用后出现的匹配覆盖先出现的，从而得到最新匹配；当这个最新匹配是处于 E 的 load 时返回停顿。它只验证选择规则，不预测具体微架构的旁路层级、乱序调度或访存延迟。来源边界参照 CS:APP 3e 第 4 章 PIPE 转发与危险检测的讨论。</p>
+</section>
 <section id="references" class="references" aria-labelledby="references-title"><span class="section-no">REFERENCES</span><h2 id="references-title">参考与边界</h2>
 <ol><li>Bryant、O'Hallaron，《<a href="https://csapp.cs.cmu.edu/3e/">CS:APP 第三版</a>》第 4 章 §§4.4–4.5，PIPE 五级结构、转发与控制逻辑。</li>
 <li>CS:APP 官方<a href="https://csapp.cs.cmu.edu/3e/figures.html">图目录</a>，图 4.35 起的流水线时序与后续 PIPE 图。</li>

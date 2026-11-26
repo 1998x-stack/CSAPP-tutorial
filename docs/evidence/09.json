@@ -74,6 +74,15 @@
       "locator": "Project overview and paper",
       "status": "verified",
       "notes": "作为背景介绍，不涉及可操作利用代码"
+    },
+    {
+      "id": "ch09b-forward-priority",
+      "claim": "多条指令写同一寄存器时，转发选择最新的在途生产者；若最新者为仍处 E 的 load，则停顿一拍而不退回较旧结果",
+      "kind": "hazard",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 4 §4.5, forwarding priority and load/use hazard",
+      "status": "derived",
+      "notes": "deep-09b 选择规则模型 examples/deep-ch09-12-b.py 09b；非具体微架构实测"
     }
   ]
 }
