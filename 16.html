@@ -66,8 +66,33 @@
 <tr><td><code>SIGSEGV</code></td><td>非法内存访问等硬件/内核事件</td><td>通常终止并生成 core（受配置限制）</td></tr>
 <tr><td><code>SIGKILL</code> / <code>SIGSTOP</code></td><td>外部强制终止 / 停止</td><td>不能捕获、屏蔽或忽略</td></tr></tbody></table>
 <p>进程定向信号与线程定向信号不同：在多线程进程中，每个线程有自己的信号屏蔽字；进程定向信号可递送给一个未屏蔽该信号的线程。不要将“内核只在返回用户态前查一次 pending 位”当作全部实现细节，更不能假设所有信号数字在各平台一致。<a href="https://man7.org/linux/man-pages/man7/signal.7.html">Linux signal(7)</a> 给出递送与掩码的定义。</p>
-<div class="math-scroll" tabindex="0" role="group" aria-label="待处理且未屏蔽的信号集合">
+<div class="math-scroll" tabindex="0" role="region" aria-label="待处理且未屏蔽的信号集合">
 <math display="block" xmlns="http://www.w3.org/1998/Math/MathML" aria-label="简化模型：可递送集合等于待处理集合减去被屏蔽集合"><mrow><msub><mi>S</mi><mtext>ready</mtext></msub><mo>=</mo><msub><mi>S</mi><mtext>pending</mtext></msub><mo>∖</mo><msub><mi>S</mi><mtext>blocked</mtext></msub></mrow></math></div>
+<figure class="lesson-figure"><div style="max-width:100%;overflow-x:auto"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 250" role="img" aria-labelledby="d16t d16d" style="display:block;width:100%;min-width:560px;height:auto"><title id="d16t">待处理位与被屏蔽位如何共同决定递送</title><desc id="d16d">逐个信号给出待处理位与被屏蔽位：SIGINT 待处理且未被屏蔽，可递送；SIGTERM 被屏蔽，保持待处理但不递送；SIGUSR1 刚递送，待处理位已清零；SIGALRM 未生成，没有待处理位。</desc>
+<rect width="720" height="250" rx="14" fill="#f8faf7"/>
+<text x="24" y="34" font-size="18" font-weight="700" fill="#264942">待处理位 ∧ ¬被屏蔽位 → 可递送</text>
+<text x="24" y="56" font-size="12.5" fill="#4b6b64">此为单线程 POSIX 信号集合示意：可递送还需该信号有可执行处置，并受内核调度影响</text>
+<text x="30" y="86" font-size="13" font-weight="600" fill="#264942">信号</text>
+<text x="300" y="86" font-size="13" font-weight="600" fill="#264942">待处理</text>
+<text x="440" y="86" font-size="13" font-weight="600" fill="#264942">被屏蔽</text>
+<text x="580" y="86" font-size="13" font-weight="600" fill="#264942">可递送</text>
+<text x="30" y="122" font-size="13" fill="#254b46">SIGINT</text>
+<rect x="255" y="104" width="90" height="24" rx="7" fill="#2f7d6a"/><text x="300" y="120" font-size="12.5" fill="#ffffff" text-anchor="middle">1</text>
+<rect x="395" y="104" width="90" height="24" rx="7" fill="#d7ddd6"/><text x="440" y="120" font-size="12.5" fill="#5b6b66" text-anchor="middle">0</text>
+<rect x="535" y="104" width="90" height="24" rx="7" fill="#2f7d6a"/><text x="580" y="120" font-size="12.5" fill="#ffffff" text-anchor="middle">是</text>
+<text x="30" y="154" font-size="13" fill="#254b46">SIGTERM</text>
+<rect x="255" y="136" width="90" height="24" rx="7" fill="#2f7d6a"/><text x="300" y="152" font-size="12.5" fill="#ffffff" text-anchor="middle">1</text>
+<rect x="395" y="136" width="90" height="24" rx="7" fill="#b45309"/><text x="440" y="152" font-size="12.5" fill="#ffffff" text-anchor="middle">1</text>
+<rect x="535" y="136" width="90" height="24" rx="7" fill="#d7ddd6"/><text x="580" y="152" font-size="12.5" fill="#5b6b66" text-anchor="middle">否（暂缓）</text>
+<text x="30" y="186" font-size="13" fill="#254b46">SIGUSR1</text>
+<rect x="255" y="168" width="90" height="24" rx="7" fill="#d7ddd6"/><text x="300" y="184" font-size="12.5" fill="#5b6b66" text-anchor="middle">0（刚递送）</text>
+<rect x="395" y="168" width="90" height="24" rx="7" fill="#d7ddd6"/><text x="440" y="184" font-size="12.5" fill="#5b6b66" text-anchor="middle">0</text>
+<rect x="535" y="168" width="90" height="24" rx="7" fill="#d7ddd6"/><text x="580" y="184" font-size="12.5" fill="#5b6b66" text-anchor="middle">否</text>
+<text x="30" y="218" font-size="13" fill="#254b46">SIGALRM</text>
+<rect x="255" y="200" width="90" height="24" rx="7" fill="#d7ddd6"/><text x="300" y="216" font-size="12.5" fill="#5b6b66" text-anchor="middle">0（未生成）</text>
+<rect x="395" y="200" width="90" height="24" rx="7" fill="#d7ddd6"/><text x="440" y="216" font-size="12.5" fill="#5b6b66" text-anchor="middle">0</text>
+<rect x="535" y="200" width="90" height="24" rx="7" fill="#d7ddd6"/><text x="580" y="216" font-size="12.5" fill="#5b6b66" text-anchor="middle">否</text>
+</svg></div><figcaption>图 16-2：<strong>被屏蔽只是暂缓递送</strong>。SIGTERM 的待处理位为 1 却被屏蔽，所以此刻不可递送；SIGUSR1 的待处理位在递送后清零。该表是教学示意，不代表真实的信号编号或内核内部数据结构。</figcaption></figure>
 <p class="small-note">这只是解释“屏蔽”的集合示意；实际递送还受信号处置、线程选择及内核调度等因素影响。</p>
 </section>
 <section id="c16-safe"><h2>16.2 为什么处理函数越短越安全？</h2>
