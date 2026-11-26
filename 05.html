@@ -74,7 +74,7 @@
 <p class="eyebrow">CSAPP · 05 / MACHINE-LEVEL PROGRAMMING</p>
 <h1>一条 if，究竟让 CPU 改变了什么？</h1>
 <p class="dek">从 <code>cmp</code> 设置条件码，到 <code>jcc</code> 选择下一条指令，再到循环的回边和 <code>switch</code> 的分派。本章要学的不是“背汇编”，而是把高级语言的判断还原成可追踪的控制流图。</p>
-<nav class="reading-map" aria-label="本章阅读路径"><strong>阅读路线</strong><a href="#flags">条件码</a><a href="#branches">分支</a><a href="#loops">循环</a><a href="#switch">switch</a><a href="#experiment">动手验证</a><a href="#deep-05">深入推导</a></nav>
+<nav class="reading-map" aria-label="本章阅读路径"><strong>阅读路线</strong><a href="#flags">条件码</a><a href="#branches">分支</a><a href="#loops">循环</a><a href="#switch">switch</a><a href="#experiment">动手验证</a><a href="#deep-05">深入推导</a><a href="#deep-05b">深入推导②</a></nav>
 </header>
 <nav class="site-topic-toc" aria-label="本章小节导航"><strong>快速定位</strong><a href="#chapter-section-05-1">01 · 比较并不产生布尔值，它先留下“痕迹”</a><a href="#chapter-section-05-2">02 · 一次分支，就是对下一条指令地址作选择</a><a href="#chapter-section-05-3">03 · 循环不是特殊魔法，而是一条回边</a><a href="#chapter-section-05-4">04 · switch 可能是多次比较，也可能是一次索引…</a><a href="#chapter-section-05-5">05 · 让编译器展示证据，而不是猜结果</a><a href="#chapter-section-05-6">查证与下一步</a></nav>
 <section class="chapter-section" id="flags">
@@ -177,6 +177,36 @@ objdump -dr flow.o</code></pre>
 <div class="deep-grid"><div><h3>有符号分支 <code>jl</code></h3><p>小于的判据是 <code>SF≠OF</code>，本例 <code>0≠1</code>，因此跳转。不能仅凭结果最高位判断大小。</p></div><div><h3>无符号分支 <code>jb</code></h3><p>小于的判据是 <code>CF=1</code>，本例为 0，不跳转。相同位模式可被解释为无符号 128 和 1。</p></div></div>
 <p>将操作数调换，<code>0x01−0x80=0x81</code>：<code>SF=1, OF=1, CF=1</code>，故有符号 <code>1&lt;−128</code> 为假，无符号 <code>1&lt;128</code> 为真。这是机器 8 位运算，不等同于 C 的 <code>char</code> 表达式：后者通常先做整数提升。</p>
 <p>用 <code>python3 examples/deep-ch05-12.py 05</code> 断言两组标志及跳转结果。以 <a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel CMP / Jcc 手册</a>核对判据；教材的机器级程序内容可参照 <a href="https://csapp.cs.cmu.edu/3e/">CS:APP 3e</a>。</p></section>
+<section class="deep-study" id="deep-05b" aria-labelledby="deep-05b-title">
+<p class="deep-kicker">技术深描 · 05 / 条件传送</p>
+<h2 id="deep-05b-title">为什么编译器不敢把每个分支都换成条件传送？</h2>
+<figure class="deep-diagram">
+<svg viewBox="0 0 880 320" role="img" aria-labelledby="d05bt d05bd" xmlns="http://www.w3.org/2000/svg">
+<title id="d05bt">条件传送与条件分支的求值路径对比</title>
+<desc id="d05bd">条件传送先计算 *p 与 0 两路再按条件码选择，即使 p 为空也会解引用；条件分支先测 p，只计算被选中一路，p 为空时返回 0 而不解引用。</desc>
+<rect width="880" height="320" fill="#fbfdf9"/>
+<text x="24" y="30" font-size="15" fill="#24433f">同一表达式 p ? *p : 0 的两种编译选择</text>
+<text x="24" y="72" font-size="14" fill="#8a2b2b">cmovcc：两路都求值</text>
+<rect x="200" y="50" width="180" height="44" rx="6" fill="#fdeeee" stroke="#b23b3b"/><text x="290" y="77" font-size="14" text-anchor="middle" fill="#7a2626">A = *p（总会执行）</text>
+<rect x="200" y="104" width="180" height="44" rx="6" fill="#eef6f0" stroke="#147f80"/><text x="290" y="131" font-size="14" text-anchor="middle" fill="#24433f">B = 0</text>
+<rect x="470" y="77" width="200" height="44" rx="6" fill="#f3f6fb" stroke="#4a6fa5"/><text x="570" y="104" font-size="14" text-anchor="middle" fill="#27395a">按条件码选 A 或 B</text>
+<g stroke="#597b77" stroke-width="2" fill="none"><path d="M380 72 H466"/><path d="M380 126 H466"/></g>
+<text x="690" y="98" font-size="13" fill="#7a2626">p = NULL 时仍解引用 → 可观察错误</text>
+<text x="24" y="196" font-size="14" fill="#147f80">jcc：只求值一路</text>
+<rect x="200" y="170" width="150" height="44" rx="6" fill="#eef6f0" stroke="#147f80"/><text x="275" y="197" font-size="14" text-anchor="middle" fill="#24433f">测 p</text>
+<rect x="430" y="150" width="200" height="44" rx="6" fill="#fdeeee" stroke="#b23b3b"/><text x="530" y="177" font-size="14" text-anchor="middle" fill="#7a2626">p≠0：算 A = *p</text>
+<rect x="430" y="204" width="200" height="44" rx="6" fill="#eef6f0" stroke="#147f80"/><text x="530" y="231" font-size="14" text-anchor="middle" fill="#24433f">p=0：用 B = 0</text>
+<g stroke="#597b77" stroke-width="2" fill="none"><path d="M350 192 H426"/><path d="M350 192 H400 V226 H426"/></g>
+<text x="650" y="222" font-size="13" fill="#147f80">p = NULL 时不触及 *p</text>
+</svg>
+<figcaption>图 05-5：条件传送会无条件计算两路；分支只计算被选中一路。图为教学示意，不代表某个优化等级必定生成何种指令。</figcaption>
+</figure>
+<p>条件传送指令 <code>cmovcc</code> 的语义是“把源操作数搬进目的，再按条件码决定是否保留”：无论条件真假，源操作数<strong>都会被读取并求值</strong>。因此它把控制相关转成了数据相关，避免了分支预测失败，但也把“未选中一侧”的代价一并承担。</p>
+<p>对 <code>p ? *p : 0</code>，C 标准只求值第二、第三操作数中的一个（C11 6.5.15p4）。若 <code>p</code> 为空，源码返回 0、根本不接触 <code>*p</code>；一旦改成 cmov，就必须先算出 <code>*p</code>，从而在 <code>p</code> 为空时触发一次可观察的解引用。所以只有当编译器能证明两路求值都安全、且无副作用时，才会用条件传送替代分支。</p>
+<div class="deep-math"><strong>cmov 先求值、后选择；分支先选择、后求值</strong><span>这是把控制相关换成数据相关的代价，不是 C 语言对指令选择的保证。</span></div>
+<pre><code>python3 examples/deep-ch05-08-b.py 05b</code></pre>
+<p>模型对同一表达式给出两条求值路径：分支模型在 <code>p</code> 为空时返回 0，cmov 模型则对 <code>p</code> 为空也执行解引用并抛出可观察错误。语义依据见 C11 6.5.15 条件运算符与 Intel SDM 的 <code>CMOVcc</code> 说明；教材机器级程序部分参照 CS:APP 3e。模型是教学示意，不涉及具体微架构的预测行为。</p>
+</section>
 <section class="chapter-section" id="references">
 <h2 id="chapter-section-05-6">查证与下一步</h2>
 <p>把握三个问题：<strong>哪条指令写标志？哪条指令读取标志？哪里存在回边或多路分派？</strong>下一章将让这些控制流跨过函数边界，观察 <code>call</code>、返回地址与调用栈。</p>

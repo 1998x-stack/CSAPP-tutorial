@@ -42,6 +42,16 @@
           "locator": "CS:APP Third Edition contents"
         }
       ]
+    },
+    {
+      "claim": "C11 6.5.15p4 只求值条件运算符的一个分支；cmovcc 必须先把两个源操作数都取入寄存器，故当未选中侧可能出错或有副作用时不能替代分支",
+      "sources": [
+        {
+          "url": "https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html",
+          "locator": "Instruction set reference: CMOVcc"
+        }
+      ],
+      "notes": "教学示意；是否生成条件传送依编译器、优化等级与目标平台而变；模型见 examples/deep-ch05-08-b.py 05b"
     }
   ],
   "figures": [

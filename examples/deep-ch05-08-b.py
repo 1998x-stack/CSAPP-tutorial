@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""Deterministic models for CSAPP 05–08 (third round); no measured CPU results.
+
+Each model is pure standard library and asserts a specific semantic boundary.
+They are teaching models, not device measurements.
+"""
+import sys
+
+
+def ch05b():
+    """A conditional move computes both operands; a branch evaluates only one.
+
+    C11 6.5.15p4 evaluates only one of the second/third operands of ?:.
+    A cmovcc must first materialize both source operands, so it cannot be used
+    when the untaken side would fault or has side effects.
+    """
+    class Fault(Exception):
+        pass
+
+    def deref(p):
+        if p is None:
+            raise Fault("null dereference would be observable")
+        return p
+
+    def branch(p):                      # only the selected side is evaluated
+        return deref(p) if p is not None else 0
+
+    def cmov(p):                        # both sides are computed, then selected
+        taken = deref(p)                # evaluated even when p is None
+        fallback = 0
+        return taken if p is not None else fallback
+
+    assert branch(None) == 0
+    assert branch(7) == 7
+    try:
+        cmov(None)
+    except Fault:
+        pass
+    else:
+        raise AssertionError("cmov model must evaluate *p even when p is null")
+
+
+cases = {"05b": ch05b}
+if __name__ == "__main__":
+    selected = list(cases) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
+    for chapter in selected:
+        if chapter not in cases:
+            sys.exit("unknown chapter: " + chapter)
+        cases[chapter]()
+        print(chapter + ":ok")
