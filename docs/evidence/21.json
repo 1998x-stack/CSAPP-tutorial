@@ -36,6 +36,15 @@
       "locator": "SO_REUSEADDR",
       "status": "verified",
       "notes": "Linux-specific condition"
+    },
+    {
+      "id": "ch21b-lt-vs-et",
+      "claim": "水平触发只要仍可读就重复报告；边沿触发仅在状态转变时报告一次，必须在一个事件内读到 EAGAIN 否则遗留数据",
+      "kind": "io",
+      "source_url": "https://man7.org/linux/man-pages/man7/epoll.7.html",
+      "locator": "Level-triggered and edge-triggered",
+      "status": "derived",
+      "notes": "deep-21b LT/ET 推进模型 examples/deep-ch19-23-b.py 21b；不依赖真实内核边界行为"
     }
   ]
 }

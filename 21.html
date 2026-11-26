@@ -56,7 +56,7 @@
 <p class="lede">迭代服务器的问题不是“没有 while 循环”，而是等待一个客户端时不能及时处理另一个客户端。我们用进程隔离、CGI 标准接口和 I/O 就绪通知三种视角，拆开“并发”背后的成本与边界。</p>
 <p class="chapter-scope">示例以 Unix/Linux 与 HTTP/1.1 为语境；CGI 是历史上重要的接口，不应直接等同于当前的应用服务器部署规范。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章导览"><strong>阅读路线</strong><a href="#c21-models">服务模型</a><a href="#c21-fork">进程回收</a><a href="#c21-cgi">CGI</a><a href="#c21-select">多路复用</a><a href="#c21-tools">排错工具</a><a href="#c21-lab">实验与自测</a><a href="#deep-21">深入推导</a></nav>
+<nav class="chapter-toc" aria-label="本章导览"><strong>阅读路线</strong><a href="#c21-models">服务模型</a><a href="#c21-fork">进程回收</a><a href="#c21-cgi">CGI</a><a href="#c21-select">多路复用</a><a href="#c21-tools">排错工具</a><a href="#c21-lab">实验与自测</a><a href="#deep-21">深入推导</a><a href="#deep-21b">深入推导②</a></nav>
 <section id="c21-models"><h2>21.1 三种处理方式：让等待不再串行传播</h2>
 <p>迭代服务器在处理 A 的阻塞读取期间，通常无法及时服务 B；<code>fork-per-client</code> 为每个连接创建子进程，能够把处理逻辑隔离开；一个事件循环则在多个 fd 中等待<strong>就绪事件</strong>，只处理当前可推进的操作。并发不代表没有等待，而是等待的组织方式不同。</p>
 <figure class="lesson-figure"><img src="chapter-assets/21-server-models.svg" width="920" height="285" alt="迭代模型中 A 的等待挡住 B；多进程模型中 A、B 分别处理；事件循环在 A 等待时可处理 B 的就绪事件。"><figcaption>图 21-1：模型没有绝对优劣。连接数、工作负载、隔离要求、进程/线程成本决定选型。</figcaption></figure>
@@ -157,6 +157,34 @@ strace -e trace=network ./server</code></pre>
 /tmp/deep-io readiness
 python3 examples/deep-ch19-23-models.py 21</code></pre>
 <p>C 程序使用 <code>poll</code> 观察已关闭写端的管道，随后确认 <code>read=0</code>。这是一项可复现的 POSIX 就绪实验，并非真实 HTTP 服务器的性能测试。依据 <a href="https://man7.org/linux/man-pages/man2/poll.2.html">poll(2)</a>、<a href="https://man7.org/linux/man-pages/man7/epoll.7.html">epoll(7)</a>；继续参考 <a href="28.html">第 28 章的非阻塞写与连接所有权</a>。</p></section>
+<section class="deep-study" id="deep-21b" aria-labelledby="deep-21b-title">
+<p class="deep-kicker">技术深描 · 21 / 触发模式</p>
+<h2 id="deep-21b-title">LT 与 ET：为什么边沿触发时必须读到 EAGAIN？</h2>
+<figure class="deep-figure" tabindex="0" role="group" aria-label="可滚动技术图解">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 280" role="img" aria-labelledby="d21bt d21bd" style="display:block;width:100%;height:auto">
+<title id="d21bt">水平触发与边沿触发的就绪通知差异</title>
+<desc id="d21bd">水平触发下，只要数据未取完，每次 poll 都会再次报告可读，因此每次读一块也能逐步取完；边沿触发下，仅在状态发生转变时报告一次，回调若只读一块就返回，剩余数据不会再引发事件而被遗留，正确的边沿处理要在本次回调中一直读到 EAGAIN。</desc>
+<rect width="880" height="280" fill="#fbfdf9"/>
+<text x="24" y="30" font-size="16" fill="#24433f">同样有 10 字节待读、每次最多读 3 字节</text>
+<g font-family="system-ui,sans-serif" font-size="14">
+<text x="30" y="76" fill="#236b66">LT 水平触发</text>
+<text x="200" y="76" fill="#55716f">事件 t1、t2、t3… 每次读一块 → 读满 10</text>
+<rect x="30" y="94" width="820" height="42" rx="8" fill="#e3f1eb" stroke="#83b3a6"/><text x="50" y="120" fill="#236b66">每次唤醒仍有数据 ⇒ 继续报告 ⇒ 不会遗留</text>
+<text x="30" y="176" fill="#7a2626">ET 边沿触发</text>
+<text x="200" y="176" fill="#55716f">只在状态转变时报告一次</text>
+<rect x="30" y="194" width="395" height="56" rx="8" fill="#fdeeee" stroke="#b23b3b"/><text x="227" y="218" text-anchor="middle" fill="#7a2626">只读一块就返回</text><text x="227" y="239" text-anchor="middle" fill="#8a3b3b">剩余 7 字节遗留，不再有事件</text>
+<rect x="455" y="194" width="395" height="56" rx="8" fill="#e3f1eb" stroke="#83b3a6"/><text x="652" y="218" text-anchor="middle" fill="#236b66">本次回调一直读到 EAGAIN</text><text x="652" y="239" text-anchor="middle" fill="#236b66">读满 10，状态安全</text>
+</g>
+</svg>
+<figcaption>图 21-2：LT 会反复报告直到条件清除；ET 只报告一次转变，必须读到 EAGAIN 才不至于遗留数据。机制示意。</figcaption>
+</figure>
+<p>“可读”的<strong>报告方式</strong>取决于触发模式。水平触发（level-triggered，LT）下，只要 fd 仍然可读，下一次 <code>poll</code>/<code>epoll_wait</code> 还会报告它，因此回调即使每次只读一块，也能靠多次唤醒逐步取完。边沿触发（edge-triggered，ET）下，事件只在状态<strong>发生转变</strong>时产生一次；回调若只读了一部分就返回，剩下的数据不会再次触发事件，从而被长期遗留。</p>
+<table class="deep-table"><thead><tr><th>模式</th><th>未取完时是否再次报告</th><th>正确策略</th></tr></thead><tbody><tr><td>水平触发 LT</td><td>会（只要仍可读）</td><td>每次事件读一块也可以，但应设预算避免饿死其他连接</td></tr><tr><td>边沿触发 ET</td><td>不会</td><td>在本次回调中循环读写，直到返回 <code>EAGAIN</code></td></tr></tbody></table>
+<div class="deep-math"><strong>ET 的充分条件：一个事件内一直操作到 EAGAIN，并保存剩余状态</strong><span>LT/ET 是通知语义，并不改变 read/write 可能短操作这一事实。</span></div>
+<p>取“10 字节待读、每次最多读 3 字节”：LT 依次在三次唤醒中读满 10；ET 若只读 3 字节就返回，会遗留 7 字节且不再收到事件；只有在本次回调里循环读到 <code>EAGAIN</code>，才能读满 10。无论哪种模式，都要保存输入缓冲、输出游标与关闭状态，避免忙等或丢字节。</p>
+<pre><code>python3 examples/deep-ch19-23-b.py 21b</code></pre>
+<p>模型用三个函数分别表示“LT 多次唤醒”“ET 只读一块”和“ET 读到 EAGAIN”，断言只有最后一种能在一次事件内取完。它不依赖真实内核的 epoll 边界行为；具体语义以 <a href="https://man7.org/linux/man-pages/man7/epoll.7.html">epoll(7)</a> 为准。公平读取预算、工作线程移交与连接所有权仍需在真实程序里单独设计，本节不把它们混同为通知模式。</p>
+</section>
 
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 21</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="22.html"><small>延伸到第 22 章</small><span>线程怎样改变服务器并发模型？</span><b aria-hidden="true">↗</b></a><a href="28.html"><small>延伸到第 28 章</small><span>就绪事件如何驱动连接状态机？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article></main>

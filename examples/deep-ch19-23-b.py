@@ -71,7 +71,37 @@ def ch20b():
     assert delimit({}) == "read-to-close"
 
 
-cases = {"19b": ch19b, "20b": ch20b}
+def ch21b():
+    """Edge-triggered readiness must be drained until EAGAIN.
+
+    Level-triggered poll/epoll keeps reporting a ready fd until the condition
+    clears, so reading one chunk per wakeup still makes progress. Edge-triggered
+    readiness fires only on the transition: if the callback reads part of the
+    available data and stops, no further event arrives and the rest is stranded.
+    A correct ET handler keeps reading in that visit until EAGAIN.
+    """
+    def lt(available, chunk):
+        delivered, guard = 0, 0
+        while delivered < available and guard < 100:   # re-notified each time
+            guard += 1
+            delivered += min(chunk, available - delivered)
+        return delivered
+
+    def et_naive(available, chunk):                     # one event, one read
+        return min(chunk, available)
+
+    def et_correct(available, chunk):                   # drain until EAGAIN
+        delivered = 0
+        while delivered < available:
+            delivered += min(chunk, available - delivered)
+        return delivered
+
+    assert lt(10, 3) == 10
+    assert et_naive(10, 3) == 3                         # 7 bytes stranded
+    assert et_correct(10, 3) == 10
+
+
+cases = {"19b": ch19b, "20b": ch20b, "21b": ch21b}
 if __name__ == "__main__":
     selected = list(cases) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
     for chapter in selected:
