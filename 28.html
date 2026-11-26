@@ -89,6 +89,25 @@ for (;;) {
 <output id="connection-state-output" aria-live="polite">READING：收到了部分头部，继续等待剩余字节；不能把它当作完整 HTTP 请求。</output>
 </div>
 <p>当读到 <code>0</code>，意味着对端按 TCP 语义关闭了发送方向，必须结合未完成请求判断如何结束；当读写返回 <code>EINTR</code> 时可以按契约重试；<code>EAGAIN</code> 则表示当前暂不可继续，不是故障。写缓冲只保留尚未发送的字节，等 <code>EPOLLOUT</code> 后继续；不能在一次 <code>write</code> 后就把响应对象释放。</p>
+<figure class="lesson-figure"><div style="max-width:100%;overflow-x:auto"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 250" role="img" aria-labelledby="d28t d28d" style="display:block;width:100%;min-width:560px;height:auto"><title id="d28t">层级触发与边沿触发的就绪通知对比</title><desc id="d28d">层级触发只要缓冲区还有数据就持续报告可读，读一次后下次仍会收到；边沿触发仅在状态变化时报告一次，必须循环读到 EAGAIN 才结束本轮；两种模式下 EAGAIN 都表示当前暂不可继续。</desc>
+<rect width="720" height="250" rx="14" fill="#f8faf7"/>
+<text x="24" y="30" font-size="17" font-weight="700" fill="#264942">LT 与 ET：就绪通知的重复性不同</text>
+<rect x="30" y="48" width="200" height="34" rx="6" fill="#264942"/><text x="130" y="70" font-size="12" fill="#ffffff" text-anchor="middle">对比项</text>
+<rect x="234" y="48" width="230" height="34" rx="6" fill="#147f80"/><text x="349" y="70" font-size="12" fill="#ffffff" text-anchor="middle">层级触发 LT</text>
+<rect x="468" y="48" width="222" height="34" rx="6" fill="#b45309"/><text x="579" y="70" font-size="12" fill="#ffffff" text-anchor="middle">边沿触发 ET</text>
+<rect x="30" y="86" width="200" height="38" rx="6" fill="#eef3ee"/><text x="44" y="110" font-size="11.5" fill="#264942">通知时机</text>
+<rect x="234" y="86" width="230" height="38" rx="6" fill="#f2f8f5"/><text x="248" y="110" font-size="11.5" fill="#1f5b4b">有数据就持续通知</text>
+<rect x="468" y="86" width="222" height="38" rx="6" fill="#faf3e8"/><text x="482" y="110" font-size="11.5" fill="#8f3a28">仅状态变化时通知一次</text>
+<rect x="30" y="128" width="200" height="38" rx="6" fill="#eef3ee"/><text x="44" y="152" font-size="11.5" fill="#264942">读空策略</text>
+<rect x="234" y="128" width="230" height="38" rx="6" fill="#f2f8f5"/><text x="248" y="152" font-size="11.5" fill="#1f5b4b">读一次也可，下次再读</text>
+<rect x="468" y="128" width="222" height="38" rx="6" fill="#faf3e8"/><text x="482" y="152" font-size="11.5" fill="#8f3a28">必须循环读到 EAGAIN</text>
+<rect x="30" y="170" width="200" height="38" rx="6" fill="#eef3ee"/><text x="44" y="194" font-size="11.5" fill="#264942">未读空时</text>
+<rect x="234" y="170" width="230" height="38" rx="6" fill="#f2f8f5"/><text x="248" y="194" font-size="11.5" fill="#1f5b4b">下次 epoll_wait 仍报告</text>
+<rect x="468" y="170" width="222" height="38" rx="6" fill="#faf3e8"/><text x="482" y="194" font-size="11.5" fill="#8f3a28">可能不再收到同一摘要</text>
+<rect x="30" y="212" width="200" height="34" rx="6" fill="#eef3ee"/><text x="44" y="234" font-size="11.5" fill="#264942">EAGAIN 含义</text>
+<rect x="234" y="212" width="230" height="34" rx="6" fill="#f2f8f5"/><text x="248" y="234" font-size="11.5" fill="#1f5b4b">本轮数据已处理完</text>
+<rect x="468" y="212" width="222" height="34" rx="6" fill="#faf3e8"/><text x="482" y="234" font-size="11.5" fill="#8f3a28">结束本轮的必要条件</text>
+</svg></div><figcaption>图 28-2：<strong>可读只是一次“可以尝试”的许可</strong>。LT 会反复提醒，ET 把“读到 EAGAIN”变成实现者的责任；任何模式下 <code>EAGAIN</code> 都不等于故障或 EOF。</figcaption></figure>
 </section>
 <section id="c28-worker">
 <h2>28.3 线程池并不是“越多越好”</h2>
