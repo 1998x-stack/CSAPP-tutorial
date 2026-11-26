@@ -27,6 +27,15 @@
       "locator": "Chapter 10 robust I/O",
       "status": "verified",
       "notes": "POSIX code intentionally constrained"
+    },
+    {
+      "id": "ch19b-output-cursor",
+      "claim": "非阻塞发送端保存输出游标：仅在有正数字节传输时前进，EAGAIN/EINTR 不前进也不重发已接受前缀，EAGAIN 不等于成功",
+      "kind": "io",
+      "source_url": "https://man7.org/linux/man-pages/man2/write.2.html",
+      "locator": "RETURN VALUE and EAGAIN/EINTR error conditions",
+      "status": "derived",
+      "notes": "deep-19b 输出游标状态机模型 examples/deep-ch19-23-b.py 19b；非内核缓冲实测"
     }
   ]
 }

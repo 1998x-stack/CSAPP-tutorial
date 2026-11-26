@@ -56,7 +56,7 @@
 <p class="lede">一个 <code>read()</code> 读到的不是“一个完整消息”，<code>dup2()</code> 也没有复制文件内容。沿着“描述符 → 打开文件描述 → 文件”这条路径，我们把 Unix I/O、重定向、缓冲和短读写串成一个可检查的模型。</p>
 <p class="chapter-scope">阅读前提：了解进程和基本 C 语法；本章示例以 POSIX / Linux 为语境，不把所有设备等同于普通磁盘文件。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章导览"><strong>阅读路线</strong><a href="#c19-model">文件描述符</a><a href="#c19-syscall">短读写</a><a href="#c19-dup">重定向</a><a href="#c19-buffer">stdio 缓冲</a><a href="#c19-rio">RIO</a><a href="#c19-lab">实验与自测</a><a href="#deep-19">深入推导</a></nav>
+<nav class="chapter-toc" aria-label="本章导览"><strong>阅读路线</strong><a href="#c19-model">文件描述符</a><a href="#c19-syscall">短读写</a><a href="#c19-dup">重定向</a><a href="#c19-buffer">stdio 缓冲</a><a href="#c19-rio">RIO</a><a href="#c19-lab">实验与自测</a><a href="#deep-19">深入推导</a><a href="#deep-19b">深入推导②</a></nav>
 <section id="c19-model"><h2>19.1 描述符不是文件：先看三层映射</h2>
 <p>进程看见的文件描述符（fd）只是一个小整数。内核通过<strong>进程的描述符表</strong>找到一个打开文件描述（open file description），其中保存文件偏移量和文件状态标志，再指向文件对象。<code>open()</code> 通常创建新的打开文件描述；<code>dup()</code> / <code>dup2()</code> 则让两个 fd 指向<strong>同一个</strong>打开文件描述。</p>
 <figure class="lesson-figure"><img src="chapter-assets/19-fd-map.svg" width="920" height="284" alt="fd 3 与 fd 4 均指向同一个打开文件描述和同一个文件，另一个 open 创建独立的打开文件描述。"><figcaption>图 19-1：共享与否的关键不是 fd 数值，而是它们是否指向同一条“打开文件描述”。</figcaption></figure>
@@ -150,6 +150,40 @@ ssize_t readn(int fd, void *dest, size_t count) {
 /tmp/deep-io short-read
 python3 examples/deep-ch19-23-models.py 19</code></pre>
 <p>这份 C 程序使用匿名管道验证<strong>短读 + EOF</strong>，不是制造未定义的网络时序。规则依据 <a href="https://man7.org/linux/man-pages/man2/read.2.html">read(2)</a>、<a href="https://man7.org/linux/man-pages/man2/write.2.html">write(2)</a>；下一章再把流上的字节转为有明确定界的应用记录。</p></section>
+<section class="deep-study" id="deep-19b" aria-labelledby="deep-19b-title">
+<p class="deep-kicker">技术深描 · 19 / 输出游标</p>
+<h2 id="deep-19b-title">非阻塞写：为什么不能重发已写前缀，也不能把 EAGAIN 当成功？</h2>
+<figure class="deep-figure" tabindex="0" role="group" aria-label="可滚动技术图解">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 300" role="img" aria-labelledby="d19bt d19bd" style="display:block;width:100%;height:auto">
+<title id="d19bt">非阻塞发送端的输出游标不变量</title>
+<desc id="d19bd">待发送缓冲区为 HELLO，输出游标从 0 开始：一次 write 接受 2 字节后游标到 2；EAGAIN 未传输任何字节，游标保持 2；再接受 1 字节到 3；EINTR 未传输，游标保持 3；最后接受 2 字节到 5，完成。游标只在有正数进展时前进，已接受前缀不重发、不丢弃。</desc>
+<rect width="880" height="300" fill="#fbfdf9"/>
+<text x="24" y="30" font-size="16" fill="#24433f">发送缓冲区 HELLO：游标只在有正数进展时前进</text>
+<g font-family="system-ui,sans-serif">
+<text x="40" y="74" font-size="14" fill="#55716f">缓冲区</text>
+<rect x="160" y="52" width="56" height="40" rx="6" fill="#e3f1eb" stroke="#83b3a6"/><text x="188" y="79" font-size="18" text-anchor="middle" fill="#236b66">H</text>
+<rect x="216" y="52" width="56" height="40" rx="6" fill="#e3f1eb" stroke="#83b3a6"/><text x="244" y="79" font-size="18" text-anchor="middle" fill="#236b66">E</text>
+<rect x="272" y="52" width="56" height="40" rx="6" fill="#f3f6fb" stroke="#4a6fa5"/><text x="300" y="79" font-size="18" text-anchor="middle" fill="#27395a">L</text>
+<rect x="328" y="52" width="56" height="40" rx="6" fill="#f3f6fb" stroke="#4a6fa5"/><text x="356" y="79" font-size="18" text-anchor="middle" fill="#27395a">L</text>
+<rect x="384" y="52" width="56" height="40" rx="6" fill="#f3f6fb" stroke="#4a6fa5"/><text x="412" y="79" font-size="18" text-anchor="middle" fill="#27395a">O</text>
+</g>
+<g font-family="system-ui,sans-serif" font-size="14">
+<text x="40" y="132" fill="#7a2626">write → 2</text><text x="300" y="132" fill="#55716f">游标 0 → 2（“HE”）</text>
+<text x="40" y="168" fill="#8a6a1f">write → EAGAIN</text><text x="300" y="168" fill="#55716f">游标保持 2（未传输）</text>
+<text x="40" y="204" fill="#7a2626">write → 1</text><text x="300" y="204" fill="#55716f">游标 2 → 3（“L”）</text>
+<text x="40" y="240" fill="#8a6a1f">write → EINTR</text><text x="300" y="240" fill="#55716f">游标保持 3（未传输）</text>
+<text x="40" y="276" fill="#7a2626">write → 2</text><text x="300" y="276" fill="#55716f">游标 3 → 5，完成</text>
+</g>
+</svg>
+<figcaption>图 19-2：输出游标只在 write 交付正数字节时前进；EAGAIN/EINTR 不代表成功，也不跳过任何字节。机制示意，非吞吐测量。</figcaption>
+</figure>
+<p>阻塞写通常能一次写完大缓冲的一部分，非阻塞写则可能<strong>一个字节也没写就返回</strong>。若把非阻塞 <code>write</code> 的返回值一律当作“发送成功”，要么丢掉未写部分，要么在下次就绪时从头重发，导致对端看到重复前缀。正确做法是维护一个<strong>输出游标</strong>，只重试尚未发送的后缀。</p>
+<table class="deep-table"><thead><tr><th>结果</th><th>含义</th><th>游标</th></tr></thead><tbody><tr><td><code>n &gt; 0</code></td><td>已接受 n 字节</td><td>前进 n</td></tr><tr><td><code>EAGAIN</code>/<code>EWOULDBLOCK</code></td><td>当前不可写，未曾传输</td><td>不变，等待下次就绪</td></tr><tr><td><code>EINTR</code></td><td>交付数据前被信号打断</td><td>不变，按契约重试</td></tr></tbody></table>
+<div class="deep-math"><strong>已接受前缀不可变，未发送后缀可重试</strong><span>游标从不倒退；把 EAGAIN 当成成功会在未传输时误报完成。</span></div>
+<p>取缓冲区 <code>HELLO</code>：<code>write</code> 返回 2，游标到 2；接着 <code>EAGAIN</code>，游标仍为 2；再返回 1，游标到 3；遇 <code>EINTR</code> 不动；最后返回 2，游标到 5 完成。全程期待的是“已接受前缀”<code>HEL</code> 等，而不是整段重来。</p>
+<pre><code>python3 examples/deep-ch19-23-b.py 19b</code></pre>
+<p>模型用一个脚本化的返回值序列驱动状态机，断言游标单调、不重发、不丢弃，且 <code>EAGAIN</code> 不产生假成功。它不模拟真实内核缓冲、写合成或 TCP 的字节流边界；具体返回语义以 <a href="https://man7.org/linux/man-pages/man2/write.2.html">write(2)</a> 为准。correct 的发送状态机只保存<strong>剩余输入、输出游标与关闭状态</strong>，避免忙等与重复发送。</p>
+</section>
 
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 19</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="20.html"><small>延伸到第 20 章</small><span>文件描述符如何扩展为 socket？</span><b aria-hidden="true">↗</b></a><a href="28.html"><small>延伸到第 28 章</small><span>非阻塞 I/O 如何保持发送进度？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article></main>
