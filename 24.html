@@ -93,6 +93,22 @@ unsigned xor_with_and_not(unsigned x, unsigned y) {
 <p>Bomb Lab 给你的是可执行文件而非源代码。核心练习是形成一个可检验的推理闭环：找到当前阶段入口、标出分支条件、追踪数据来自哪里、用调试器验证假设。不同实例的常量和阶段结构可能不同，不能预设第几关一定是 Fibonacci 或特定跳转表。</p>
 <ol><li><strong>建立地图：</strong>在授权的课程二进制上用 <code>objdump -d</code> 或 <code>disassemble</code> 查看函数边界、调用关系及分支。</li><li><strong>锁定观察点：</strong>GDB 用 <code>break</code>、<code>run</code>、<code>info registers</code>、<code>x/</code> 等检查参数、局部数据与条件跳转；寄存器的意义取决于目标 ABI 和当前指令。</li><li><strong>写出可解释的约束：</strong>把循环、比较、递归和表索引转为纸面关系，预测什么输入会令某个分支成立。</li><li><strong>用实验驳斥假设：</strong>仅在许可的教学环境内运行自己的实例，记录输入、断点状态和实际分支，不要把一次成功当成通用结论。</li></ol>
 <p>以 x86-64 System V 为例，函数的前几个整数/指针参数通常由寄存器传递，但不能简单地把每次 <code>cmp</code> 旁边的 <code>%rsi</code> 当成“要比较的整数”：必须结合此前的数据流。调试器显示的是<strong>具体机器状态</strong>，不是省略上下文的解题答案。</p>
+<figure class="lesson-figure"><div style="max-width:100%;overflow-x:auto"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 250" role="img" aria-labelledby="d24t d24d" style="display:block;width:100%;min-width:560px;height:auto"><title id="d24t">炸弹阶段的一般控制路径：读入、比较、分支</title><desc id="d24d">一个阶段先读取一行输入，phase 函数解析并与内部期望值比较：相等则登记通过并进入下一阶段，否则调用 explode_bomb。实际常量、循环与阶段结构由各实例决定。</desc>
+<rect width="720" height="250" rx="14" fill="#f8faf7"/>
+<text x="24" y="32" font-size="17" font-weight="700" fill="#264942">一个阶段：读入 → 比较 → 分支</text>
+<rect x="20" y="96" width="120" height="56" rx="8" fill="#147f80"/><text x="80" y="120" font-size="11.5" fill="#ffffff" text-anchor="middle">读取输入行</text><text x="80" y="138" font-size="10.5" fill="#d8ece9" text-anchor="middle">stdin / 文件</text>
+<rect x="180" y="96" width="160" height="56" rx="8" fill="#2f7d6a"/><text x="260" y="122" font-size="11.5" fill="#ffffff" text-anchor="middle">phase_n</text><text x="260" y="140" font-size="10.5" fill="#d8ece9" text-anchor="middle">解析并按字面比较</text>
+<path d="M455 92 L515 124 L455 156 L395 124 Z" fill="#b45309"/><text x="455" y="129" font-size="11.5" fill="#ffffff" text-anchor="middle">相等?</text>
+<rect x="560" y="46" width="150" height="56" rx="8" fill="#2f7d6a"/><text x="635" y="70" font-size="11.5" fill="#ffffff" text-anchor="middle">登记通过</text><text x="635" y="88" font-size="10.5" fill="#d8ece9" text-anchor="middle">进入下一阶段</text>
+<rect x="560" y="172" width="150" height="56" rx="8" fill="#8f3a28"/><text x="635" y="196" font-size="11.5" fill="#ffffff" text-anchor="middle">调用</text><text x="635" y="214" font-size="10.5" fill="#f0cfc7" text-anchor="middle">explode_bomb</text>
+<defs><marker id="d24ar" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6 z" fill="#5b6b66"/></marker></defs>
+<line x1="140" y1="124" x2="178" y2="124" stroke="#5b6b66" stroke-width="1.6" marker-end="url(#d24ar)"/>
+<line x1="340" y1="124" x2="393" y2="124" stroke="#5b6b66" stroke-width="1.6" marker-end="url(#d24ar)"/>
+<line x1="492" y1="108" x2="558" y2="82" stroke="#2f7d6a" stroke-width="1.6" marker-end="url(#d24ar)"/><text x="522" y="90" font-size="11" fill="#1f5b4b">是</text>
+<line x1="492" y1="140" x2="558" y2="192" stroke="#8f3a28" stroke-width="1.6" marker-end="url(#d24ar)"/><text x="522" y="176" font-size="11" fill="#8f3a28">否</text>
+<path d="M635 46 C 500 8, 120 8, 82 94" fill="none" stroke="#147f80" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#d24ar)"/>
+<text x="360" y="18" font-size="11" fill="#1f5b4b" text-anchor="middle">还有下一阶段 → 回到读入</text>
+</svg></div><figcaption>图 24-3：<strong>把每个阶段看成“读入—比较—分支”</strong>，你就有了可检验的推理闭环；相等与不相等只是分支方向，真正的约束需从数据流里推出。不同实例的常量与阶段结构可能不同。</figcaption></figure>
 <div class="exercise"><strong>小练习：</strong>若一段汇编先把输入乘 2，再与常量比较，如何区分“输入必须等于某个固定值”和“只比较最低几位”？先记录运算宽度与可能的截断，再整理比较分支，而不是仅凭常量猜测。</div>
 </section>
 
