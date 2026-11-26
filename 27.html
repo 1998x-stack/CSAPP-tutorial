@@ -111,7 +111,27 @@ on_sys_enter_read(ctx):
 <p><a href="https://docs.riscv.org/reference/isa/unpriv/unpriv-index.html">RISC-V Unprivileged ISA</a> · <a href="https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html">CUDA Programming Model</a> · <a href="https://docs.kernel.org/bpf/verifier.html">Linux eBPF Verifier</a> · <a href="https://docs.kernel.org/driver-api/cxl/linux/cxl-driver.html">Linux CXL Driver</a>。本文讨论的是机制，不代表任何硬件的基准结果。</p>
 </section>
 
-<section id="c27-roofline-check" class="lesson-extension"><h2>把 Roofline 算式补上单位，才知道谁在限制性能</h2><p>若设备在所研究的数据路径上可持续提供 <strong>2 GB/s</strong> 的数据带宽、该计算类型的峰值为 <strong>8 GFLOP/s</strong>，那么在计算强度 <code>I = FLOP / byte</code> 下，吞吐量上界是 <code>min(8, 2 × I)</code> GFLOP/s。这里的 2 和 8 都是假设参数，不是对任意 GPU 或 CPU 的测量。</p><table><thead><tr><th>计算强度</th><th>带宽上界</th><th>可用上界</th><th>初步判断</th></tr></thead><tbody><tr><td>0.25 FLOP/byte</td><td>0.5 GFLOP/s</td><td>0.5 GFLOP/s</td><td>带宽约束更紧</td></tr><tr><td>1 FLOP/byte</td><td>2 GFLOP/s</td><td>2 GFLOP/s</td><td>带宽约束更紧</td></tr><tr><td>4 FLOP/byte</td><td>8 GFLOP/s</td><td>8 GFLOP/s</td><td>两条理论上界相交</td></tr><tr><td>8 FLOP/byte</td><td>16 GFLOP/s</td><td>8 GFLOP/s</td><td>计算峰值约束更紧</td></tr></tbody></table><p>交点 <code>I* = 8 / 2 = 4 FLOP/byte</code> 来自单位约简。<strong>上界不是预测值</strong>：实际性能还会受到缓存、访存模式、分支、同步、占用率和实现细节影响；带宽必须对应所选的内存层级和数据流量定义。</p></section>
+<section id="c27-roofline-check" class="lesson-extension"><h2>把 Roofline 算式补上单位，才知道谁在限制性能</h2><p>若设备在所研究的数据路径上可持续提供 <strong>2 GB/s</strong> 的数据带宽、该计算类型的峰值为 <strong>8 GFLOP/s</strong>，那么在计算强度 <code>I = FLOP / byte</code> 下，吞吐量上界是 <code>min(8, 2 × I)</code> GFLOP/s。这里的 2 和 8 都是假设参数，不是对任意 GPU 或 CPU 的测量。</p><table><thead><tr><th>计算强度</th><th>带宽上界</th><th>可用上界</th><th>初步判断</th></tr></thead><tbody><tr><td>0.25 FLOP/byte</td><td>0.5 GFLOP/s</td><td>0.5 GFLOP/s</td><td>带宽约束更紧</td></tr><tr><td>1 FLOP/byte</td><td>2 GFLOP/s</td><td>2 GFLOP/s</td><td>带宽约束更紧</td></tr><tr><td>4 FLOP/byte</td><td>8 GFLOP/s</td><td>8 GFLOP/s</td><td>两条理论上界相交</td></tr><tr><td>8 FLOP/byte</td><td>16 GFLOP/s</td><td>8 GFLOP/s</td><td>计算峰值约束更紧</td></tr></tbody></table><p>交点 <code>I* = 8 / 2 = 4 FLOP/byte</code> 来自单位约简。<strong>上界不是预测值</strong>：实际性能还会受到缓存、访存模式、分支、同步、占用率和实现细节影响；带宽必须对应所选的内存层级和数据流量定义。</p>
+<figure class="lesson-figure"><div style="max-width:100%;overflow-x:auto"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 250" role="img" aria-labelledby="d27t d27d" style="display:block;width:100%;min-width:560px;height:auto"><title id="d27t">带宽上界与计算峰值相交于计算强度 I* 等于 4</title><desc id="d27d">横轴为计算强度 FLOP 每字节，纵轴为吞吐量 GFLOP 每秒；带宽上界为 2 乘 I，在 I 小于 4 时更紧；计算峰值为 8，在 I 大于 4 时更紧；两条线相交于 I 等于 4。图中数字均为假设参数，不是实测。</desc>
+<rect width="720" height="250" rx="14" fill="#f8faf7"/>
+<text x="80" y="36" font-size="12.5" fill="#264942">吞吐量（GFLOP/s）</text>
+<line x1="80" y1="205" x2="660" y2="205" stroke="#5b6b66" stroke-width="1.6"/>
+<line x1="80" y1="205" x2="80" y2="45" stroke="#5b6b66" stroke-width="1.6"/>
+<text x="370" y="232" font-size="12.5" fill="#264942" text-anchor="middle">计算强度 I（FLOP/byte）</text>
+<text x="70" y="94" font-size="11" fill="#4b6b64" text-anchor="end">8</text>
+<text x="70" y="209" font-size="11" fill="#4b6b64" text-anchor="end">0</text>
+<text x="370" y="221" font-size="11" fill="#4b6b64" text-anchor="middle">4</text>
+<text x="660" y="221" font-size="11" fill="#4b6b64" text-anchor="middle">8</text>
+<line x1="80" y1="90" x2="660" y2="90" stroke="#8f3a28" stroke-width="1.6" stroke-dasharray="6 4"/>
+<text x="648" y="82" font-size="11.5" fill="#8f3a28" text-anchor="end">计算峰值 = 8</text>
+<line x1="80" y1="205" x2="370" y2="90" stroke="#2f7d6a" stroke-width="2"/>
+<text x="150" y="160" font-size="11.5" fill="#1f5b4b">带宽上界 = 2·I</text>
+<line x1="370" y1="90" x2="370" y2="205" stroke="#5b6b66" stroke-width="1.4" stroke-dasharray="4 4"/>
+<circle cx="370" cy="90" r="4.5" fill="#b45309"/>
+<text x="380" y="108" font-size="11.5" fill="#7a5a17">I* = 8 / 2 = 4</text>
+<text x="120" y="70" font-size="11.5" fill="#1f5b4b">带宽约束区</text>
+<text x="500" y="120" font-size="11.5" fill="#8f3a28">计算峰值约束区</text>
+</svg></div><figcaption>图 27-2：<strong>两条上界取较小者</strong>。I 小于 4 时，提升计算强度通常比堆更多算力更有效；I 大于 4 后计算峰值才是上限。带宽与峰值必须对应具体数据路径，图例中的 2 与 8 是假设参数而非测量结果。</figcaption></figure></section>
 
 <section class="deep-study" id="deep-27" aria-labelledby="deep-27-title">
 <p class="deep-kicker">技术深描 · 27 / ISA FIELDS</p>
