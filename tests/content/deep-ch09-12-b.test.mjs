@@ -8,7 +8,7 @@ const root = resolve(import.meta.dirname, '../..');
 const read = p => readFileSync(resolve(root, p), 'utf8');
 
 // Fourth-round deep dives: chapters 09-12 carry an external-SVG "deep-NNb" section.
-const implemented = [9, 10];
+const implemented = [9, 10, 11];
 
 test('09-12 fourth-round deep dives keep section, TOC link, SVG asset and runnable case', () => {
   for (const n of implemented) {

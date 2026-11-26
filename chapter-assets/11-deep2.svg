@@ -1,0 +1,24 @@
+<svg viewBox="0 0 880 280" role="img" aria-labelledby="d11bt d11bd" xmlns="http://www.w3.org/2000/svg">
+<title id="d11bt">写回+写分配与写直达+写合并的内存流量对比</title>
+<desc id="d11bd">向一条 64 B 缓存行连续写 64 B：写回加写分配先因首次未命中把整行读入（64 B 读），行变脏后在该行被逐出时写回（64 B 写），共搬运 128 B；写直达加写合并不分配、不回写，连续存储合并为一次 64 B 写。同样存入 64 B，两种策略搬运的字节数不同。</desc>
+<rect width="880" height="280" fill="#fbfdf9"/>
+<text x="24" y="30" font-size="16" fill="#24433f">向一条 64 B 缓存行连续写入 64 B 数据</text>
+<g font-family="system-ui,sans-serif">
+<text x="40" y="74" font-size="15" fill="#7a2626">写回 + 写分配</text>
+<rect x="220" y="52" width="180" height="46" rx="8" fill="#fdeeee" stroke="#b23b3b"/>
+<text x="310" y="80" font-size="14" text-anchor="middle" fill="#7a2626">未命中 → 读入整行 64 B</text>
+<rect x="430" y="52" width="180" height="46" rx="8" fill="#e7eef4" stroke="#356c88"/>
+<text x="520" y="80" font-size="14" text-anchor="middle" fill="#27495c">行变脏 → 逐出回写 64 B</text>
+<path d="M400 75 H426" stroke="#597b77" stroke-width="2"/>
+<text x="640" y="80" font-size="14" fill="#7a2626">合计 128 B</text>
+<text x="40" y="176" font-size="15" fill="#236b66">写直达 + 写合并</text>
+<rect x="220" y="154" width="180" height="46" rx="8" fill="#e3f1eb" stroke="#83b3a6"/>
+<text x="310" y="182" font-size="14" text-anchor="middle" fill="#236b66">不分配，无填充</text>
+<rect x="430" y="154" width="180" height="46" rx="8" fill="#e3f1eb" stroke="#83b3a6"/>
+<text x="520" y="182" font-size="14" text-anchor="middle" fill="#236b66">连续存储合并为 64 B 写</text>
+<path d="M400 177 H426" stroke="#597b77" stroke-width="2"/>
+<text x="640" y="182" font-size="14" fill="#236b66">合计 64 B</text>
+<text x="24" y="240" font-size="13" fill="#55716f">假设：工作集远大于缓存，窗口内每个被触及的行都被逐出；行 64 B，地址对齐。</text>
+<text x="24" y="262" font-size="13" fill="#8a2b2b">把“存储次数”当作“搬运字节数”会高估或低估流量——策略改变读/写的次数。</text>
+</g>
+</svg>

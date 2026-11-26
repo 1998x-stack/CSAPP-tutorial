@@ -74,6 +74,15 @@
       "locator": "§6.5.2.1; derived arithmetic",
       "status": "derived",
       "notes": "可编译 C11 程序，用于正确性而非性能测量"
+    },
+    {
+      "id": "ch11b-write-policy",
+      "claim": "写回+写分配与写直达+写合并的搬运字节数不同：同样存入 64 B，前者因填充与回写搬运 128 B，后者只写 64 B",
+      "kind": "memory",
+      "source_url": "https://csapp.cs.cmu.edu/3e/",
+      "locator": "Chapter 6, write-back/write-through and write-allocate policies",
+      "status": "derived",
+      "notes": "deep-11b 流量计数模型 examples/deep-ch09-12-b.py 11b；假定工作集远大于缓存，非带宽实测"
     }
   ]
 }

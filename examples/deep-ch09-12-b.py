@@ -55,7 +55,37 @@ def ch10b():
     assert bound(4, 2, 4, 4) == 0.25         # fewer chains, more width
 
 
-cases = {"09b": ch09b, "10b": ch10b}
+def ch11b():
+    """Write policy decides whether a store stream reads memory at all.
+
+    Assume a streaming store of S consecutive bytes to an aligned region whose
+    working set far exceeds the cache, so every touched line is evicted in the
+    window. With write-back + write-allocate, the first store to a line misses
+    and fills it (64 B read), then later stores hit; each dirty line is written
+    back once (64 B). With write-through + write-combining there is no fill and
+    consecutive stores merge into one line-sized write. So counting stores is
+    not counting traffic -- the policy changes the bytes moved.
+    """
+    LINE = 64
+
+    def write_back(S):
+        lines = (S + LINE - 1) // LINE       # distinct lines touched
+        fills = lines                        # write-allocate on first miss
+        writebacks = lines                   # each dirty line evicted once
+        return fills, writebacks, (fills + writebacks) * LINE
+
+    def write_through(S):
+        lines = (S + LINE - 1) // LINE       # merged into line-sized writes
+        return 0, 0, lines * LINE
+
+    assert write_back(64) == (1, 1, 128)     # 2x amplification
+    assert write_back(128) == (2, 2, 256)
+    assert write_back(1) == (1, 1, 128)      # one byte store still fills a line
+    assert write_through(64) == (0, 0, 64)   # no fill, no writeback
+    assert write_through(128) == (0, 0, 128)
+
+
+cases = {"09b": ch09b, "10b": ch10b, "11b": ch11b}
 if __name__ == "__main__":
     selected = list(cases) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
     for chapter in selected:
