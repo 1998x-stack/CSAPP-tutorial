@@ -71,7 +71,22 @@ def ch16b():
     accepted = min(over, limit)
     assert accepted == 3 and over - accepted == 2
 
-CASES = {"13b": ch13b, "14b": ch14b, "15b": ch15b, "16b": ch16b}
+def ch17b():
+    # Build a 57-bit VA from known five-level fields (top-down), then decode it.
+    fields = [5, 4, 3, 2, 1]               # PML5, PML4, PDPT, PD, PT
+    off = 0xabc
+    va = off + sum(v << (12 + 9 * (4 - k)) for k, v in enumerate(fields))
+    assert va < (1 << 57)
+    assert tuple((va >> s) & 0x1ff for s in (48, 39, 30, 21, 12)) == tuple(fields)
+    assert va & 0xfff == off
+    # The same lower 48 bits decode as a four-level split (top level = old PML4).
+    assert tuple((va >> s) & 0x1ff for s in (39, 30, 21, 12)) == tuple(fields[1:])
+    # Huge-page offsets are just wider masks over the same VA.
+    assert va % (1 << 21) == va & ((1 << 21) - 1)   # 2 MiB
+    assert va % (1 << 30) == va & ((1 << 30) - 1)   # 1 GiB
+    assert 12 < 21 < 30
+
+CASES = {"13b": ch13b, "14b": ch14b, "15b": ch15b, "16b": ch16b, "17b": ch17b}
 
 if __name__ == "__main__":
     selected = list(CASES) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]

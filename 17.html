@@ -54,7 +54,7 @@
 <header class="chapter-hero"><p class="eyebrow">虚拟内存 / 17</p><h1>两个进程都访问 0x1000，为什么互不干扰？</h1>
 <p class="lede">虚拟地址不是“贴上标签的物理地址”。它是在<strong>当前进程地址空间</strong>中解释的一个位置：页表可以把相同虚拟页映射到不同物理页，也可以让不同进程共享同一物理页。页表提供隔离与共享，TLB 则让这种翻译可高效重复使用。</p>
 <p class="chapter-scope">主线采用 x86-64 的传统 48 位规范虚拟地址、4 KiB 基页、四级页表作教学示例。实际硬件还可能使用五级分页、2 MiB / 1 GiB 大页及其他体系结构的翻译方式。</p></header>
-<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c17-mapping">01 地址映射</a><a href="#c17-walk">02 页表遍历</a><a href="#c17-tlb">03 TLB 的角色</a><a href="#c17-fault">04 缺页是什么</a><a href="#c17-lab">05 地址分解实验</a><a href="#deep-17">06 深度推演</a></nav>
+<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c17-mapping">01 地址映射</a><a href="#c17-walk">02 页表遍历</a><a href="#c17-tlb">03 TLB 的角色</a><a href="#c17-fault">04 缺页是什么</a><a href="#c17-lab">05 地址分解实验</a><a href="#deep-17">06 深度推演</a><a href="#deep-17b">07 5 级与大页</a></nav>
 <section id="c17-mapping"><h2>17.1 相同虚拟页，不代表相同物理页</h2>
 <p>想象进程 A 和 B 都读取虚拟地址 <code>0x1000</code>：页表 A 可以指向物理页框 42，页表 B 可以指向物理页框 91。除非内核显式安排共享映射，它们读到的未必是相同内容。内核还能把部分虚拟页设为不可访问，利用权限位保护内存。</p>
 <figure class="lesson-figure"><img src="chapter-assets/17-process-map.svg" alt="两个进程都使用虚拟页0x1，进程A映射到物理页42，进程B映射到物理页91；共享页通过两张页表映射到同一物理页。" width="880" height="305"><figcaption>图 17-1：地址的意义依赖于<strong>当前地址空间</strong>；需要共享时，两份页表可以故意指向同一物理页。</figcaption></figure>
@@ -138,6 +138,17 @@ int main(void) {
 <pre><code>python3 examples/deep-ch13-18-models.py 17
 # 与浏览器现有地址分解交互独立，不读取物理页映射。</code></pre>
 <p>计算规则可据 <a href="https://www.kernel.org/doc/html/latest/mm/page_tables.html">Linux Kernel Documentation · Page Tables</a> 和 <a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel SDM · IA-32e Paging</a>核对；本例并未通过特权指令观察页表内容。</p></section>
+
+<section class="deep-study" id="deep-17b" aria-labelledby="deep-17b-title"><p class="deep-kicker">逐步核验 · 17b / LEVELS &amp; HUGE PAGES</p><h2 id="deep-17b-title">同一台机器可能是 4 级或 5 级分页：字段怎么变？</h2>
+<figure class="deep-figure" tabindex="0" role="group" aria-label="可横向滚动的独立图解"><img src="chapter-assets/17-deep2.svg" width="960" height="264" loading="lazy" alt="48 位虚拟地址按四级 9+9+9+9+12 拆分；启用 5 级分页的 57 位虚拟地址多出一层 PML5 索引，变成 9+9+9+9+9+12。2 MiB 大页在 PD 层停止遍历，用 21 位页内偏移；1 GiB 大页在 PDPT 层停止，用 30 位偏移。"><figcaption>分页级数、地址宽度与基页大小必须<strong>同时指定</strong>；换个模式，索引层数和偏移位宽都不同。</figcaption></figure>
+<p>上一节用的是<strong>四级分页、48 位虚拟地址、4 KiB 基页</strong>。这个前提不能省略：如果开启 Intel 的五级分页（LA57），虚拟地址宽度变为 <strong>57 位</strong>，多出一层 <code>PML5</code> 索引，拆分变成 <code>9+9+9+9+9+12</code>。所以「四层页表」只是一个<strong>教学映射</strong>，不是所有机器的事实。</p>
+<table class="deep-table"><thead><tr><th>模式</th><th>VA 宽度</th><th>拆分（位）</th><th>页内偏移</th></tr></thead><tbody><tr><td>四级分页</td><td>48</td><td>4×9 + 12</td><td>4 KiB</td></tr><tr><td>五级分页</td><td>57</td><td>5×9 + 12</td><td>4 KiB</td></tr><tr><td>2 MiB 大页</td><td>48</td><td>2×9 + 21（在 PD 停止）</td><td>2 MiB</td></tr><tr><td>1 GiB 大页</td><td>48</td><td>1×9 + 30（在 PDPT 停止）</td><td>1 GiB</td></tr></tbody></table>
+<p>大页的本质是<strong>提前停止遍历</strong>：叶级页表项置 <code>PS</code> 位后，直接用更宽的偏移拼页框地址，少读一级页表。代价是映射粒度变粗：一个 2 MiB 大页内部不能再有不同权限，也更容易因内部一块活跃数据而保持整页驻留。</p>
+<p><strong>权限也会触发故障。</strong>页表项可访问还要看权限位：只读页上的写会触发保护性故障（也是写时复制实现的基础）；用户态访问 <code>U/S=0</code> 的页会被拒绝；取指到 <code>NX</code> 页同样出错。因此「缺页」不都是「尚未分配」：映射存在但权限不符时，内核通常直接向进程报错，而不是悄悄补一页。</p>
+<div class="warning"><p>上表中的页框编号（PPN/物理页号）只是<strong>教学占位值</strong>；普通进程无法通过合法指令得到真实物理地址，本节不把任何示例 PPN 当作实际物理页。要验证实际页表布局需特权或内核接口，超出本章范围。</p></div>
+<pre><code>python3 examples/deep-ch13-18-models.py 17    # 四级 48 位地址拆分
+python3 examples/deep-ch13-18-b.py 17b        # 57 位拆分 + 大页偏移对比</code></pre>
+<p>字段规则可据 <a href="https://www.kernel.org/doc/html/latest/mm/page_tables.html">Linux Kernel Documentation · Page Tables</a> 与 <a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel SDM · IA-32e Paging</a> 核对；具体级数与偏移以你机器实际启用的模式为准。</p></section>
 
 <section id="c17-close"><h2>归纳：分清翻译、缓存与缺页</h2><p>虚拟页定义“进程看到什么”，页表定义“它映射到哪里”，TLB 缓存“近期翻译结果”，缺页异常让内核处理“尚未建立或不允许的访问”。下一章把视角移到 <code>malloc</code> / <code>free</code>：用户态分配器怎样在这些虚拟映射之上管理对象。</p>
 <h3>延伸阅读</h3><p><a href="https://www.kernel.org/doc/html/latest/mm/page_tables.html">Linux Page Tables</a>、<a href="https://man7.org/linux/man-pages/man2/mmap.2.html">mmap(2)</a>、<a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel 软件开发手册</a>；上述教学例子采用四级分页与 4 KiB 基页。</p></section>

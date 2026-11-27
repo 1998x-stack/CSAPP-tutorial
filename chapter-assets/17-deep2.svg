@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 264" role="img" aria-labelledby="d17b-t d17b-d">
+<title id="d17b-t">48 位四级与 57 位五级分页的字段拆分，以及大页偏移</title>
+<desc id="d17b-d">第一行 48 位虚拟地址按四级分页拆成 9+9+9+9 位索引加 12 位 4 KiB 偏移。第二行 57 位虚拟地址在开启五级分页后多出一层 9 位 PML5 索引，成为 9+9+9+9+9+12。2 MiB 大页在 PD 层停止遍历，用 21 位偏移；1 GiB 大页在 PDPT 层停止，用 30 位偏移。</desc>
+<rect x="0" y="0" width="960" height="264" fill="#fbfaf7"/>
+<g font-size="12" text-anchor="middle">
+<text x="20" y="30" font-size="15" font-weight="700" fill="#203b41" text-anchor="start">四级 48 位</text>
+<rect x="150" y="16" width="54" height="26" fill="#97c6bf"/><text x="177" y="34" fill="#123">PML4·9</text>
+<rect x="204" y="16" width="54" height="26" fill="#a8d0ca"/><text x="231" y="34" fill="#123">PDPT·9</text>
+<rect x="258" y="16" width="54" height="26" fill="#b9dad5"/><text x="285" y="34" fill="#123">PD·9</text>
+<rect x="312" y="16" width="54" height="26" fill="#cae4e0"/><text x="339" y="34" fill="#123">PT·9</text>
+<rect x="366" y="16" width="72" height="26" fill="#e8f3f0"/><text x="402" y="34" fill="#123">offset·12</text>
+
+<text x="20" y="80" font-size="15" font-weight="700" fill="#5b4d94" text-anchor="start">五级 57 位</text>
+<rect x="96" y="66" width="54" height="26" fill="#b9aedf"/><text x="123" y="84" fill="#123">PML5·9</text>
+<rect x="150" y="66" width="54" height="26" fill="#c2b8e4"/><text x="177" y="84" fill="#123">PML4·9</text>
+<rect x="204" y="66" width="54" height="26" fill="#cbc2e9"/><text x="231" y="84" fill="#123">PDPT·9</text>
+<rect x="258" y="66" width="54" height="26" fill="#d4cdee"/><text x="285" y="84" fill="#123">PD·9</text>
+<rect x="312" y="66" width="54" height="26" fill="#ddd7f3"/><text x="339" y="84" fill="#123">PT·9</text>
+<rect x="366" y="66" width="72" height="26" fill="#f0edfa"/><text x="402" y="84" fill="#123">offset·12</text>
+</g>
+
+<g font-size="12">
+<rect x="500" y="120" width="436" height="112" rx="12" fill="#eef1f3" stroke="#c3ccd1"/>
+<text x="516" y="146" font-size="14" font-weight="700" fill="#3c4a50">大页 = 提前停止遍历</text>
+<text x="516" y="172" fill="#203b41">2 MiB：PD 层 PS=1 → 偏移 21 位</text>
+<text x="516" y="196" fill="#203b41">1 GiB：PDPT 层 PS=1 → 偏移 30 位</text>
+<text x="516" y="220" fill="#5a666c">粒度变粗：页内不能再有不同权限</text>
+</g>
+<text x="20" y="150" font-size="12.5" fill="#53676d">必须同时声明 VA 宽度、级数与基页大小；</text>
+<text x="20" y="172" font-size="12.5" fill="#53676d">示例中的页框号为教学占位值，非真实物理页。</text>
+<text x="20" y="210" font-size="12.5" fill="#53676d">权限不符（只读写、U/S、NX）也可触发故障，</text>
+<text x="20" y="232" font-size="12.5" fill="#53676d">并非只有“尚未分配”才是缺页。</text>
+</svg>
