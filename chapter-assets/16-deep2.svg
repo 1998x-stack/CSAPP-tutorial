@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 264" role="img" aria-labelledby="d16b-t d16b-d">
+<title id="d16b-t">传统信号合并 vs 实时信号排队</title>
+<desc id="d16b-d">左侧传统非实时信号 SIGUSR1 在屏蔽期间被产生三次，内核只保留一个待处理位，解除屏蔽后只递送一次。右侧实时信号 SIGRTMIN 三次发送进入按信号号排队的队列，依次递送三次并携带各自的 si_value，直到达到 RLIMIT_SIGPENDING。</desc>
+<rect x="0" y="0" width="960" height="264" fill="#fbfaf7"/>
+<text x="20" y="30" font-size="17" font-weight="700" fill="#203b41">三次发送，一次递送 vs 三次递送</text>
+<g font-size="13">
+<rect x="24" y="50" width="436" height="170" rx="12" fill="#fff2e9" stroke="#dcb8a6"/>
+<text x="40" y="76" font-size="15" font-weight="700" fill="#955335">传统信号 SIGUSR1</text>
+<text x="40" y="104" fill="#203b41">产生：raise ×3</text>
+<text x="40" y="130" fill="#53676d">pending 位：0 → 1（只一个）</text>
+<text x="40" y="156" fill="#53676d">多余两次被合并丢弃</text>
+<rect x="40" y="170" width="120" height="30" rx="8" fill="#d06d4d"/>
+<text x="54" y="190" fill="white">递送 ×1</text>
+<text x="176" y="190" fill="#955335">不能当计数器</text>
+
+<rect x="500" y="50" width="436" height="170" rx="12" fill="#e8f3f0" stroke="#97c6bf"/>
+<text x="516" y="76" font-size="15" font-weight="700" fill="#1d5b5e">实时信号 SIGRTMIN</text>
+<text x="516" y="104" fill="#203b41">产生：sigqueue ×3（带 si_value）</text>
+<text x="516" y="130" fill="#53676d">FIFO 队列：v1 → v2 → v3</text>
+<text x="516" y="156" fill="#53676d">上限 RLIMIT_SIGPENDING</text>
+<rect x="516" y="170" width="120" height="30" rx="8" fill="#147f80"/>
+<text x="530" y="190" fill="white">递送 ×3</text>
+<text x="652" y="190" fill="#1d5b5e">按序，可携带数据</text>
+</g>
+<text x="20" y="246" font-size="12.5" fill="#53676d">教学示意：队列长度与具体内核实现相关，不把某个实现的 RLIMIT_SIGPENDING 值当作标准常量。</text>
+</svg>

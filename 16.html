@@ -55,7 +55,7 @@
 <h1>一个信号到来时，程序停在了哪里？</h1>
 <p class="lede">你按下 <code>Ctrl+C</code> 时，程序并没有主动调用某个“退出函数”。内核向前台进程组发出 <code>SIGINT</code>，进程根据自身的处置方式决定终止、忽略还是运行处理函数。真正困难的是：<strong>通知可能在代码的任何可中断位置到达。</strong></p>
 <p class="chapter-scope">下文采用 POSIX 信号模型和 Linux 行为解释；示例程序按单线程进程编写。信号编号、默认动作和系统调用重启行为不能脱离平台随意类推。</p></header>
-<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c16-route">01 信号的旅程</a><a href="#c16-safe">02 最小处理函数</a><a href="#c16-mask">03 屏蔽与竞争</a><a href="#c16-jump">04 非本地跳转</a><a href="#c16-lab">05 可复现实验</a><a href="#deep-16">06 深度推演</a></nav>
+<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c16-route">01 信号的旅程</a><a href="#c16-safe">02 最小处理函数</a><a href="#c16-mask">03 屏蔽与竞争</a><a href="#c16-jump">04 非本地跳转</a><a href="#c16-lab">05 可复现实验</a><a href="#deep-16">06 深度推演</a><a href="#deep-16b">07 排队与线程</a></nav>
 <section id="c16-route"><h2>16.1 发送不等于处理：生成、等待、递送</h2>
 <p>把信号看作一个<strong>事件通知</strong>，而不是可靠的消息队列。信号由终端、内核异常、定时器或进程（例如 <code>kill</code>）生成；目标可能立即接收，也可能在被屏蔽时保持<strong>待处理（pending）</strong>。当信号解除屏蔽且可递送，内核才执行对应处置。普通非实时信号多次生成不保证保留次数；实时信号具有不同的排队语义。</p>
 <figure class="lesson-figure"><img src="chapter-assets/16-signal-path.svg" alt="信号生成后进入待处理状态；若被屏蔽则仍待处理；解除屏蔽后按默认、忽略或处理函数的处置进行递送。" width="880" height="300"><figcaption>图 16-1：<strong>生成 → 待处理 → 递送</strong>。被屏蔽表示暂不递送，不等于永久丢弃；普通信号的待处理状态也不是累计计数器。</figcaption></figure>
@@ -196,6 +196,18 @@ int main(void) {
 /tmp/deep-posix signal
 python3 examples/deep-ch13-18-models.py 16</code></pre>
 <p>仓库 C 示例先屏蔽 <code>SIGUSR1</code>，通过 <code>raise</code> 使它变成 pending，再以 <code>sigsuspend</code> 原子解除屏蔽并唤醒。它<strong>不通过实际挂起程序来“验证错误路径”</strong>，以免演示代码无限阻塞；该示例也不涵盖多线程定向信号分发。接口依据 <a href="https://man7.org/linux/man-pages/man2/sigsuspend.2.html">sigsuspend(2)</a>、<a href="https://man7.org/linux/man-pages/man7/signal-safety.7.html">signal-safety(7)</a>。</p></section>
+
+<section class="deep-study" id="deep-16b" aria-labelledby="deep-16b-title"><p class="deep-kicker">逐步核验 · 16b / QUEUING &amp; THREADS</p><h2 id="deep-16b-title">同一个信号发三次，为什么只处理一次？</h2>
+<figure class="deep-figure" tabindex="0" role="group" aria-label="可横向滚动的独立图解"><img src="chapter-assets/16-deep2.svg" width="960" height="264" loading="lazy" alt="左侧传统非实时信号：在屏蔽期间连续发三次只留下一个待处理位，解除屏蔽后只递送一次。右侧实时信号 SIGRTMIN：三次发送进入 FIFO 队列，依次递送三次，并携带 si_value。"><figcaption>传统信号只有「待处理/未待处理」两态；实时信号按信号号<strong>排队</strong>，直到达到 <code>RLIMIT_SIGPENDING</code>。</figcaption></figure>
+<p>上一节的 <code>volatile sig_atomic_t ready</code> 只能表达“至少发生过一次”。原因在于<strong>传统（非实时）信号不排队</strong>：若某信号处于 pending（尚未递送，例如被屏蔽）而同一信号再次产生，内核只保留<strong>一个</strong>待处理实例，额外发生的事件被丢弃（合并）。因此把到达次数记进整数<strong>不可靠</strong>。</p>
+<table class="deep-table"><thead><tr><th>信号类别</th><th>多次产生</th><th>递送与附加信息</th></tr></thead><tbody><tr><td>传统信号（如 <code>SIGUSR1</code>）</td><td>合并为一个 pending</td><td>可能只递送一次</td></tr><tr><td>实时信号（<code>SIGRTMIN..SIGRTMAX</code>）</td><td>按信号号排队</td><td>FIFO 依次递送，可携带 <code>si_value</code></td></tr><tr><td>队列上限</td><td>超过 <code>RLIMIT_SIGPENDING</code> 的发送可能失败</td><td><code>sigqueue</code> 可返回错误</td></tr></tbody></table>
+<p><strong>多线程下的归属：</strong>进程级信号（如另一进程发来的）在<strong>未屏蔽它的线程中任选一个</strong>递送；线程级信号（<code>pthread_kill</code>）则定向到指定线程。信号掩码是<strong>每线程</strong>的，用 <code>pthread_sigmask</code> 修改。常见稳健做法：在主线程启动时屏蔽要处理的信号，让该掩码被所有线程继承，再用一个专用线程在循环里 <code>sigwait</code>/<code>sigwaitinfo</code> 同步取出——这既避免处理函数里的 async-signal-safe 限制，又让“队列/计数”逻辑回到普通代码。</p>
+<div class="warning"><p>处理函数内只能调用 <strong>async-signal-safe</strong> 函数；<code>printf</code>、<code>malloc</code>、加锁等都不在保证之列。跨线程计数应使用 C11 原子或由同一 mutex 保护的谓词，而不是靠信号合并行为推导出一个固定值。</p></div>
+<pre><code>cc -std=c11 -D_POSIX_C_SOURCE=200809L -pthread -Wall -Wextra -Werror -pedantic \
+  examples/deep-ch13-18-b-signals.c -o /tmp/deep-sig
+/tmp/deep-sig queue    # 分别在屏蔽下发三次，比较传统与实时信号
+python3 examples/deep-ch13-18-b.py 16b</code></pre>
+<p>本节限于 POSIX/Linux 单进程内的信号语义，不把某个实现的队列长度当作标准常量。依据 <a href="https://man7.org/linux/man-pages/man7/signal.7.html">signal(7)</a>、<a href="https://man7.org/linux/man-pages/man2/sigqueue.2.html">sigqueue(2)</a> 与 <a href="https://man7.org/linux/man-pages/man3/pthread_sigmask.3.html">pthread_sigmask(3)</a>。</p></section>
 
 <section id="c16-close"><h2>归纳：信号只通知，不替你完成同步</h2><p>区分<strong>生成/待处理/递送</strong>，缩短处理函数，并消除检查与等待之间的竞态。下一章进入虚拟地址空间：内核还会通过另一类控制流变化——缺页异常——帮助程序按需获得内存。</p>
 <h3>延伸阅读</h3><p><a href="https://man7.org/linux/man-pages/man7/signal.7.html">signal(7)</a>、<a href="https://man7.org/linux/man-pages/man7/signal-safety.7.html">signal-safety(7)</a>、<a href="https://man7.org/linux/man-pages/man2/sigsuspend.2.html">sigsuspend(2)</a> 与 <a href="https://man7.org/linux/man-pages/man3/longjmp.3.html">longjmp(3)</a>；章节示例限定在 POSIX 单线程情形。</p></section>

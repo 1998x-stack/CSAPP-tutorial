@@ -14,6 +14,8 @@ import re
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent.parent
+# Chapters that gained a second-round deep diagram (chapter-assets/NN-deep2.svg).
+SECOND_ROUND_DEEP = {16}
 SOURCES = {
     "labs/bit-operations/representation.c": "endianness=",
     "labs/cache/cache_geometry.c": "set=1 offset=12",
@@ -73,11 +75,18 @@ def check_illustrated_chapters() -> None:
         if "<math " not in html:
             raise AssertionError(f"chapter {chapter}: MathML missing")
         assets = re.findall(r'<img\s+src="(chapter-assets/[^"]+\.svg)"', html)
-        expected = 4 if chapter in (16, 17, 18) else 3
+        # Second-round deep dives append an extra diagram, so update the count
+        # here rather than dropping the earlier per-chapter assertion.
+        base = 4 if chapter in (16, 17, 18) else 3
+        expected = base + (1 if chapter in SECOND_ROUND_DEEP else 0)
         if len(assets) != expected:
             raise AssertionError(f"chapter {chapter}: expected {expected} SVGs")
-        if chapter in (16, 17, 18) and assets[-1] != f"chapter-assets/{chapter}-deep.svg":
-            raise AssertionError(f"chapter {chapter}: original three figures must precede the deep diagram")
+        deep_tail = [f"chapter-assets/{chapter}-deep.svg"]
+        if chapter in SECOND_ROUND_DEEP:
+            deep_tail.append(f"chapter-assets/{chapter}-deep2.svg")
+        if chapter in (16, 17, 18) and assets[-len(deep_tail):] != deep_tail:
+            raise AssertionError(
+                f"chapter {chapter}: original figures must precede the deep diagrams")
         for name in assets:
             svg = ROOT / name
             tree = ET.parse(svg)
@@ -111,5 +120,5 @@ if __name__ == "__main__":
     check_html()
     check_illustrated_chapters()
     check_c()
-    print("Snippet checks passed: 28 chapter code sections, 21 SVGs and 8 compiled C examples")
+    print(f"Snippet checks passed: 28 chapter code sections, {21 + len(SECOND_ROUND_DEEP)} SVGs and 8 compiled C examples")
 

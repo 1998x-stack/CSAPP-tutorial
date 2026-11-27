@@ -53,7 +53,25 @@ def ch15b():
     after_exec = {fd: e for fd, e in table.items() if not e["cloexec"]}
     assert sorted(after_exec) == [3]
 
-CASES = {"13b": ch13b, "14b": ch14b, "15b": ch15b}
+def ch16b():
+    # Traditional signals: any positive number of sends while blocked coalesces
+    # to a single pending instance, so at most one delivery can occur.
+    for sends in (1, 2, 3, 100):
+        pending = 1 if sends else 0
+        assert pending == 1
+    # Real-time signals queue each occurrence in FIFO order with its payload.
+    sent, limit = 3, 3
+    queue = list(range(1, sent + 1))       # si_value payloads 1,2,3
+    delivered = []
+    while queue and len(delivered) < limit:
+        delivered.append(queue.pop(0))
+    assert delivered == [1, 2, 3] and queue == []
+    # Sends beyond RLIMIT_SIGPENDING are not queued (sigqueue may then error).
+    over = 5
+    accepted = min(over, limit)
+    assert accepted == 3 and over - accepted == 2
+
+CASES = {"13b": ch13b, "14b": ch14b, "15b": ch15b, "16b": ch16b}
 
 if __name__ == "__main__":
     selected = list(CASES) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
