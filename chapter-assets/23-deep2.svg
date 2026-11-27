@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" role="img" aria-labelledby="d23b-t d23b-d">
+<title id="d23b-t">POSIX 线程取消：延迟取消只在取消点生效，清理处理器负责归还资源</title>
+<desc id="d23b-d">上半部分对比两种取消类型：默认的延迟取消只在取消点（如 cond_wait、read、join）生效，异步取消可在任意指令处中止因而极难保证一致性。下半部分是一条时间线：工作线程持有互斥锁进入临界区，在取消点收到挂起的取消请求后开始栈回退，已注册的清理处理器被调用，负责解锁互斥锁并递减引用计数，随后连接点 join 才返回。关键不变量是：任何跨越取消点仍被持有的资源，都必须由清理处理器释放，否则锁会永久遗留。</desc>
+<rect x="0" y="0" width="960" height="300" fill="#fbfaf7"/>
+<g font-family="system-ui,sans-serif">
+<text x="24" y="30" font-size="16" font-weight="700" fill="#24433f">取消何时生效，决定了你必须在哪里归还资源</text>
+
+<rect x="24" y="48" width="446" height="84" rx="10" fill="#e8f3f0" stroke="#97c6bf"/>
+<text x="40" y="74" font-size="14.5" font-weight="700" fill="#1d5b5e">延迟取消（默认）</text>
+<text x="40" y="98" font-size="12.5" fill="#203b41">仅在取消点被检测：cond_wait、read、join…</text>
+<text x="40" y="118" font-size="12.5" fill="#53676d">可在明确位置用 pthread_testcancel 主动设置取消点</text>
+
+<rect x="490" y="48" width="446" height="84" rx="10" fill="#fdeeee" stroke="#d9a8a8"/>
+<text x="506" y="74" font-size="14.5" font-weight="700" fill="#8a2b2b">异步取消</text>
+<text x="506" y="98" font-size="12.5" fill="#4a2020">可在任意指令处中止线程</text>
+<text x="506" y="118" font-size="12.5" fill="#6a3b3b">难以保证不变量，仅限极少数场景</text>
+
+<rect x="24" y="146" width="912" height="112" rx="10" fill="#f3f6fb" stroke="#4a6fa5"/>
+<text x="40" y="172" font-size="14.5" font-weight="700" fill="#27395a">一次被取消的工作线程</text>
+<text x="300" y="172" font-size="12.5" fill="#3a5074">持锁进入临界区 → 在取消点收到取消请求 → 栈回退</text>
+<text x="40" y="200" font-size="12.5" fill="#203b41">① pthread_cleanup_push 注册的处理器被调用</text>
+<text x="40" y="220" font-size="12.5" fill="#203b41">② 处理器内 pthread_mutex_unlock、递减引用计数、释放缓冲</text>
+<text x="40" y="242" font-size="12.5" fill="#203b41">③ 线程终止，pthread_join 返回 PTHREAD_CANCELED</text>
+</g>
+<text x="24" y="282" font-size="12.5" fill="#53676d">教学示意：跨取消点仍被持有的资源必须由清理处理器释放，否则锁会永久遗留。</text>
+</svg>

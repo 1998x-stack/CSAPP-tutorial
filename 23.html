@@ -58,7 +58,7 @@
 <p class="lede">在真正的服务里，瓶颈往往不是“线程数量不足”，而是队列无边界、锁覆盖了耗时任务，或者每次请求都新建线程。<strong>并发架构的关键，是把共享规则和任务生命周期设计清楚。</strong></p>
 <p class="chapter-scope">使用 POSIX 读写锁和条件变量说明机制；性能依赖负载与实现，不引用未经测量的纳秒数或固定加速比。以下线程池为教学模型，不是完整生产级库。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c23-rw">01 读写锁</a><a href="#c23-pool">02 任务队列</a><a href="#c23-shutdown">03 关闭协议</a><a href="#c23-deadlock">04 死锁</a><a href="#c23-debug">05 诊断工具</a><a href="#c23-practice">06 实验</a><a href="#deep-23">深入推导</a></nav>
+<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c23-rw">01 读写锁</a><a href="#c23-pool">02 任务队列</a><a href="#c23-shutdown">03 关闭协议</a><a href="#c23-deadlock">04 死锁</a><a href="#c23-debug">05 诊断工具</a><a href="#c23-practice">06 实验</a><a href="#deep-23">深入推导</a><a href="#deep-23b">取消语义</a></nav>
 
 <section id="c23-rw">
 <h2>23.1 读者共享，写者独占：读写锁解决的是访问规则</h2>
@@ -173,6 +173,14 @@ run(task);                                 /* 一定在锁外 */</code></pre>
 python3 examples/deep-ch19-23-models.py 23</code></pre>
 <p>实际 C 程序用一个生产者、一个消费者、两个队列槽、六个确定性任务值，检查累积结果与已处理数；线程的运行次序不固定，<strong>断言检查最终状态而不是日志顺序</strong>。依据 <a href="https://man7.org/linux/man-pages/man3/pthread_cond_wait.3p.html">pthread_cond_wait(3p)</a>、<a href="https://man7.org/linux/man-pages/man3/pthread_cond_broadcast.3p.html">pthread_cond_broadcast(3p)</a>。</p></section>
 
+
+<section class="deep-study" id="deep-23b" aria-labelledby="deep-23b-title"><p class="deep-kicker">逐步核验 · 23b / CANCELLATION</p><h2 id="deep-23b-title">要“取消”一个阻塞在工作线程上的任务，资源应该在哪里归还？</h2><figure class="deep-figure" tabindex="0" role="group" aria-label="可横向滚动的独立图解"><img src="chapter-assets/23-deep2.svg" width="960" height="300" loading="lazy" alt="上半部分对比默认的延迟取消（仅在 cond_wait、read、join 等取消点生效）与异步取消（可在任意指令处中止）；下半部分是一条时间线：工作线程持锁进入临界区，在取消点收到取消请求后开始栈回退，已注册的清理处理器被调用，负责解锁并递减引用计数，然后 join 返回 PTHREAD_CANCELED。"><figcaption>关闭队列时除了广播唤醒，还要回答“<strong>已被接受的任务怎么取消</strong>”：默认延迟取消只在取消点生效，资源要靠清理处理器归还。</figcaption></figure>
+<p>上一节用 <code>closed</code> 与广播优雅关闭队列。但如果某个工作线程正<strong>阻塞</strong>在耗时任务里，主线程要主动取消它，就必须区分“请求取消”和“取消生效”：<code>pthread_cancel</code> 只是发出请求，默认的<strong>延迟取消</strong>要等线程到达下一个<strong>取消点</strong>（如 <code>pthread_cond_wait</code>、<code>read</code>、<code>pthread_join</code>）才真正中止。</p>
+<table class="deep-table"><thead><tr><th>取消类型</th><th>何时生效</th><th>可用性</th></tr></thead><tbody><tr><td><code>PTHREAD_CANCEL_DEFERRED</code>（默认）</td><td>线程到达取消点</td><td>可在明确位置用 <code>pthread_testcancel</code> 主动设点</td></tr><tr><td><code>PTHREAD_CANCEL_ASYNCHRONOUS</code></td><td>任意指令处</td><td>极难维持不变量，仅限极少数场景</td></tr></tbody></table>
+<p>关键不变量是：<strong>任何跨越取消点仍被持有的资源，都必须由 <code>pthread_cleanup_push</code> 注册的清理处理器释放。</strong>工作线程若在持锁的临界区内被取消，而没有清理处理器，互斥锁就永远处于锁定状态，后续线程会死锁；同样地，已分配的缓冲和引用计数也必须在此归还。清理处理器在栈回退时逆序执行，<code>pthread_join</code> 只有在它跑完、线程真正终止后才返回。</p>
+<div class="deep-math"><strong>取消点必然经过：持锁 → 回退 → 清理处理器解锁 → join 返回 PTHREAD_CANCELED</strong><span>忘记 push/pop 配对或把资源放在清理处理器之外，等于把锁永久留给下一个线程。</span></div>
+<pre><code>python3 examples/deep-ch22-28-b.py 23b</code></pre>
+<p>模型用一个脚本化的状态机对比“有清理处理器”与“无清理处理器”两种回退路径，断言只有前者能让锁在 <code>join</code> 之后回到可获取状态，且被取消的任务不会被重复执行，也不会被漏掉回收。它不实现真实的线程栈回退；语义以 <a href="https://man7.org/linux/man-pages/man3/pthread_cancel.3.html">pthread_cancel(3)</a>、<a href="https://man7.org/linux/man-pages/man3/pthread_cleanup_push.3.html">pthread_cleanup_push(3)</a> 为准。</p></section>
 
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 23</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="22.html"><small>延伸到第 22 章</small><span>共享状态里的竞争条件怎么证明？</span><b aria-hidden="true">↗</b></a><a href="28.html"><small>延伸到第 28 章</small><span>线程池与 Reactor 的职责怎么划分？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article>

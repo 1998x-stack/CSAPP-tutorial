@@ -32,7 +32,35 @@ def ch22b():
     assert publish("release-acquire", False) == ("none", "old")
 
 
-cases = {"22b": ch22b}
+def ch23b():
+    """POSIX deferred cancellation must release resources in a cleanup handler.
+
+    pthread_cancel only *requests* cancellation. Under the default deferred
+    type the thread stops at its next cancellation point; before that, every
+    cleanup handler registered with pthread_cleanup_push runs during stack
+    unwinding and must release resources held across the point. A worker that
+    holds a mutex inside the critical section without a handler leaves the
+    mutex locked forever once join returns, and the cancelled task is neither
+    completed nor reclaimed.
+    """
+    def run(pushed):
+        state = {"locked": True, "reclaimed": 0}
+
+        def cleanup():
+            state["locked"] = False
+            state["reclaimed"] = 1        # cancelled task reclaimed exactly once
+
+        if pushed:
+            cleanup()                     # stack unwinding runs pushed handlers
+        return state
+
+    leaked = run(pushed=False)
+    assert leaked["locked"] is True and leaked["reclaimed"] == 0
+    cleaned = run(pushed=True)
+    assert cleaned["locked"] is False and cleaned["reclaimed"] == 1
+
+
+cases = {"22b": ch22b, "23b": ch23b}
 if __name__ == "__main__":
     selected = list(cases) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
     for chapter in selected:
