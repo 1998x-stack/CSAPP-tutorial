@@ -173,7 +173,43 @@ def ch27b():
     assert passes([0, 1, 2]) == 3         # three-way switch: three passes
 
 
-cases = {"22b": ch22b, "23b": ch23b, "24b": ch24b, "25b": ch25b, "26b": ch26b, "27b": ch27b}
+def ch28b():
+    """Half-close and EPIPE: writing to a peer that stopped reading.
+
+    A TCP connection has two independent directions. shutdown(SHUT_WR) sends a
+    FIN and closes only the write direction, so the local side can still read a
+    reply. When the peer has stopped reading, the first write is often accepted
+    into the local send buffer and returns success; only after the reset arrives
+    does a later write raise SIGPIPE and return -1 with errno EPIPE. A server
+    ignores SIGPIPE and treats EPIPE as "stop writing, tear down". The number of
+    writes that succeed before EPIPE is implementation dependent.
+    """
+    def connect(peer_read_open=True):
+        return {"write_open": True, "read_open": True,
+                "peer_read_open": peer_read_open, "buffered": 0}
+
+    def shutdown_write(c):
+        c["write_open"] = False          # FIN sent; read direction still usable
+
+    def write(c):
+        if not c["write_open"]:
+            return "EPIPE"               # the local write side is already closed
+        if not c["peer_read_open"]:
+            c["buffered"] += 1
+            if c["buffered"] >= 2:       # reset observed: teaching threshold
+                return "EPIPE"
+        return "OK"
+
+    c = connect(peer_read_open=True)
+    shutdown_write(c)
+    assert c["read_open"] is True and write(c) == "EPIPE"    # read still usable
+
+    c = connect(peer_read_open=False)
+    assert write(c) == "OK"                                  # first write buffered
+    assert write(c) == "EPIPE"                               # reset -> EPIPE
+
+
+cases = {"22b": ch22b, "23b": ch23b, "24b": ch24b, "25b": ch25b, "26b": ch26b, "27b": ch27b, "28b": ch28b}
 if __name__ == "__main__":
     selected = list(cases) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
     for chapter in selected:

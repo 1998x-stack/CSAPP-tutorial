@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" role="img" aria-labelledby="d28b-t d28b-d">
+<title id="d28b-t">半关闭与 EPIPE：向已停止读取的对端写入会发生什么</title>
+<desc id="d28b-d">左半部分展示 shutdown(SHUT_WR)：本端发送 FIN，只关闭写方向，读方向仍可用，因此对端仍能回送响应，本端仍可读到 EOF 之前的数据。右半部分展示对端关闭其读方向后本端继续写：第一次写可能被内核缓冲而返回成功，随后到达的复位使下一次写触发 SIGPIPE 并返回 EPIPE。正确做法是忽略 SIGPIPE，并把 EPIPE 当作停止写、拆除连接的信号，而不是崩溃。</desc>
+<rect x="0" y="0" width="960" height="300" fill="#fbfaf7"/>
+<g font-family="system-ui,sans-serif">
+<text x="24" y="30" font-size="16" font-weight="700" fill="#24433f">半关闭只关一个方向；对端不再读时写入会先成功后失败</text>
+
+<rect x="24" y="48" width="446" height="150" rx="10" fill="#e8f3f0" stroke="#97c6bf"/>
+<text x="40" y="74" font-size="14.5" font-weight="700" fill="#1d5b5e">shutdown(SHUT_WR)</text>
+<text x="40" y="100" font-size="12.5" fill="#203b41">方向：write_open = false，read_open 不变</text>
+<text x="40" y="124" font-size="12.5" fill="#203b41">行为：发出 FIN，但仍可读对端回送的字节</text>
+<text x="40" y="148" font-size="12.5" fill="#203b41">适用：请求已发完、还要收响应的场景</text>
+<text x="40" y="176" font-size="12" fill="#53676d">与 close 不同：close 还会释放描述符</text>
+
+<rect x="490" y="48" width="446" height="150" rx="10" fill="#fdeeee" stroke="#d9a8a8"/>
+<text x="506" y="74" font-size="14.5" font-weight="700" fill="#8a2b2b">对端关闭读方向后继续写</text>
+<text x="506" y="100" font-size="12.5" fill="#4a2020">第 1 次 write：可能被内核缓冲，返回成功</text>
+<text x="506" y="124" font-size="12.5" fill="#4a2020">随后到达 RST：下一次 write 触发 SIGPIPE</text>
+<text x="506" y="148" font-size="12.5" fill="#4a2020">该 write 返回 −1 且 errno = EPIPE</text>
+<text x="506" y="176" font-size="12" fill="#6a3b3b">成功写的次数取决于实现/内核，此处为教学取值</text>
+
+<rect x="24" y="212" width="912" height="52" rx="10" fill="#f3f6fb" stroke="#4a6fa5"/>
+<text x="40" y="238" font-size="13" fill="#27395a">正确做法：进程级忽略 SIGPIPE（signal(SIGPIPE, SIG_IGN)），并把 EPIPE 当作“停止写、拆除连接”</text>
+<text x="40" y="256" font-size="12" fill="#53676d">EPIPE 是正常的结果，不是异常崩溃；写循环应在此时退出并把连接置为关闭状态</text>
+</g>
+<text x="24" y="288" font-size="12.5" fill="#53676d">教学示意：POSIX 契约模型，非真实 TCP 抓包；具体发送/复位时机由内核与网络决定。</text>
+</svg>

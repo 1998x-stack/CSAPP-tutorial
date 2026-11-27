@@ -58,7 +58,7 @@
 <p class="lede">服务器要管理的是<strong>许多大部分时间都在等待的连接</strong>。如果每个连接占据一个阻塞线程，资源很快耗尽；如果把连接的读写状态交给非阻塞事件循环，则少量执行线程可以复用在众多连接之间。真正难的不是调用一次 <code>epoll_wait</code>，而是让每一次状态转换都正确。</p>
 <p class="chapter-scope">本章是一份 Linux HTTP/1.1 教学服务器的设计与验收指南，不是已交付的生产服务器；“十万连接”和特定 RPS 都只能在指定环境中被测量，不能由架构名称推导。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c28-arch">01 架构边界</a><a href="#c28-state">02 连接状态机</a><a href="#c28-worker">03 线程与背压</a><a href="#c28-http">04 HTTP 语义</a><a href="#c28-bench">05 验收路线</a><a href="#deep-28">深入推导</a></nav>
+<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c28-arch">01 架构边界</a><a href="#c28-state">02 连接状态机</a><a href="#c28-worker">03 线程与背压</a><a href="#c28-http">04 HTTP 语义</a><a href="#c28-bench">05 验收路线</a><a href="#deep-28">深入推导</a><a href="#deep-28b">半关闭与 EPIPE</a></nav>
 <section id="c28-arch">
 <h2>28.1 先分清“就绪通知”与“工作已经完成”</h2>
 <p><code>epoll</code> 告诉程序哪些描述符可能可以不阻塞地读写，<strong>不会替你读完报文、解析 HTTP 或发送所有响应</strong>。一个连接可在“读到半个请求头”“等待业务结果”“写缓冲尚未排空”之间移动。现代 Linux 上 <code>epoll</code> 避免了 <code>select</code> 的位图上限，但“复杂度只等于就绪 fd 数”不是所有工作负载下的完整性能公式。</p>
@@ -162,6 +162,14 @@ wrk -t2 -c100 -d30s --latency http://127.0.0.1:8080/health
 <pre><code>python3 examples/deep-ch24-28-models.py 28</code></pre>
 <p>模型只使用标准库：把一条请求按 1/12/40 字节重组并断言只有以空行结尾时才视为完整；又用 <code>1536, 0, 2560</code> 模拟一次短写加一次 <code>EAGAIN</code> 再加一次写，断言总共发送 4096 字节且没有重发；最后用一个代际号演示旧事件在 fd 被复用后必须被丢弃。依据 <a href="https://man7.org/linux/man-pages/man7/epoll.7.html">epoll(7)</a> 与 RFC 9112 的报文定界规则。这是一个验证不变量的小模型，不提供任何 RPS 或连接数承诺。</p>
 </section>
+
+<section class="deep-study" id="deep-28b" aria-labelledby="deep-28b-title"><p class="deep-kicker">逐步核验 · 28b / HALF-CLOSE</p><h2 id="deep-28b-title">对端已经不再读了，为什么第一次 <code>write</code> 还会成功？</h2><figure class="deep-figure" tabindex="0" role="group" aria-label="可横向滚动的独立图解"><img src="chapter-assets/28-deep2.svg" width="960" height="300" loading="lazy" alt="左半部分：shutdown(SHUT_WR) 只关闭写方向并发出 FIN，读方向仍可用，因此对端仍能回送响应、本端仍可读。右半部分：对端关闭读方向后本端继续写，第一次写可能被内核缓冲而返回成功，随后到达的复位使下一次写触发 SIGPIPE 并返回 EPIPE。底部建议忽略 SIGPIPE 并把 EPIPE 当作停止写、拆除连接的信号。"><figcaption>关闭一个 TCP 连接的两个方向是<strong>分开</strong>的：<code>shutdown(SHUT_WR)</code> 只发 FIN；对端停止读之后，写入会先成功后失败，最后以 <code>EPIPE</code> 告知本端。</figcaption></figure>
+<p>上一节用两个游标描述一条连接。但连接有<strong>两个方向</strong>：关闭写方向不等于关闭连接。<code>shutdown(fd, SHUT_WR)</code> 只发送一个 FIN，本端<strong>仍可读</strong>——这正是“请求已发完、还要收响应”的常用姿势。真正释放描述符的是 <code>close</code>。</p>
+<table class="deep-table"><thead><tr><th>动作</th><th>写方向</th><th>读方向</th><th>结果</th></tr></thead><tbody><tr><td><code>shutdown(SHUT_WR)</code></td><td>关闭（发 FIN）</td><td>保持</td><td>仍可读到对端响应</td></tr><tr><td>对端关闭读方向后本端 <code>write</code></td><td>本端未关</td><td>—</td><td>首写可能被缓冲，随后返回 <code>EPIPE</code></td></tr></tbody></table>
+<p>向一个<strong>已停止读取</strong>的对端写入，并不会在第一次调用就失败：内核先把数据放进发送缓冲，第一次 <code>write</code> 往往返回成功；当复位到达后，下一次 <code>write</code> 才会<strong>触发 <code>SIGPIPE</code></strong>，并在信号被忽略时以 <code>errno = EPIPE</code> 返回 −1。成功写入的次数取决于内核与实现，不能当成固定常量。</p>
+<div class="deep-math"><strong>忽略 <code>SIGPIPE</code>，把 <code>EPIPE</code> 当作正常终止信号：停止写 → 置连接关闭 → 回收资源</strong><span>让 <code>SIGPIPE</code> 沿用默认动作会直接杀死进程；把它当成可预期的返回值才不会因对端消失而崩溃。</span></div>
+<pre><code>python3 examples/deep-ch22-28-b.py 28b</code></pre>
+<p>模型用一个脚本化的连接状态对比“半关闭后仍可读”与“对端停读后写入最终返回 EPIPE”两条路径，断言首写成功、后续写返回 <code>EPIPE</code>，且 <code>shutdown(SHUT_WR)</code> 只关闭写方向。它是 POSIX 契约的确定性模型，<strong>不是</strong>真实 TCP 抓包；复位到达时机、缓冲阈值以 <a href="https://man7.org/linux/man-pages/man2/shutdown.2.html">shutdown(2)</a>、<a href="https://man7.org/linux/man-pages/man7/socket.7.html">socket(7)</a> 与 <a href="https://man7.org/linux/man-pages/man7/signal.7.html">signal(7)</a> 为准。</p></section>
 
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 28</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="19.html"><small>延伸到第 19 章</small><span>短读短写的状态怎样跨事件保留？</span><b aria-hidden="true">↗</b></a><a href="23.html"><small>延伸到第 23 章</small><span>队列背压与线程池边界如何落实？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article>
