@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="d13b-t d13b-d" viewBox="0 0 960 264">
+<title id="d13b-t">同一 call 调用点在四种设置下的重定位类型</title>
+<desc id="d13b-d">四列的调用点都用 E8 rel32 五字节编码：同翻译单元静态函数解析为 R_X86_64_PC32 指向符号自身；默认可抢占外部函数解析为 R_X86_64_PLT32 指向 PLT 入口 L；-fno-plt 用 R_X86_64_GOTPCRELX 经 GOT 间接调用；取函数地址用 R_X86_64_64。前三者写入位移字段的值都按 L+A-P 计算，目标不同。</desc>
+<rect x="0" y="0" width="960" height="264" fill="#fbfaf7"/>
+<text x="20" y="30" font-size="17" font-weight="700" fill="#203b41">同一个 E8 dd dd dd dd 调用点，四种设置</text>
+<g font-size="13">
+<rect x="18" y="48" width="222" height="168" rx="12" fill="#e8f3f0" stroke="#97c6bf"/>
+<text x="34" y="74" font-size="15" font-weight="700" fill="#1d5b5e">static / 不可抢占</text>
+<text x="34" y="104" fill="#203b41">R_X86_64_PC32</text>
+<text x="34" y="130" fill="#53676d">R = S + A − P</text>
+<text x="34" y="156" fill="#53676d">目标 = 符号自身 S</text>
+<text x="34" y="188" fill="#147f80">L 退化为 S，位移同值</text>
+
+<rect x="254" y="48" width="222" height="168" rx="12" fill="#fff2e9" stroke="#dcb8a6"/>
+<text x="270" y="74" font-size="15" font-weight="700" fill="#955335">可抢占外部函数</text>
+<text x="270" y="104" fill="#203b41">R_X86_64_PLT32</text>
+<text x="270" y="130" fill="#53676d">R = L + A − P</text>
+<text x="270" y="156" fill="#53676d">目标 = PLT 入口 L</text>
+<text x="270" y="188" fill="#d06d4d">L≠S 时位移不同</text>
+
+<rect x="490" y="48" width="222" height="168" rx="12" fill="#f0edfa" stroke="#b9aedf"/>
+<text x="506" y="74" font-size="15" font-weight="700" fill="#5b4d94">-fno-plt</text>
+<text x="506" y="104" fill="#203b41">R_X86_64_GOTPCRELX</text>
+<text x="506" y="130" fill="#53676d">R = G + A − P</text>
+<text x="506" y="156" fill="#53676d">目标 = GOT 槽 G</text>
+<text x="506" y="188" fill="#7461ba">经 GOT 间接 call *</text>
+
+<rect x="726" y="48" width="216" height="168" rx="12" fill="#eef1f3" stroke="#c3ccd1"/>
+<text x="742" y="74" font-size="15" font-weight="700" fill="#3c4a50">取函数地址</text>
+<text x="742" y="104" fill="#203b41">R_X86_64_64</text>
+<text x="742" y="130" fill="#53676d">R = S + A</text>
+<text x="742" y="156" fill="#53676d">绝对地址，非 PC 相对</text>
+<text x="742" y="188" fill="#5a666c">不能套用 −P</text>
+</g>
+<text x="20" y="246" font-size="12.5" fill="#53676d">教学示意：类型与目标随架构、符号可见性和链接选项变化；权威定义以 System V AMD64 psABI 为准。</text>
+</svg>

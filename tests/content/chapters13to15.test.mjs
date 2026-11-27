@@ -5,12 +5,12 @@ import { runInNewContext } from "node:vm";
 
 const read = path => readFileSync(new URL(path, import.meta.url), "utf8");
 const chapters = [
-  ["13", "13-linking.svg", 6],
-  ["14", "14-dynamic-linking.svg", 5],
-  ["15", "15-process-lifecycle.svg", 5],
+  ["13", "13-linking.svg", 7, 3],
+  ["14", "14-dynamic-linking.svg", 5, 2],
+  ["15", "15-process-lifecycle.svg", 5, 2],
 ];
 
-for (const [number, svgName, expectedHeads] of chapters) {
+for (const [number, svgName, expectedHeads, expectedCaptions] of chapters) {
   test("chapter " + number + " keeps semantic narrative, standalone diagram and evidence", () => {
     const html = read("../../" + number + ".html");
     const asset = read("../../docs/chapters/assets/" + svgName);
@@ -25,7 +25,7 @@ for (const [number, svgName, expectedHeads] of chapters) {
     assert.match(html, /class="chapter-map"/);
     assert.match(html, /href="index\.html"/);
     assert.equal((html.match(/<svg\b/g) || []).length, 1);
-    assert.equal((html.match(/<figcaption\b/g) || []).length, 2);
+    assert.equal((html.match(/<figcaption\b/g) || []).length, expectedCaptions);
     const inlineSvg = html.match(/<svg\b[\s\S]*?<\/svg>/);
     assert.ok(inlineSvg);
     assert.equal(asset.replace(/^<\?xml[^>]*\?>\s*/, "").trim(), inlineSvg[0]);

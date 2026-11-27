@@ -53,7 +53,7 @@
 <p>两个源文件分别定义 <code>main()</code> 和 <code>sum()</code>。编译成 <code>.o</code> 后，调用方仍不知道 <code>sum</code> 最终位于哪个地址；因此目标文件留下符号引用和重定位项。链接器必须找到定义、决定布局，再修正相关引用，才能生成可执行文件。</p><p>这不是简单拼接字节：ELF 的节、符号表、静态库提取规则和重定位类型共同约束链接结果。下面从可观察的工具输出出发，解释为什么有时会看到 <code>undefined reference</code>，为什么链接顺序会改变静态库解析结果，以及怎样自行验证。</p>
 <p class="chapter-eyebrow">ELF · 符号解析 · 重定位</p>
 <p class="dek">链接器不是把二进制简单拼起来：它要证明每个引用找得到定义，并把「不知道地址」变成「可执行的地址」。</p>
-<nav class="chapter-map" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c13-elf">目标文件</a><a href="#c13-symbols">符号</a><a href="#c13-archive">静态库</a><a href="#c13-weak">强弱符号</a><a href="#c13-reloc">重定位</a><a href="#c13-practice">动手验证</a><a href="#deep-13">逐步推导</a></nav>
+<nav class="chapter-map" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c13-elf">目标文件</a><a href="#c13-symbols">符号</a><a href="#c13-archive">静态库</a><a href="#c13-weak">强弱符号</a><a href="#c13-reloc">重定位</a><a href="#c13-practice">动手验证</a><a href="#deep-13">逐步推导</a><a href="#deep-13b">重定位矩阵</a></nav>
 <div class="concept-steps" id="ch13-state" data-stage="a">
 <figure><div class="diagram-scroll" tabindex="0" aria-label="可水平滚动查看静态链接过程"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c13-fig-title c13-fig-desc" viewBox="0 0 760 248">
 <title id="c13-fig-title">从源文件到可执行文件：解析符号与重定位</title>
@@ -291,6 +291,20 @@ objdump -dr /tmp/deep-reloc.o
 python3 examples/deep-ch13-18-models.py 13</code></pre>
 <p>本图中的地址是<strong>固定输入的算例</strong>，并非声称某个实际链接程序恰好加载在这些地址。公式依据 <a href="https://gitlab.com/x86-psABIs/x86-64-ABI/">System V AMD64 psABI · Relocation Types</a>；工具行为依据 <a href="https://sourceware.org/binutils/docs/binutils/readelf.html">GNU readelf</a>。</p></section>
 
+
+<section class="deep-study" id="deep-13b" aria-labelledby="deep-13b-title"><p class="deep-kicker">推导校验 · 13b / TOOLCHAIN MATRIX</p><h2 id="deep-13b-title">同一条 call，为什么有时显示 PC32、有时显示 PLT32？</h2>
+<figure class="deep-figure" tabindex="0" role="group" aria-label="独立可横向查看的图解"><img src="chapter-assets/13-deep2.svg" width="960" height="264" loading="lazy" alt="同一调用点在三类情形下的重定位：同翻译单元或不可抢占目标解析为 R_X86_64_PC32 直接位移；默认可抢占外部函数解析为 R_X86_64_PLT32 指向 PLT 入口；-fno-plt 时用 GOTPCRELX 经 GOT 间接调用。"><figcaption>三类情形的位移字段计算都写作 <code>L+S+A−P</code> 的变体；具体类型取决于符号可见性与链接选项，而非指令 opcode。</figcaption></figure>
+<p>上一节的 <code>R = S + A − P</code> 只描述了一种 <strong>PC 相对</strong>重定位。在真实 x86-64 工具链上，一个 <code>call</code> 具体生成 <code>R_X86_64_PC32</code> 还是 <code>R_X86_64_PLT32</code>，取决于<strong>被调符号是否可抢占</strong>（preemptible，即能否被另一共享对象覆盖）以及链接选项，而不是看汇编里有没有 <code>call</code>。</p>
+<div class="deep-math" role="group" aria-label="PLT32 位移公式"><strong>R_X86_64_PLT32：R = L + A − P</strong><span><code>L</code> 为符号对应 <strong>PLT 入口</strong>地址；若链接器判定符号不可抢占，可改用符号自身地址</span></div>
+<p>正因为存在「可退化为符号自身地址」这一条，<code>PLT32</code> 与 <code>PC32</code> 在静态链接或 <code>local</code>/<code>hidden</code> 符号情形下常常写入<strong>相同</strong>的位移字节；反过来，对可抢占的外部函数，<code>PLT32</code> 的 <code>L</code> 指向 PLT 桩，两者结果不同。因此<strong>不能把任一 <code>readelf -r</code> 输出当作「必然等价」或「必然不同」的普遍结论</strong>，只能针对具体编译/链接设置核对。</p>
+<table class="deep-table"><thead><tr><th>情形</th><th>常见重定位</th><th>调用目标</th></tr></thead><tbody><tr><td>同翻译单元 <code>static</code> 函数</td><td><code>R_X86_64_PC32</code></td><td>符号自身</td></tr><tr><td>可抢占外部函数（默认 PIE/共享）</td><td><code>R_X86_64_PLT32</code></td><td>PLT 入口（<code>L</code>）</td></tr><tr><td><code>-fno-plt</code> 的间接调用</td><td><code>R_X86_64_GOTPCRELX</code></td><td>经 GOT 槽取函数地址</td></tr><tr><td>取函数指针初值</td><td><code>R_X86_64_64</code> / <code>GOTPCREL</code></td><td>绝对地址或 GOT</td></tr></tbody></table>
+<p>用仓库示例编译为 <code>.o</code>，逐类型对照 <code>readelf -rW</code> 与 <code>objdump -dr</code>；再分别加 <code>-fno-plt</code> 与 <code>-static</code> 观察差异。工具不会替我们判断语义，只会如实打印该次设置下的记录。</p>
+<pre><code>cc -std=c11 -O0 -fPIC -c examples/deep-ch13-18-reloc.c -o /tmp/reloc-pic.o
+readelf -rW /tmp/reloc-pic.o        # 记录类型与符号名
+cc -std=c11 -O0 -fno-plt -c examples/deep-ch13-18-reloc.c -o /tmp/reloc-noplt.o
+readelf -rW /tmp/reloc-noplt.o      # 间接调用改用 GOT
+python3 examples/deep-ch13-18-b.py 13b</code></pre>
+<p>本节的位移算例与「相同字节」结论只针对<strong>具体输入和链接设置</strong>成立，不代表所有架构或链接器；重定位类型的权威定义见 <a href="https://gitlab.com/x86-psABIs/x86-64-ABI/">System V AMD64 psABI · Relocation Types</a>，工具行为见 <a href="https://sourceware.org/binutils/docs/binutils/readelf.html">GNU readelf 手册</a>。</p></section>
 
 <p>这一章把链接理解为两件事：<strong>符号解析</strong>寻找定义，<strong>重定位</strong>修补引用。我们还用真实的静态归档顺序和 GCC 10 之后的暂定定义行为检查了容易误解的链接规则。下一章，我们将讨论静态链接的"进阶版"——动态链接，看看共享库是如何在运行时被加载和解析的。</p>
 
