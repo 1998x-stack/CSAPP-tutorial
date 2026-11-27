@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" role="img" aria-labelledby="d27b-t d27b-d">
+<title id="d27b-t">SIMT 分支发散：同一 warp 内路径不一致时按路径串行执行</title>
+<desc id="d27b-d">上半部分是一个 32 通道的 warp 遇到 if-else 分支：当所有通道分支结果一致时只需一遍执行。下半部分当通道分配到不同路径时，先以遮罩让走 if 的通道执行、其余通道屏蔽，再让走 else 的通道执行一遍，最后在汇合点重新汇合。因此一次非一致分支的代价等于不同路径的数量，而一致分支只花一遍。该模型描述的是 SIMT 架构的既定行为，不是对某款 GPU 的实测时序。</desc>
+<rect x="0" y="0" width="960" height="300" fill="#fbfaf7"/>
+<g font-family="system-ui,sans-serif">
+<text x="24" y="30" font-size="16" font-weight="700" fill="#24433f">一个 warp 遇到分支：路径一致与否决定执行几遍</text>
+
+<rect x="24" y="50" width="912" height="74" rx="10" fill="#e8f3f0" stroke="#97c6bf"/>
+<text x="40" y="76" font-size="14" font-weight="700" fill="#1d5b5e">一致分支：一遍执行</text>
+<text x="40" y="100" font-size="12.5" fill="#203b41">所有通道同走一条路径，遮罩全开，其余路径跳过</text>
+<text x="40" y="116" font-size="12" fill="#53676d">代价 = 不同路径数量 = 1</text>
+
+<rect x="24" y="138" width="446" height="120" rx="10" fill="#fdeeee" stroke="#d9a8a8"/>
+<text x="40" y="164" font-size="14" font-weight="700" fill="#8a2b2b">第 1 遍：走 if 的通道</text>
+<text x="40" y="188" font-size="12.5" fill="#4a2020">遮罩：走 else 的通道被屏蔽</text>
+<text x="40" y="212" font-size="11.5" font-family="ui-monospace,monospace" fill="#8a2b2b">active = 1100</text>
+<text x="40" y="238" font-size="12" fill="#6a3b3b">其余通道在等，不产生工作</text>
+
+<rect x="490" y="138" width="446" height="120" rx="10" fill="#f7eadf" stroke="#dcb8a6"/>
+<text x="506" y="164" font-size="14" font-weight="700" fill="#955335">第 2 遍：走 else 的通道</text>
+<text x="506" y="188" font-size="12.5" fill="#6a3b3b">遮罩：走 if 的通道被屏蔽</text>
+<text x="506" y="212" font-size="11.5" font-family="ui-monospace,monospace" fill="#955335">active = 0011</text>
+<text x="506" y="238" font-size="12" fill="#6a3b3b">两遍结束后在汇合点重新汇合</text>
+</g>
+<text x="24" y="284" font-size="12.5" fill="#53676d">教学示意：非一致分支的代价 = 不同路径数量；纯属 SIMT 架构行为的确定性模型，非 GPU 实测。</text>
+</svg>

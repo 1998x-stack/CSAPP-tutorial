@@ -155,7 +155,25 @@ def ch26b():
     assert decide(lifetime(None, 900, 300), current_age(0, 0, 0, 901)) == "stale"
 
 
-cases = {"22b": ch22b, "23b": ch23b, "24b": ch24b, "25b": ch25b, "26b": ch26b}
+def ch27b():
+    """SIMT warp divergence: a non-uniform branch serialises into passes.
+
+    In the SIMT execution model a warp runs one instruction for all active
+    lanes. When lanes disagree on a branch, the paths execute one after the
+    other with the other lanes masked off, then reconverge. So the cost of a
+    branch is the number of distinct paths across the warp; a uniform branch
+    costs a single pass. This is a model of documented SIMT behaviour, not a
+    measurement of any GPU's timing.
+    """
+    def passes(outcomes):
+        return len(set(outcomes))
+
+    assert passes([1, 1, 1, 1]) == 1      # uniform: one pass
+    assert passes([1, 0, 1, 0]) == 2      # divergent: two passes
+    assert passes([0, 1, 2]) == 3         # three-way switch: three passes
+
+
+cases = {"22b": ch22b, "23b": ch23b, "24b": ch24b, "25b": ch25b, "26b": ch26b, "27b": ch27b}
 if __name__ == "__main__":
     selected = list(cases) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
     for chapter in selected:

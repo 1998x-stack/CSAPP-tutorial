@@ -58,7 +58,7 @@
 <p class="lede">现代系统的许多变化，都能用一条旧问题串起来：<strong>计算在哪里发生？数据从哪里来？谁保证访问有权限而且结果可见？</strong> RISC-V、GPU、eBPF 和 CXL 并非同一种技术的四个品牌，而是从不同层级回答这三个问题。</p>
 <p class="chapter-scope">本章聚焦机制与适用边界，不把指令集规范当作具体芯片的性能，不把硬件能力等同于所有操作系统都已自动启用。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c27-bridge">01 四种扩展</a><a href="#c27-riscv">02 RISC-V</a><a href="#c27-gpu">03 GPU</a><a href="#c27-bpf">04 eBPF</a><a href="#c27-cxl">05 CXL</a><a href="#deep-27">深入推导</a></nav>
+<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c27-bridge">01 四种扩展</a><a href="#c27-riscv">02 RISC-V</a><a href="#c27-gpu">03 GPU</a><a href="#c27-bpf">04 eBPF</a><a href="#c27-cxl">05 CXL</a><a href="#deep-27">深入推导</a><a href="#deep-27b">SIMT 发散</a></nav>
 <section id="c27-bridge">
 <h2>27.1 先建立一张系统地图</h2>
 <p>先不要急着把这四种技术放在一张“谁更快”表里。它们分别工作在<strong>ISA、计算执行、内核执行环境、内存互联</strong>四个层次，优化目标和可观察指标不同。</p>
@@ -149,6 +149,14 @@ on_sys_enter_read(ctx):
 <pre><code>python3 examples/deep-ch24-28-models.py 27</code></pre>
 <p>该模型只使用整数移位与掩码，把 <code>add x10,x11,x12</code> 编码为 <code>0x00C58533</code> 并断言解码回相同的六字段；又把 <code>ld x5,8(x6)</code> 编码为 <code>0x00833283</code> 并断言 <code>imm=8, rs1=6, rd=5, funct3=011, opcode=0000011</code>；最后验证同一个 12 位字段在符号扩展后变成 <code>-4</code>。它检验的是编码约定，不代表任何微架构的指令吞吐或功耗。字段定义依据 <a href="https://docs.riscv.org/reference/isa/unpriv/unpriv-index.html">RISC-V Unprivileged ISA</a>。</p>
 </section>
+
+<section class="deep-study" id="deep-27b" aria-labelledby="deep-27b-title"><p class="deep-kicker">逐步核验 · 27b / SIMT DIVERGENCE</p><h2 id="deep-27b-title">同一条 <code>if</code>，为何通道走不同路径时要执行多遍？</h2><figure class="deep-figure" tabindex="0" role="group" aria-label="可横向滚动的独立图解"><img src="chapter-assets/27-deep2.svg" width="960" height="300" loading="lazy" alt="一个 32 通道的 warp 遇到 if-else 分支。一致分支时所有通道同走一条路径，只需一遍。不一致时先以遮罩让走 if 的通道执行、屏蔽其余；再让走 else 的通道执行一遍并屏蔽前者；两遍结束后在汇合点重新汇合。"><figcaption>GPU 的 SIMT 架构让同一 warp 的通道共享一条指令流。路径一致时一遍走完；路径不一致时只能<strong>按不同路径分遍执行</strong>，其余通道被遮罩屏蔽。</figcaption></figure>
+<p>27.3 说“并行计算常常先被数据移动限制”。另一个同样常见的限制来自<strong>控制流</strong>：在 SIMT（单指令多线程）模型里，一个 <strong>warp</strong> 的通道共享同一条指令流。如果通道对某个分支的判定不一致，硬件不能同时执行两条路径，只能<strong>一遍执行一条路径</strong>，并把它通道用遮罩屏蔽掉，最后在汇合点重新汇合。</p>
+<table class="deep-table"><thead><tr><th>分支情形</th><th>执行遍数</th><th>代价</th></tr></thead><tbody><tr><td>所有通道同一路径（一致）</td><td>1</td><td>无额外开销</td></tr><tr><td>两路各占一部分（发散）</td><td>2</td><td>两遍串行，吞吐下降</td></tr><tr><td>多路 switch，分散到 k 条路径</td><td>k</td><td>遍数随不同路径数增长</td></tr></tbody></table>
+<div class="deep-math"><strong>一次非一致分支的执行遍数 = warp 内不同路径的数量</strong><span>把数据相关的分支改成可预测、可向量化的形式，往往比增加通道数更有效。</span></div>
+<p>这也是为什么在热点循环里，应尽量让“是否进入某条路径”的判定在<strong>整个 warp 内一致</strong>：把分支改写为无分支的算术选择，或按数据布局让相邻通道走向相同路径，都能减少被串行化的遍数。</p>
+<pre><code>python3 examples/deep-ch22-28-b.py 27b</code></pre>
+<p>模型把通道的分支结果当作输入，断言一致分支为 1 遍、两种结果混合为 2 遍、<code>k</code> 路 switch 为 <code>k</code> 遍。它描述的是 SIMT 架构的<strong>既定行为模型</strong>，<strong>不是</strong>对某款 GPU 的实测时序；具体调度、占用率与收敛规则由厂商实现决定，以 <a href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#simt-architecture">CUDA C++ Programming Guide · SIMT Architecture</a> 为准。</p></section>
 
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 27</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="08.html"><small>延伸到第 08 章</small><span>ISA 与微架构如何分层？</span><b aria-hidden="true">↗</b></a><a href="10.html"><small>延伸到第 10 章</small><span>Roofline 上界如何指导性能分析？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article>
