@@ -20,7 +20,22 @@ def ch13b():
     assert plt_bytes.hex(" ") == "6b ff ff ff"
     assert int.from_bytes(plt_bytes, "little", signed=True) == r_plt
 
-CASES = {"13b": ch13b}
+def ch14b():
+    # One shared object, two hypothetical load bases B1/B2, and an addend A.
+    B1, B2, A = 0x70000000, 0x74000000, 0x1230
+    assert B1 + A == 0x70001230
+    assert B2 + A == 0x74001230          # RELATIVE tracks the load base
+    # Imported-symbol slots use the symbol address S, not B + A.
+    S_glob, S_jump = 0x72100000, 0x72100200
+    assert S_jump != S_glob
+    assert S_glob != B1 + A and S_glob != B2 + A
+    # A blanket "every GOT slot = B + A" would predict a wrong value here.
+    assert B1 + S_glob == 0xE2100000 != S_glob
+    # IFUNC (IRELATIVE) adds a resolver call before the value is final.
+    assert B1 + A + 0x400 == 0x70001630
+    assert B1 + A + 0x400 != B1 + A
+
+CASES = {"13b": ch13b, "14b": ch14b}
 
 if __name__ == "__main__":
     selected = list(CASES) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]

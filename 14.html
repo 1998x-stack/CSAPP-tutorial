@@ -53,7 +53,7 @@
 <p>假设一个程序引用共享库里的 <code>puts</code>，系统启动程序时未必知道库最终映射到哪个虚拟地址。位置无关代码、动态重定位与 GOT/PLT 机制使链接时的引用能够在装载或调用阶段得到解析。</p><p>需要区分三件事：<strong>目标文件里的未解析引用</strong>、<strong>运行时加载器的重定位</strong>，以及某些符号绑定策略下的<strong>延迟绑定</strong>。不同架构、链接器选项与安全配置可能改变实际流程；以下以 Linux x86-64 ELF 为主要模型。</p>
 <p class="chapter-eyebrow">共享库 · GOT/PLT · 位置无关代码</p>
 <p class="dek">同一个 <code>puts</code>，编译时不知道它会被映射到哪里，调用却能成功。这背后是「独立确定代码位置」与「晚一点解析符号」的分工。</p>
-<nav class="chapter-map" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c14-motive">为什么共享</a><a href="#c14-plt">GOT / PLT</a><a href="#c14-pic">PIC</a><a href="#c14-preload">插桩</a><a href="#c14-practice">动手验证</a><a href="#deep-14">逐步推导</a></nav>
+<nav class="chapter-map" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c14-motive">为什么共享</a><a href="#c14-plt">GOT / PLT</a><a href="#c14-pic">PIC</a><a href="#c14-preload">插桩</a><a href="#c14-practice">动手验证</a><a href="#deep-14">逐步推导</a><a href="#deep-14b">GOT 槽分类</a></nav>
 <div class="concept-steps" id="ch14-state" data-stage="a">
 <figure><div class="diagram-scroll" tabindex="0" aria-label="可水平滚动查看动态链接路径"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c14-title c14-desc" viewBox="0 0 760 250">
 <title id="c14-title">调用共享库函数：PLT、GOT 与动态链接器</title>
@@ -221,6 +221,20 @@ readelf -dW /tmp/deep-shared.so
 python3 examples/deep-ch13-18-models.py 14</code></pre>
 <p>在 <code>readelf</code> 中按实际输出辨认类型，不把此固定算例冒充进程实测映射。参考 <a href="https://www.sourceware.org/glibc/manual/latest/html_node/Dynamic-Linker-Hardening.html">glibc 动态链接器安全建议</a>及 <a href="https://man7.org/linux/man-pages/man8/ld.so.8.html">ld.so(8)</a>。</p></section>
 
+
+<section class="deep-study" id="deep-14b" aria-labelledby="deep-14b-title"><p class="deep-kicker">推导校验 · 14b / GOT SLOT TAXONOMY</p><h2 id="deep-14b-title">每个 GOT 槽都等于 B + A 吗？</h2>
+<figure class="deep-figure" tabindex="0" role="group" aria-label="独立可横向查看的图解"><img src="chapter-assets/14-deep2.svg" width="960" height="264" loading="lazy" alt="一个 GOT 表中四个相邻槽：RELATIVE 槽存入 B+A，指向库内对象；GLOB_DAT 槽存入符号查找得到的 S；JUMP_SLOT 槽存入函数地址 S；IRELATIVE 槽需先调用 resolver 得到实现地址，因此并非同一个 B+A 公式。"><figcaption><code>B + A</code> 只对<code>R_X86_64_RELATIVE</code>这类<strong>对象内固定偏移</strong>成立；导入符号的 GOT 槽要经过符号查找，公式不同。</figcaption></figure>
+<p>上一节强调 <code>R_X86_64_RELATIVE</code> 计算为 <code>B + A</code>。但动态段里同时存在多种重定位，它们写入的 GOT 槽<strong>不是同一个公式</strong>。若把「GOT 槽 = B + A」当作普遍规律，就会对导入符号、函数调用入口和 IFUNC 解析得到错误结果。</p>
+<table class="deep-table"><thead><tr><th>重定位</th><th>写入值</th><th>解析对象</th></tr></thead><tbody><tr><td><code>R_X86_64_RELATIVE</code></td><td><code>B + A</code></td><td>本对象内固定偏移</td></tr><tr><td><code>R_X86_64_GLOB_DAT</code></td><td><code>S</code></td><td>全局数据符号地址（可能来自其他库）</td></tr><tr><td><code>R_X86_64_JUMP_SLOT</code></td><td><code>S</code></td><td>外部函数地址（PLT 对应 GOT 项）</td></tr><tr><td><code>R_X86_64_IRELATIVE</code></td><td><code>resolver(B+A)</code></td><td>IFUNC：先调用解析函数返回实现地址</td></tr></tbody></table>
+<div class="deep-math" role="group" aria-label="四种槽的取值对比"><strong>RELATIVE：B + A</strong><span>GLOB_DAT / JUMP_SLOT：<code>S</code>（名字查找得到，<code>A</code> 通常为 0）</span></div>
+<p>为什么 <code>GLOB_DAT</code> 的槽可能是 <code>0x72100000</code> 而非 <code>0x70001230</code>？因为 <code>S</code> 取决于<strong>符号查找按装载顺序选中的定义</strong>：它可能指向另一个共享对象、也可能是被 <code>LD_PRELOAD</code> 抢插而换掉的定义。这类槽由动态链接器用符号解析结果填写，与 <code>B + A</code> 无关。</p>
+<p><strong>与 RELRO 的关系：</strong> <code>-Wl,-z,relro,-z,now</code>（完整 RELRO）要求在装载阶段完成这些重定位，随后把相应 GOT 区域设为只读；延迟绑定（<code>JUMP_SLOT</code> 在首次调用时填写）与控制这两者配合。重定位<strong>类型</strong>决定「写什么值」，RELRO/NOW 决定「何时写、之后能否再写」，两者不能互相代替。</p>
+<pre><code>cc -std=c11 -fPIC -shared -O0 examples/deep-ch13-18-shared.c -o /tmp/deep-shared.so
+readelf -rW /tmp/deep-shared.so   # 区分 RELATIVE / GLOB_DAT / JUMP_SLOT
+cc -std=c11 -O0 -Wl,-z,relro,-z,now examples/deep-ch13-18-shared.c -shared -fPIC -o /tmp/deep-now.so
+readelf -dW /tmp/deep-now.so     # 查看 BIND_NOW / FLAGS_1 标志
+python3 examples/deep-ch13-18-b.py 14b</code></pre>
+<p>上例的 <code>B</code>、<code>S</code> 是<strong>固定输入</strong>，并非某个进程真实映射；重定位公式依据 <a href="https://gitlab.com/x86-psABIs/x86-64-ABI/">System V AMD64 psABI · Relocation Types</a>，装载时序与 RELRO 依据 <a href="https://man7.org/linux/man-pages/man8/ld.so.8.html">ld.so(8)</a>。</p></section>
 
 <p>这一章把动态链接拆成三个独立问题：共享对象如何映射、调用目标何时解析、PIC 如何避免对共享代码页做绝对地址修补。通过 <code>puts</code> 的小实验，我们还能观察符号插桩如何改变查找结果。从下一章开始，我们将进入一个全新的主题——异常控制流（Exceptional Control Flow, ECF）。你写的每个程序都会涉及系统调用、信号处理、进程控制——这些都属于 ECF 的范畴。理解了 ECF，你就理解了操作系统的"灵魂"。</p>
 
