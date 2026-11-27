@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent.parent
 # Chapters that gained a second-round deep diagram (chapter-assets/NN-deep2.svg).
-SECOND_ROUND_DEEP = {16, 17}
+SECOND_ROUND_DEEP = {16, 17, 18}
 SOURCES = {
     "labs/bit-operations/representation.c": "endianness=",
     "labs/cache/cache_geometry.c": "set=1 offset=12",

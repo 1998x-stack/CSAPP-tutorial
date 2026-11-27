@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 
 const root = resolve(import.meta.dirname, '../..');
 const read = path => readFileSync(join(root, path), 'utf8');
-const chapters = ['13', '14', '15', '16', '17'];
+const chapters = ['13', '14', '15', '16', '17', '18'];
 
 for (const id of chapters) {
   test('chapter ' + id + ' second-round deep dive keeps section, TOC link, SVG and model', () => {

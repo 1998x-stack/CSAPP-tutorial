@@ -54,7 +54,7 @@
 <header class="chapter-hero"><p class="eyebrow">虚拟内存 / 18</p><h1>malloc(100) 真的向内核要了 100 字节吗？</h1>
 <p class="lede">通常不会。<code>malloc</code> 面对的是<strong>进程已有的虚拟地址空间和分配器维护的块</strong>；是否需要请求新的映射、何时获得真实物理页、何时把内存归还给内核，都取决于内存分配器和操作系统。理解这层区别，才能真正解释碎片、驻留集和分配失败。</p>
 <p class="chapter-scope">实例以 Linux/POSIX <code>mmap</code> 与 C11 分配接口为主；分配器组织策略使用教学模型，不把某个 glibc 版本的阈值、时间复杂度或碎片率当成跨平台定律。</p></header>
-<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c18-mmap">01 映射与物理页</a><a href="#c18-heap">02 分配器管理块</a><a href="#c18-frag">03 内外碎片</a><a href="#c18-gc">04 回收与 GC</a><a href="#c18-lab">05 安全代码实验</a><a href="#deep-18">06 深度推演</a></nav>
+<nav class="chapter-toc" aria-label="本章目录"><strong>阅读路线</strong><a href="#c18-mmap">01 映射与物理页</a><a href="#c18-heap">02 分配器管理块</a><a href="#c18-frag">03 内外碎片</a><a href="#c18-gc">04 回收与 GC</a><a href="#c18-lab">05 安全代码实验</a><a href="#deep-18">06 深度推演</a><a href="#deep-18b">07 分配器与内核</a></nav>
 <section id="c18-mmap"><h2>18.1 映射虚拟区域，不等于立即分配全部物理页</h2>
 <p><code>mmap</code> 在进程的虚拟地址空间创建映射，并指定权限、共享方式与后备对象。对于常见的私有匿名映射，读写页可能在首次访问时才逐步关联物理内存；有些读操作能共享只读零页，而写入通常需要可写的实际页面。具体何时兑现内存受内核、预取、页面大小和内存压力影响。</p>
 <figure class="lesson-figure"><img src="chapter-assets/18-mmap.svg" alt="mmap创建虚拟映射，尚未触碰的匿名页可能没有单独的物理页；首次写入引发缺页后分配清零的页框；munmap撤销映射。" width="880" height="300"><figcaption>图 18-1：<strong>地址空间映射 → 按需触页 → 页框关联</strong>是常见路径，不是所有 <code>mmap</code> 参数和系统都必须经历的固定顺序。</figcaption></figure>
@@ -147,6 +147,19 @@ int *allocate_ints(size_t count) {
 /tmp/deep-posix realloc
 python3 examples/deep-ch13-18-models.py 18</code></pre>
 <p>C 程序检查乘法溢出后进行非零长度的 <code>realloc</code>，验证原内容得以保留；模型脚本只验证固定池的可合并关系，不代表 glibc 的实际堆管理算法。参考 <a href="https://man7.org/linux/man-pages/man3/malloc.3.html">malloc(3)</a> 及 <a href="https://www.kernel.org/doc/html/latest/mm/page_tables.html">Linux 页表文档</a>。</p></section>
+
+<section class="deep-study" id="deep-18b" aria-labelledby="deep-18b-title"><p class="deep-kicker">逐步核验 · 18b / ABSTRACTION VS OS</p><h2 id="deep-18b-title">固定池模型之外，真实分配器还向内核要了什么？</h2>
+<figure class="deep-figure" tabindex="0" role="group" aria-label="可横向滚动的独立图解"><img src="chapter-assets/18-deep2.svg" width="960" height="264" loading="lazy" alt="三层：应用调用 malloc/free；分配器内部用 arena、bins 和空闲链表管理块；大请求可能直接走 mmap，小请求从堆顶区 sbrk 扩展。free 归还给分配器不一定会 munmap 或降低 RSS。"><figcaption>固定池只是分配器的<strong>抽象</strong>；它下面还有「向内核要虚拟内存」和「实际驻留物理页」两层。</figcaption></figure>
+<p>上一节的 <code>F64|A32|F64|B32|F32</code> 是一个<strong>教学抽象</strong>：它把分配器当成已拥有的一块连续内存。真实的 C 库分配器要在其之上再做两件事：向内核申请或归还虚拟内存，并把物理页的驻留留给内核按需决定。</p>
+<table class="deep-table"><thead><tr><th>层级</th><th>负责什么</th><th>可观察量</th></tr></thead><tbody><tr><td>应用</td><td>调用 <code>malloc</code>/<code>free</code>/<code>realloc</code></td><td>返回指针、是否 NULL</td></tr><tr><td>分配器</td><td>arena、bin、空闲链表、块头/对齐</td><td>bins 大小、块头开销（实现相关）</td></tr><tr><td>内核映射</td><td>扩展堆顶（<code>brk</code>/<code>sbrk</code>）或大块 <code>mmap</code></td><td>虚拟大小（VSZ）</td></tr><tr><td>物理页</td><td>首次触碰时才分配页框</td><td>常驻集（RSS）</td></tr></tbody></table>
+<p>因此「<code>malloc</code> 成功」只意味着分配器找到了块或扩展了地址空间，<strong>不等于已占用同等物理内存</strong>；「<code>free</code> 返回」也不保证马上 <code>munmap</code> 或降低 RSS。许多分配器对<strong>较大</strong>的请求直接 <code>mmap</code>（阈值是实现定义的，例如 glibc 常见的 <code>mmap_threshold</code> 默认可由 <code>mallopt</code> 调整），对较小请求从堆区取用并保留复用。多线程下还可能有多个 <strong>arena</strong> 以减少锁竞争，因此观察到的映射数量会更多。</p>
+<div class="warning"><p><strong>不要用单次运行“证明”内存行为：</strong>RSS/VSZ 受内核版本、分配器、<code>mallopt</code> 设置和运行时负载影响。如要写实验，先声明<strong>环境、命令、预热与重复次数</strong>，并同时报告原始数值，而不是只给一个结论。同一路径在不同机器上可能不同。</p></div>
+<p>回到可判定的代码契约，仍然只有几条是标准保证的：<code>nmemb × size</code> 可能溢出 <code>size_t</code>（宜用 <code>calloc</code> 或先用 <code>SIZE_MAX / size</code> 预检；分配器自身的元数据开销属于实现细节）；非零长度的 <code>realloc</code> 失败时<strong>旧指针仍然有效</strong>，应先用临时变量接收。</p>
+<pre><code>cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pedantic \
+  examples/deep-ch13-18-posix.c -o /tmp/deep-posix
+/tmp/deep-posix realloc     # 非零 realloc 失败后旧块仍可用
+python3 examples/deep-ch13-18-b.py 18b</code></pre>
+<p>本节不引入任何实测内存数字；分配器行为依据 <a href="https://sourceware.org/glibc/manual/latest/html_node/Memory-Allocation.html">GNU libc：Memory Allocation</a>，接口保证依据 <a href="https://man7.org/linux/man-pages/man3/malloc.3.html">malloc(3)</a>。</p></section>
 
 <section id="c18-close"><h2>归纳：分配地址、分配块和占用物理页是三件事</h2><p>虚拟内存负责映射与权限，分配器负责块组织与复用，实际物理页由内核在适当时机管理。下章讨论系统级 I/O 时，文件映射与内核页缓存的联系会再次出现。</p>
 <h3>延伸阅读</h3><p><a href="https://man7.org/linux/man-pages/man2/mmap.2.html">mmap(2)</a>、<a href="https://man7.org/linux/man-pages/man3/malloc.3.html">malloc(3)</a>、<a href="https://sourceware.org/glibc/manual/latest/html_node/Memory-Allocation.html">GNU libc：Memory Allocation</a>。图中固定池与块尺寸属于教学演示，不代表任何特定生产分配器。</p></section>

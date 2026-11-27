@@ -86,7 +86,28 @@ def ch17b():
     assert va % (1 << 30) == va & ((1 << 30) - 1)   # 1 GiB
     assert 12 < 21 < 30
 
-CASES = {"13b": ch13b, "14b": ch14b, "15b": ch15b, "16b": ch16b, "17b": ch17b}
+def ch18b():
+    SIZE_MAX = (1 << 64) - 1
+    def mul_ok(n, s):
+        return s == 0 or n <= SIZE_MAX // s
+    assert mul_ok(1 << 32, 4)              # element count * size fits
+    assert not mul_ok(1 << 62, 4)          # overflows 64-bit size_t
+    assert (1 << 32) * 4 == 1 << 34
+    # A failed realloc with nonzero size leaves the old block valid.
+    old = {"gen": 1, "data": [1, 2, 3]}
+    def realloc(p, ok):
+        return p if not ok else {"gen": 2, "data": p["data"] + [0, 0]}
+    p = old
+    tmp = realloc(p, ok=False)
+    assert tmp is p and p["data"] == [1, 2, 3]   # never overwrite p before success
+    p = realloc(p, ok=True)
+    assert p["gen"] == 2 and len(p["data"]) == 5
+    # Large requests may take an mmap path; threshold is implementation-defined.
+    threshold = 128 * 1024
+    assert 200 * 1024 >= threshold and 4 * 1024 < threshold
+
+CASES = {"13b": ch13b, "14b": ch14b, "15b": ch15b, "16b": ch16b,
+         "17b": ch17b, "18b": ch18b}
 
 if __name__ == "__main__":
     selected = list(CASES) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]

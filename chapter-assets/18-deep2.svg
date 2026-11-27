@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 264" role="img" aria-labelledby="d18b-t d18b-d">
+<title id="d18b-t">分配器抽象与其下的内核映射、物理页三层</title>
+<desc id="d18b-d">顶层应用调用 malloc、free、realloc。中间分配器用 arena、bins 和空闲链表组织块，并带块头与对齐开销。底层内核：小请求从堆顶经 brk/sbrk 扩展，大请求经 mmap；物理页在首次触碰时才驻留。free 归还给分配器不一定会 munmap 或降低 RSS，所以 malloc 成功不等于占用同等物理内存。</desc>
+<rect x="0" y="0" width="960" height="264" fill="#fbfaf7"/>
+<g font-size="13">
+<rect x="24" y="30" width="912" height="44" rx="10" fill="#e8f3f0" stroke="#97c6bf"/>
+<text x="40" y="58" font-size="15" font-weight="700" fill="#1d5b5e">应用：</text>
+<text x="180" y="58" fill="#203b41">malloc / free / realloc → 返回指针或 NULL</text>
+
+<rect x="24" y="86" width="912" height="52" rx="10" fill="#fff2e9" stroke="#dcb8a6"/>
+<text x="40" y="112" font-size="15" font-weight="700" fill="#955335">分配器：</text>
+<text x="210" y="112" fill="#203b41">arena · bins · 空闲链表 · 块头/对齐（实现细节）</text>
+<text x="210" y="132" font-size="12" fill="#53676d">固定池只是这一层的抽象；开销与策略随实现而变</text>
+
+<rect x="24" y="150" width="446" height="60" rx="10" fill="#f0edfa" stroke="#b9aedf"/>
+<text x="40" y="176" font-size="15" font-weight="700" fill="#5b4d94">小请求：</text>
+<text x="150" y="176" fill="#203b41">从堆顶 brk/sbrk 扩展</text>
+<text x="40" y="198" font-size="12" fill="#53676d">保留复用，不一定马上归还内核</text>
+
+<rect x="490" y="150" width="446" height="60" rx="10" fill="#eef1f3" stroke="#c3ccd1"/>
+<text x="506" y="176" font-size="15" font-weight="700" fill="#3c4a50">大请求：</text>
+<text x="616" y="176" fill="#203b41">mmap（阈值实现定义）</text>
+<text x="506" y="198" font-size="12" fill="#53676d">物理页在首次触碰时才驻留（RSS）</text>
+</g>
+<text x="24" y="238" font-size="12.5" fill="#53676d">教学示意：malloc 成功 ≠ 占用同等物理内存；free 返回 ≠ 立刻降低 RSS。</text>
+<text x="24" y="256" font-size="12.5" fill="#53676d">任何内存实验都应记录环境、命令、预热与重复次数。</text>
+</svg>
