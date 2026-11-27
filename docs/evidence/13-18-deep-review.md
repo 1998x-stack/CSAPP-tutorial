@@ -35,3 +35,18 @@ readelf -rW /tmp/deep-shared.so
 ```
 
 浏览器自动化在 1440/390/360px 宽度检查所有 6 个网页的原交互、新 SVG 加载、焦点与页面宽度；其结果与截图必须根据实际工作流报告记录，不由此文档预断。
+
+## 追加：13–18 章第三轮（`deep-NNb`）重定位/信号/分页/分配的逐条校验
+
+本轮在 13–18 各追加一节 `deep-NNb`、一张外链图 `chapter-assets/NN-deep2.svg` 与确定性模型 `examples/deep-ch13-18-b.py`（新增 16b 的可编译示例 `examples/deep-ch13-18-b-signals.c`）。下表只记录本轮新增的论断与检验方式，不覆盖旧页面的全部历史断言。
+
+| 章 | 核心可证伪论断 | 依据 | 检验与限制 |
+| --- | --- | --- | --- |
+| 13b | PLT32 的通式为 L+A−P；当链接器判定符号不可抢占时可退化为符号自身地址，因此不能把 PLT32 与 PC32 断言为普遍等价或普遍不同 | [System V AMD64 psABI](https://gitlab.com/x86-psABIs/x86-64-ABI/)、[GNU readelf](https://sourceware.org/binutils/docs/binutils/readelf.html) | `python3 examples/deep-ch13-18-b.py 13b`；L=0x401030、S=0x401100、P=0x4010c1、A=-4 时 R_plt=-0x95 与 R_pc=0x3b 相差 L-S |
+| 14b | GOT 槽并非都为 B+A：RELATIVE=B+A，而 GLOB_DAT/JUMP_SLOT 写入符号查找得到的 S，IRELATIVE 还需先调用 resolver | [System V AMD64 psABI](https://gitlab.com/x86-psABIs/x86-64-ABI/)、[ld.so(8)](https://man7.org/linux/man-pages/man8/ld.so.8.html) | `python3 examples/deep-ch13-18-b.py 14b`；B1=0x70000000 时 RELATIVE 随 B 变、S=0x72100000 不随 B 变；数值为固定算例 |
+| 15b | 继承的 fd 指向同一 OFD 故共享偏移；重新 open 建新 OFD 则偏移独立；FD_CLOEXEC 的 fd 在 exec 后关闭 | [open(2)](https://man7.org/linux/man-pages/man2/open.2.html)、[fcntl(2)](https://man7.org/linux/man-pages/man2/fcntl.2.html) | 模型 `15b`；用 pipe/waitpid 同步，不靠打印或延时判断顺序 |
+| 16b | 传统信号多次产生合并为一个 pending，实时信号按信号号 FIFO 排队；队列有 RLIMIT_SIGPENDING 上限 | [signal(7)](https://man7.org/linux/man-pages/man7/signal.7.html)、[sigqueue(2)](https://man7.org/linux/man-pages/man2/sigqueue.2.html)、[pthread_sigmask(3)](https://man7.org/linux/man-pages/man3/pthread_sigmask.3.html) | 模型 `16b` 与 C 示例 `queue` 模式；示例在 macOS 上实时部分输出 rt-skip，不把某实现的队列长度当标准常量 |
+| 17b | 分页级数、VA 宽度、基页大小必须同时声明：四级=4×9+12（48 位），五级加一层 PML5=5×9+12（57 位）；大页在 PD/PDPT 提前停止遍历 | [Linux Page Tables](https://www.kernel.org/doc/html/latest/mm/page_tables.html)、[Intel SDM](https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html) | 模型 `17b` 用已知字段构造并回解 57 位地址；示例中的页框号为教学占位值，非真实物理页 |
+| 18b | malloc 成功不等于占用等量物理内存、free 不保证立即 munmap/降 RSS；分配器用 arena/bins 并对大请求可能走 mmap（阈值实现定义） | [malloc(3)](https://man7.org/linux/man-pages/man3/malloc.3.html)、[GNU libc Memory Allocation](https://sourceware.org/glibc/manual/latest/html_node/Memory-Allocation.html) | 模型 `18b` 只验证乘法溢出预检与失败 realloc 的旧指针有效性；不给出任何实测内存数字 |
+
+本轮验证命令：`python3 examples/deep-ch13-18-b.py all`、`cc -std=c11 -Wall -Wextra -Werror -pedantic examples/deep-ch13-18-b-signals.c && /tmp/x queue`、`npm test`。浏览器部分以本地真实 HTTP 服务 + Chromium 在 1440/390/360px 运行；未执行时记为未验证。

@@ -34,6 +34,12 @@
 
 七节分别处理：转发优先级（选最新在途生产者）、向量宽度下的 CPE 下界、写策略的内存流量、LRU 替换轨迹、非阻塞输出游标、HTTP/1.1 报文定界（RFC 9112 §6）与 LT/ET 就绪语义。来源、断言与不能外推的边界见 [09–12 账本](../evidence/09-12-deep-review.md) 与 [19–21 账本](../evidence/19-21-deep-review.md)。浏览器验收以本地真实 HTTP 服务 + Chromium 在 1440/390/360px 运行；未执行时记为未验证。
 
+## 2026-11-26 · 第 13–18 章第三轮（重定位 / 信号 / 分页 / 分配）
+
+在 13–18 第二轮基础上，为每章追加一节 `deep-NNb`、一张外链图 `chapter-assets/NN-deep2.svg` 与确定性模型 `examples/deep-ch13-18-b.py`（含 16b 可编译示例 `examples/deep-ch13-18-b-signals.c`），并新增回归测试 `tests/content/deep-ch13-18-b.test.mjs`。六节分别处理：PLT32 与 PC32 的差异矩阵、GOT 槽的 RELATIVE/GLOB_DAT/JUMP_SLOT/IRELATIVE 分类、OFD 共享与 FD_CLOEXEC、传统信号合并 vs 实时信号排队、四级与五级分页及大页偏移、分配器抽象与内核映射/物理页的区分。来源、断言与不能外推的边界见 [13–18 账本](../evidence/13-18-deep-review.md)。
+
+为保留既有数量断言，`scripts/verify-snippets.py` 的每章 SVG 计数由 4 调整为 5，并校验尾部两个图依次为 `NN-deep.svg`、`NN-deep2.svg`，未删除旧断言。浏览器验收以本地真实 HTTP 服务 + Chromium 在 1440/390/360px 运行；未执行时记为未验证。
+
 ## 当前页面工程基线
 
 - 入口：`index.html` 与 `01.html`–`28.html`；顺序和元数据由 `courses.json` 约束。
