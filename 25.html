@@ -58,7 +58,7 @@
 <p class="lede">Cache Lab 追踪一条缓存行的状态；Shell Lab 追踪一个作业的状态；Malloc Lab 追踪一块堆内存的状态。对象完全不同，故障却都来自同一个问题：<strong>状态更新发生在什么时候，谁保证它始终合法？</strong></p>
 <p class="chapter-scope">本章按 CS:APP3e 常见实验组织；具体接口、评分与输入轨迹以你拿到的 handout 为准。示例是教学模型，不是官方 Lab 答案。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c25-map">01 三种状态机</a><a href="#c25-cache">02 Cache Lab</a><a href="#c25-shell">03 Shell Lab</a><a href="#c25-malloc">04 Malloc Lab</a><a href="#c25-check">05 验证清单</a><a href="#deep-25">深入推导</a></nav>
+<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c25-map">01 三种状态机</a><a href="#c25-cache">02 Cache Lab</a><a href="#c25-shell">03 Shell Lab</a><a href="#c25-malloc">04 Malloc Lab</a><a href="#c25-check">05 验证清单</a><a href="#deep-25">深入推导</a><a href="#deep-25b">组相联计数</a></nav>
 <section id="c25-map">
 <h2>25.1 从现象出发：正确性不只取决于算法</h2>
 <p>想象一次缓存访问发生在替换之前、一个子进程在登记前就退出，或者两个相邻空闲块在释放后没有合并。这些问题看似不相干，却可以统一为：<strong>事件、状态、必须维持的不变量</strong>。</p>
@@ -162,6 +162,13 @@ if (pid == 0) {
 <pre><code>python3 examples/deep-ch24-28-models.py 25</code></pre>
 <p>该模型只用标准库：一个直接映射缓存对四次访问重放，断言恰好得到 <code>1/3/1</code> 的命中/缺失/驱逐；随后在一块相邻块阵列上做即时合并，断言“两个相邻空闲块算作一段”“释放块 0 后仍是一段”“全部释放后整堆合并为一”。它检查的是终态不变量，而不是日志顺序。性能与碎片指标仍需用真实 trace 实测，不在此断言。</p>
 </section>
+
+<section class="deep-study" id="deep-25b" aria-labelledby="deep-25b-title"><p class="deep-kicker">逐步核验 · 25b / CACHE GEOMETRY</p><h2 id="deep-25b-title">同一条访问轨迹，为何 LRU 会先驱逐某一行？把命中/未命中/驱逐写成可复算</h2><figure class="deep-figure" tabindex="0" role="group" aria-label="可横向滚动的独立图解"><img src="chapter-assets/25-deep2.svg" width="960" height="300" loading="lazy" alt="地址拆成 tag、组索引 s 位与块偏移 b 位。教学参数 s=2、E=2、b=4。组 0 两路按最近使用顺序变化：访问 0x000、0x100 后为 tag0 最久未用、tag4 最近使用；读 0x000 命中后调整为 tag4 最久未用、tag0 最近使用；访问 0x200 未命中时驱逐最久未用的 tag4。教学模拟计数为 access 5、hit 2、miss 3、evict 1。"><figcaption>Cache Lab 的计数取决于<strong>几何参数</strong>（s、E、b）与<strong>替换策略</strong>。同一地址在不同参数下可能命中，也可能驱逐，因此必须把三条规则（拆位、判命中、更新 LRU）写清楚再算。</figcaption></figure>
+<p>上一节把 Cache Lab 归到“状态不变量”。要真正复算 <code>csim</code> 的计数，需要三个明确约定：地址拆成 <code>tag | set(s 位) | offset(b 位)</code>；命中要求同组内 tag 相等<strong>且有效位为 1</strong>；每次访问后更新被访行的最近使用次序，需要腾位时驱逐最久未使用的一行。</p>
+<table class="deep-table"><thead><tr><th>访问</th><th>组 / tag</th><th>结果</th><th>组 0（LRU→MRU）</th></tr></thead><tbody><tr><td><code>0x000</code></td><td>组 0 / tag0</td><td>未命中 · 填充</td><td>tag0</td></tr><tr><td><code>0x100</code></td><td>组 0 / tag4</td><td>未命中 · 填充</td><td>tag0, tag4</td></tr><tr><td><code>0x000</code></td><td>组 0 / tag0</td><td>命中 · 提升</td><td>tag4, tag0</td></tr><tr><td><code>0x200</code></td><td>组 0 / tag8</td><td>未命中 · 驱逐 tag4</td><td>tag0, tag8</td></tr><tr><td><code>0x000</code></td><td>组 0 / tag0</td><td>命中</td><td>tag8, tag0</td></tr></tbody></table>
+<div class="deep-math"><strong>hit + miss = access，且 evict = 发生过填充的未命中中需要腾位的次数</strong><span>计数守恒是自查的第一道关；填充与驱逐必须基于同一份 tag/有效位状态。</span></div>
+<pre><code>python3 examples/deep-ch22-28-b.py 25b</code></pre>
+<p>模型实现一个纯标准库的组相联 Cache（参数化 <code>s/E/b</code> 与 LRU），在上述 5 条访问上断言 <code>access=5, hit=2, miss=3, evict=1</code>，并检查 <code>hit+miss=access</code>。它是对 Cache Lab <code>csim</code> 契约的确定性复算，<strong>不是</strong>对任何真实处理器缓存的实测：真实硬件的写策略（写直达/写回、写分配）、预取、物理地址索引与关联度都会改变结果。参数与地址均属教学算例。</p></section>
 
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 25</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="11.html"><small>延伸到第 11 章</small><span>局部性实验与存储层次如何相连？</span><b aria-hidden="true">↗</b></a><a href="15.html"><small>延伸到第 15 章</small><span>为什么 shell 必须管理进程状态？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article>

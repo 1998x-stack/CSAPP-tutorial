@@ -87,7 +87,43 @@ def ch24b():
     assert logical_shift(0x80000000, 0) == 0x80000000   # well-defined branch
 
 
-cases = {"22b": ch22b, "23b": ch23b, "24b": ch24b}
+def ch25b():
+    """Cache Lab csim: s/E/b geometry with LRU replacement.
+
+    The tag/set/offset split, the hit test (same set, matching tag, valid bit)
+    and the LRU bookkeeping are the whole contract. Counts must satisfy
+    hit + miss == access; an eviction happens only when a miss must reuse a
+    line in a full set. This is a deterministic re-computation of the lab
+    contract, not a measurement of any real hardware cache.
+    """
+    s, E, b = 2, 2, 4
+
+    def simulate(trace):
+        sets = {i: [] for i in range(1 << s)}   # MRU first; each entry is a tag
+        stat = {"access": 0, "hit": 0, "miss": 0, "evict": 0}
+        for addr in trace:
+            stat["access"] += 1
+            tag = addr >> (s + b)
+            idx = (addr >> b) & ((1 << s) - 1)
+            line = sets[idx]
+            if tag in line:
+                stat["hit"] += 1
+                line.remove(tag)
+                line.insert(0, tag)             # promote to most recently used
+            else:
+                stat["miss"] += 1
+                if len(line) == E:
+                    line.pop()                  # evict the least recently used
+                    stat["evict"] += 1
+                line.insert(0, tag)
+        return stat
+
+    stat = simulate([0x000, 0x100, 0x000, 0x200, 0x000])
+    assert stat == {"access": 5, "hit": 2, "miss": 3, "evict": 1}
+    assert stat["hit"] + stat["miss"] == stat["access"]
+
+
+cases = {"22b": ch22b, "23b": ch23b, "24b": ch24b, "25b": ch25b}
 if __name__ == "__main__":
     selected = list(cases) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
     for chapter in selected:
