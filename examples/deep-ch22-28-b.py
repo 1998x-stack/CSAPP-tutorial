@@ -60,7 +60,34 @@ def ch23b():
     assert cleaned["locked"] is False and cleaned["reclaimed"] == 1
 
 
-cases = {"22b": ch22b, "23b": ch23b}
+def ch24b():
+    """Data Lab logical right shift: mask after an arithmetic shift.
+
+    C leaves the result of >> on a negative signed value implementation-defined,
+    and a shift count >= the width is undefined (C11 6.5.7). So logicalShift
+    starts from the common arithmetic shift and ANDs a mask ~(~0 << (32-n))
+    that keeps the low 32-n bits, and handles n == 0 separately because 32-n
+    would be 32. The model interprets patterns as 32-bit two's complement.
+    """
+    MASK = 0xFFFFFFFF
+
+    def as_signed32(v):
+        v &= MASK
+        return v - (1 << 32) if v & 0x80000000 else v
+
+    def logical_shift(x, n):
+        if n == 0:
+            return x & MASK
+        mask = (1 << (32 - n)) - 1        # ~(~0 << (32 - n)) keeps low bits
+        return (as_signed32(x) >> n) & mask
+
+    assert logical_shift(0x80000000, 4) == 0x08000000   # not 0xF8000000
+    assert logical_shift(0xFFFFFFFF, 8) == 0x00FFFFFF
+    assert logical_shift(0x0000FFFF, 4) == 0x00000FFF
+    assert logical_shift(0x80000000, 0) == 0x80000000   # well-defined branch
+
+
+cases = {"22b": ch22b, "23b": ch23b, "24b": ch24b}
 if __name__ == "__main__":
     selected = list(cases) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
     for chapter in selected:

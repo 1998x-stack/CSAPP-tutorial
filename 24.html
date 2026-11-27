@@ -58,7 +58,7 @@
 <p class="lede">会写 C 语言，不代表理解了每个运算符产生什么位、每条机器指令改变了什么状态，或一次不受限写入为什么有危险。三个经典 Lab 刚好把这三层连接起来：<strong>先证明表达式，再解释机器行为，最后识别越界与控制流风险。</strong></p>
 <p class="chapter-scope">本章课程编号 24 不等于原书章节号。实验以 CMU CS:APP 3e 官方 handout 为准；不同教学版本和个人实例的参数与题目可能不同。仅在获授权的教学环境内进行安全实验。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c24-map">01 共同主线</a><a href="#c24-data">02 Data Lab</a><a href="#c24-bomb">03 Bomb Lab</a><a href="#c24-attack">04 Attack Lab</a><a href="#c24-defense">05 防御边界</a><a href="#c24-practice">06 练习</a><a href="#deep-24">深入推导</a></nav>
+<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c24-map">01 共同主线</a><a href="#c24-data">02 Data Lab</a><a href="#c24-bomb">03 Bomb Lab</a><a href="#c24-attack">04 Attack Lab</a><a href="#c24-defense">05 防御边界</a><a href="#c24-practice">06 练习</a><a href="#deep-24">深入推导</a><a href="#deep-24b">位级语义</a></nav>
 
 <section id="c24-map">
 <h2>24.1 三个实验，其实在追问同一件事</h2>
@@ -168,6 +168,14 @@ if (fgets(buf, sizeof buf, stdin) != NULL) {
 cc -std=c11 -Wall -Wextra -Werror -pedantic examples/olah-ch24-bitlogic.c -o /tmp/ch24 &amp;&amp; /tmp/ch24</code></pre>
 <p>第一个命令运行一个纯标准库的确定性模型：它用固定容量 16 的缓冲区验证“完整 / 截断”两种判定，并用除法检查一个会回绕的 <code>size_t</code> 乘法；通过时打印 <code>24:ok</code>。语料依据 <a href="https://csapp.cs.cmu.edu/3e/attacklab.pdf">Attack Lab 官方讲义</a>中 <code>getbuf</code> 对写入长度的处理，以及 ISO C 对有符号移位与整数提升的规定；模型是教学示意，不是对某个实例的复现。</p>
 </section>
+
+<section class="deep-study" id="deep-24b" aria-labelledby="deep-24b-title"><p class="deep-kicker">逐步核验 · 24b / BIT SEMANTICS</p><h2 id="deep-24b-title">同一个 <code>&gt;&gt;</code>，为何逻辑右移还要补一层掩码？</h2><figure class="deep-figure" tabindex="0" role="group" aria-label="可横向滚动的独立图解"><img src="chapter-assets/24-deep2.svg" width="960" height="300" loading="lazy" alt="取 32 位模式 0x80000000 右移 4 位：算术右移复制符号位得到 0xF8000000，逻辑右移移入 0 得到 0x08000000。右侧列出两个字面陷阱：有符号右移结果实现定义；移位量大于等于字长属未定义行为，n=0 时掩码移位即 32。写法是先右移再与掩码相与。"><figcaption>位模式相同，移位后却不同：要得到逻辑右移，必须显式把高 <code>n</code> 位清零，并对 <code>n=0</code> 的特殊情况单独处理。</figcaption></figure>
+<p>Data Lab 要求仅用 <code>~ &amp; | ^ + &lt;&lt; &gt;&gt;</code> 实现位运算。最容易被低估的是“逻辑右移”：当 <code>x</code> 的<strong>最高位为 1</strong> 且类型为有符号时，C 的 <code>&gt;&gt;</code> 结果在标准里是<strong>实现定义</strong>的——常见实现做算术右移（复制符号位），于是得到与逻辑右移不同的位模式。</p>
+<table class="deep-table"><thead><tr><th>操作</th><th>对 <code>0x80000000&gt;&gt;4</code> 的结果</th><th>移入位</th></tr></thead><tbody><tr><td>算术右移（常见实现）</td><td><code>0xF8000000</code></td><td>符号位</td></tr><tr><td>逻辑右移（目标语义）</td><td><code>0x08000000</code></td><td>0</td></tr></tbody></table>
+<p>因此正确写法是：先做一次右移，再与掩码 <code>~(~0 &lt;&lt; (32 - n))</code> 相与，把高 <code>n</code> 位清零；但 <code>n = 0</code> 时移位量为 32，等于字长，属于<strong>未定义行为</strong>（C11 §6.5.7），必须单独返回 <code>x</code>。这正是 Data Lab 里“看起来对、边界一测就错”的典型来源。</p>
+<div class="deep-math"><strong>logicalShift(x,n) = (x &gt;&gt; n) &amp; ~(~0 &lt;&lt; (32 - n))，且 n=0 时返回 x</strong><span>掩码补逻辑右移；对 <code>n=0</code> 的分支把移位量从 32 救回合法范围。</span></div>
+<pre><code>python3 examples/deep-ch22-28-b.py 24b</code></pre>
+<p>模型按 32 位两补数解释位模式，对多个 <code>(x, n)</code> 比较“算术右移再掩码”与“预期逻辑右移”是否一致，并显式断言 <code>n=0</code> 必须走单独分支。它是对 C 位运算语义的确定性建模；具体规则以 <a href="https://port70.net/~nsz/c/c11/n1570.html#6.5.7">C11 §6.5.7</a> 为准，且不把某台机器的移位指令当成标准行为。</p></section>
 
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 24</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="02.html"><small>延伸到第 02 章</small><span>整数模型为何决定位运算结果？</span><b aria-hidden="true">↗</b></a><a href="07.html"><small>延伸到第 07 章</small><span>反汇编怎样解释越界访问？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article>
