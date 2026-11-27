@@ -40,6 +40,10 @@
 
 为保留既有数量断言，`scripts/verify-snippets.py` 的每章 SVG 计数由 4 调整为 5，并校验尾部两个图依次为 `NN-deep.svg`、`NN-deep2.svg`，未删除旧断言。浏览器验收以本地真实 HTTP 服务 + Chromium 在 1440/390/360px 运行；未执行时记为未验证。
 
+## 2026-11-27 · 第 22–28 章第五轮（原子内存序 / 取消 / 位运算 / Cache / HTTP 新鲜度 / SIMT / 半关闭）
+
+在既有深描基础上，为 22–28 各追加一节 `deep-NNb`、一张外链图 `chapter-assets/NN-deep2.svg` 与纯标准库确定性模型 `examples/deep-ch22-28-b.py`，新增回归测试 `tests/content/deep-ch22-28-b.test.mjs`。七节分别处理：C11 原子内存序的发布/订阅规则、POSIX 延迟取消与清理处理器、Data Lab 逻辑右移的掩码与移位未定义行为、组相联 Cache 的命中/驱逐复算、RFC 9111 新鲜度与当前年龄、SIMT 分支发散的分遍执行、以及半关闭与 `EPIPE`。来源、断言与不能外推的边界见 [22–28 账本](../evidence/22-28-deep-review.md)。浏览器验收以本地真实 HTTP 服务 + Chromium 在 1440/390/360px 运行；未执行时记为未验证。
+
 ## 当前页面工程基线
 
 - 入口：`index.html` 与 `01.html`–`28.html`；顺序和元数据由 `courses.json` 约束。
