@@ -58,7 +58,7 @@
 <p class="lede">“执行了两次”不等于“共享状态更新了两次”。并发的困难不是线程跑得快，而是<strong>两个独立执行流会在一个共享世界里相遇</strong>。从一个计数器开始，我们逐步建立线程、同步与等待的正确模型。</p>
 <p class="chapter-scope">范围：POSIX Threads / Linux 常见实践、C11 及以上的普通内存访问规则。时间线图是说明交错顺序的教学模型，不代表数据竞争程序具有可预测结果。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c22-model">01 共享边界</a><a href="#c22-life">02 生命周期</a><a href="#c22-race">03 丢失更新</a><a href="#c22-mutex">04 临界区</a><a href="#c22-cond">05 等待条件</a><a href="#c22-practice">06 动手验证</a><a href="#deep-22">深入推导</a></nav>
+<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c22-model">01 共享边界</a><a href="#c22-life">02 生命周期</a><a href="#c22-race">03 丢失更新</a><a href="#c22-mutex">04 临界区</a><a href="#c22-cond">05 等待条件</a><a href="#c22-practice">06 动手验证</a><a href="#deep-22">深入推导</a><a href="#deep-22b">内存序</a></nav>
 
 <section id="c22-model">
 <h2>22.1 先画边界：线程究竟共享什么？</h2>
@@ -173,6 +173,13 @@ pthread_mutex_unlock(&amp;mu);</code></pre>
 python3 examples/deep-ch19-23-models.py 22</code></pre>
 <p>实际 C 实验只执行<strong>没有数据竞争的正确版本</strong>，不编译运行未定义行为来“观察丢失更新”。如果多个锁保护不同资源，仍要考虑锁顺序、死锁与锁粒度。参考 <a href="https://man7.org/linux/man-pages/man3/pthread_mutex_lock.3p.html">pthread_mutex_lock(3p)</a>、<a href="https://man7.org/linux/man-pages/man3/pthread_join.3.html">pthread_join(3)</a> 与 <a href="https://en.cppreference.com/w/c/language/memory_model.html">C 内存模型</a>。</p></section>
 
+<section class="deep-study" id="deep-22b" aria-labelledby="deep-22b-title"><p class="deep-kicker">逐步核验 · 22b / MEMORY ORDER</p><h2 id="deep-22b-title">互斥锁之外，原子操作的“内存序”到底保证了什么？</h2><figure class="deep-figure" tabindex="0" role="group" aria-label="可横向滚动的独立图解"><img src="chapter-assets/22-deep2.svg" width="960" height="300" loading="lazy" alt="三行对比：relaxed 只保证该原子对象的操作不可分割，不排序其它内存访问；release 存储与 acquire 加载配对时，若加载读到该存储的值，则其之前的写入对加载之后的读取可见；seq_cst 在 acquire/release 之上再追加全局总顺序。"><figcaption>同样一个原子变量，三种内存序的<strong>保证范围</strong>不同：relaxed 只管原子性，release/acquire 才建立 happens-before。</figcaption></figure>
+<p>上一节用互斥锁把整个读—改—写包成临界区。若改用原子操作，还必须回答“<strong>用哪种内存序</strong>”。C11 把原子性与<strong>排序/可见性</strong>拆成两件事：<code>memory_order_relaxed</code> 只保证对该原子对象的读—改—写不可分割，却<strong>不</strong>为其它普通读写建立 <em>happens-before</em>。</p>
+<table class="deep-table"><thead><tr><th>内存序</th><th>对原子操作本身</th><th>对其它内存访问</th></tr></thead><tbody><tr><td><code>relaxed</code></td><td>原子（不可撕裂）</td><td>不排序，不发布负载</td></tr><tr><td><code>release</code> 存储 / <code>acquire</code> 加载</td><td>原子</td><td>成对使用时建立同步并公开负载</td></tr><tr><td><code>seq_cst</code></td><td>原子</td><td>在 acquire/release 之上给所有 seq_cst 操作一个总顺序</td></tr></tbody></table>
+<div class="deep-math"><strong>发布—订阅规则：acquire 加载读到了 release 存储写的值 ⇒ 存储前的写入对加载后的读取可见</strong><span>这条规则才是用原子标志“发布”一段初始化数据的安全依据。</span></div>
+<p>典型模式是：线程 A 先写普通数据，再用 <code>release</code> 存储把 <code>ready</code> 置 1；线程 B 用 <code>acquire</code> 加载 <code>ready</code>，若读到 1，则 A 在存储之前的写入对 B 之后的读取可见。若 <code>ready</code> 用 <code>relaxed</code>，B 完全可能看到 <code>ready==1</code> 却仍读到旧的负载——这正是“用原子变量发布数据”时最容易犯的错。</p>
+<pre><code>python3 examples/deep-ch22-28-b.py 22b</code></pre>
+<p>模型用脚本化重排对比三种内存序：relaxed 允许“标志已置而负载未发布”，release/acquire 与 seq_cst 则要求观察到标志即观察到负载。它是对<strong>语言语义</strong>的确定性建模，不是对某款处理器弱内存表现的实测；具体保证以 <a href="https://en.cppreference.com/w/c/atomic/memory_order.html">C 原子内存序</a> 与 <a href="https://en.cppreference.com/w/c/language/memory_model.html">C 内存模型</a> 为准。判断某段无锁代码是否成立，应证明它 data-race-free，而不是靠运行结果碰运气。</p></section>
 
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 22</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="23.html"><small>延伸到第 23 章</small><span>为什么互斥之外还需要条件同步？</span><b aria-hidden="true">↗</b></a><a href="26.html"><small>延伸到第 26 章</small><span>如何使生产者与消费者正确协作？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article>

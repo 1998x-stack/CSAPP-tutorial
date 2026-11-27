@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" role="img" aria-labelledby="d22b-t d22b-d">
+<title id="d22b-t">C11 原子内存序：relaxed、release/acquire 与 seq_cst 的保证范围</title>
+<desc id="d22b-d">三行对比：relaxed 只保证对该原子对象本身的操作不可分割，不排序其它读写，因此用它发布负载时观察者可能看到标志已置而负载仍是旧值。release 存储与 acquire 加载配对时，若加载读到了该存储的值，则存储前的写入对加载后的读取可见，从而建立同步并发布负载。seq_cst 在 acquire/release 之上再给所有 seq_cst 操作一个全局总顺序，代价最高。图注是机制示意，不是对某款 CPU 或编译器的实机测量。</desc>
+<rect x="0" y="0" width="960" height="300" fill="#fbfaf7"/>
+<g font-family="system-ui,sans-serif">
+<text x="24" y="30" font-size="16" font-weight="700" fill="#24433f">同一原子对象，三种内存序能保证什么</text>
+
+<rect x="24" y="48" width="912" height="66" rx="10" fill="#fdeeee" stroke="#d9a8a8"/>
+<text x="40" y="74" font-size="15" font-weight="700" fill="#8a2b2b">memory_order_relaxed</text>
+<text x="300" y="74" fill="#4a2020">仅原子性：对该对象的读—改—写不被撕裂</text>
+<text x="40" y="98" font-size="12.5" fill="#6a3b3b">不建立 happens-before，不排序其它内存访问 ⇒ 不能安全地“发布”一段普通数据</text>
+
+<rect x="24" y="124" width="912" height="76" rx="10" fill="#e8f3f0" stroke="#97c6bf"/>
+<text x="40" y="150" font-size="15" font-weight="700" fill="#1d5b5e">release 存储 ↔ acquire 加载</text>
+<text x="330" y="150" fill="#203b41">成对使用时建立同步关系</text>
+<text x="40" y="174" font-size="12.5" fill="#2f5b57">若 acquire 加载读到了该 release 存储写入的值，则存储之前的写入对加载之后的读取可见</text>
+<text x="40" y="192" font-size="12.5" fill="#53676d">这条规则是 data-race-free 程序中发布负载（如初始化后置标志）的安全做法</text>
+
+<rect x="24" y="210" width="912" height="66" rx="10" fill="#f0edfa" stroke="#b9aedf"/>
+<text x="40" y="236" font-size="15" font-weight="700" fill="#5b4d94">memory_order_seq_cst</text>
+<text x="300" y="236" fill="#3a2f5e">在 acquire/release 之上追加全局总顺序</text>
+<text x="40" y="260" font-size="12.5" fill="#4a3d78">所有 seq_cst 操作可被理解为一个总序；推理最直观，约束也最强</text>
+</g>
+<text x="24" y="292" font-size="12.5" fill="#53676d">教学示意：内存序定义的是语言层面的可见性与排序，并非某种 CPU 的实测时序。</text>
+</svg>
