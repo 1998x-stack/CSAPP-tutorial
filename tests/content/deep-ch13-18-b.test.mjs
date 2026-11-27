@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '../..');
 const read = path => readFileSync(join(root, path), 'utf8');
-const chapters = ['13', '14'];
+const chapters = ['13', '14', '15'];
 
 for (const id of chapters) {
   test('chapter ' + id + ' second-round deep dive keeps section, TOC link, SVG and model', () => {

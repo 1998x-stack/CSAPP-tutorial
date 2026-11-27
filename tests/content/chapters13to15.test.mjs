@@ -7,7 +7,7 @@ const read = path => readFileSync(new URL(path, import.meta.url), "utf8");
 const chapters = [
   ["13", "13-linking.svg", 7, 3],
   ["14", "14-dynamic-linking.svg", 6, 3],
-  ["15", "15-process-lifecycle.svg", 5, 2],
+  ["15", "15-process-lifecycle.svg", 6, 3],
 ];
 
 for (const [number, svgName, expectedHeads, expectedCaptions] of chapters) {

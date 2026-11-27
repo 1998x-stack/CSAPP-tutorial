@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 264" role="img" aria-labelledby="d15b-t d15b-d">
+<title id="d15b-t">fork 继承的 fd 共享 open file description，重新 open 则不共享</title>
+<desc id="d15b-d">父进程描述符表中的 fd 0 和 fd 1 指向同一 open file description OFD-1；fork 后子进程继承的对应表项也指向 OFD-1，因此共享文件偏移。子进程另外 open 得到的 fd 3 指向新的 OFD-2，偏移独立。带 FD_CLOEXEC 的 fd 4 在 exec 后从表中消失。</desc>
+<rect x="0" y="0" width="960" height="264" fill="#fbfaf7"/>
+<text x="20" y="30" font-size="17" font-weight="700" fill="#203b41">共享的是 open file description，不是 fd 整数</text>
+<g font-size="13">
+<rect x="24" y="56" width="200" height="150" rx="12" fill="#e8f3f0" stroke="#97c6bf"/>
+<text x="40" y="82" font-size="15" font-weight="700" fill="#1d5b5e">父 fd 表</text>
+<text x="40" y="110" fill="#203b41">fd 0 → OFD-1</text>
+<text x="40" y="136" fill="#203b41">fd 1 → OFD-1</text>
+<text x="40" y="162" fill="#203b41">fd 2 → OFD-1</text>
+<text x="40" y="190" fill="#53676d">偏移由 OFD 维护</text>
+
+<rect x="250" y="56" width="200" height="150" rx="12" fill="#f0edfa" stroke="#b9aedf"/>
+<text x="266" y="82" font-size="15" font-weight="700" fill="#5b4d94">子 fd 表（fork）</text>
+<text x="266" y="110" fill="#203b41">fd 0 → OFD-1</text>
+<text x="266" y="136" fill="#203b41">fd 1 → OFD-1</text>
+<text x="266" y="162" fill="#203b41">fd 2 → OFD-1</text>
+<text x="266" y="190" fill="#7461ba">继承项共享偏移</text>
+
+<path d="M224 131 H250" stroke="#147f80" stroke-width="2.5"/>
+<path d="M474 131 H500" stroke="#147f80" stroke-width="2.5"/>
+
+<rect x="500" y="56" width="214" height="150" rx="12" fill="#fff2e9" stroke="#dcb8a6"/>
+<text x="516" y="82" font-size="15" font-weight="700" fill="#955335">子进程重新 open</text>
+<text x="516" y="110" fill="#203b41">fd 3 → OFD-2（新）</text>
+<text x="516" y="136" fill="#53676d">底层文件相同</text>
+<text x="516" y="162" fill="#53676d">但偏移独立</text>
+<text x="516" y="190" fill="#d06d4d">与 OFD-1 无关</text>
+
+<rect x="730" y="56" width="206" height="150" rx="12" fill="#eef1f3" stroke="#c3ccd1"/>
+<text x="746" y="82" font-size="15" font-weight="700" fill="#3c4a50">exec 之后</text>
+<text x="746" y="110" fill="#203b41">fd 4 (FD_CLOEXEC)</text>
+<text x="746" y="136" fill="#53676d">→ 自动关闭</text>
+<text x="746" y="162" fill="#53676d">未设则保留</text>
+<text x="746" y="190" fill="#5a666c">决定是否传给新映像</text>
+</g>
+<text x="20" y="240" font-size="12.5" fill="#53676d">教学示意：OFD 为内核对象，图中仅展示引用关系与偏移来源，非某一进程的真实内核地址。</text>
+</svg>

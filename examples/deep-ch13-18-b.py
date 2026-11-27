@@ -35,7 +35,25 @@ def ch14b():
     assert B1 + A + 0x400 == 0x70001630
     assert B1 + A + 0x400 != B1 + A
 
-CASES = {"13b": ch13b, "14b": ch14b}
+def ch15b():
+    # OFD objects; inheritance copies references, open() makes a new object.
+    ofd1 = {"offset": 0}
+    parent_fd = {0: ofd1, 1: ofd1}
+    child_fd = dict(parent_fd)          # fork: same OFD references
+    assert parent_fd[0] is child_fd[0]
+    child_fd[0]["offset"] += 2          # read in child advances the shared OFD
+    assert parent_fd[1]["offset"] == 2 # parent sees the same offset
+    ofd2 = {"offset": 0}               # child re-opens: independent OFD
+    child_fd[3] = ofd2
+    child_fd[3]["offset"] += 4
+    assert ofd1["offset"] == 2 and ofd2["offset"] == 4
+    assert ofd1 is not ofd2
+    # exec keeps descriptors unless close-on-exec was set.
+    table = {3: {"cloexec": False}, 4: {"cloexec": True}}
+    after_exec = {fd: e for fd, e in table.items() if not e["cloexec"]}
+    assert sorted(after_exec) == [3]
+
+CASES = {"13b": ch13b, "14b": ch14b, "15b": ch15b}
 
 if __name__ == "__main__":
     selected = list(CASES) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]

@@ -53,7 +53,7 @@
 <p>一个正在运行的用户程序并非只按源码顺序前进。中断、异常和系统调用可能把控制交给内核；而 <code>fork()</code> 在内核协助下创建新进程，使父进程与子进程从看似同一个调用点继续执行，并拿到不同的返回值。</p><p>理解这种现象需要分清三个层面：处理器发生<strong>异常控制转移</strong>、操作系统维护<strong>进程及地址空间</strong>、父进程通过 <code>waitpid()</code> 观察<strong>退出状态</strong>。本章围绕这条因果链展开，示例以 Unix/Linux 系统为主，不把进程调度先后当作确定事实。</p>
 <p class="chapter-eyebrow">异常 · 内核态 · 进程生命周期</p>
 <p class="dek">CPU 为什么会离开当前指令流？为什么一个 <code>fork()</code> 会产生两个返回值，而结束的子进程仍可能留在进程表里？</p>
-<nav class="chapter-map" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c15-exception">异常分类</a><a href="#c15-syscall">系统调用</a><a href="#c15-fork">fork / COW</a><a href="#c15-exec">exec / wait</a><a href="#c15-practice">动手验证</a><a href="#deep-15">逐步推导</a></nav>
+<nav class="chapter-map" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c15-exception">异常分类</a><a href="#c15-syscall">系统调用</a><a href="#c15-fork">fork / COW</a><a href="#c15-exec">exec / wait</a><a href="#c15-practice">动手验证</a><a href="#deep-15">逐步推导</a><a href="#deep-15b">OFD 与 exec</a></nav>
 <div class="concept-steps" id="ch15-state" data-stage="a">
 <figure><div class="diagram-scroll" tabindex="0" aria-label="可水平滚动查看父子进程生命周期"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="c15-title c15-desc" viewBox="0 0 760 245">
 <title id="c15-title">从 fork 到 execve 再到 waitpid 的进程生命周期</title>
@@ -191,6 +191,17 @@ child exit=0</code></pre>
 python3 examples/deep-ch13-18-models.py 15</code></pre>
 <p>解释据 <a href="https://man7.org/linux/man-pages/man2/fork.2.html">fork(2)</a>、<a href="https://man7.org/linux/man-pages/man2/open.2.html">open(2)：open file description</a> 与 <a href="https://man7.org/linux/man-pages/man2/waitpid.2.html">waitpid(2)</a>。本节限于 POSIX/Linux 单线程且无其他并发访问的说明。</p></section>
 
+
+<section class="deep-study" id="deep-15b" aria-labelledby="deep-15b-title"><p class="deep-kicker">推导校验 · 15b / OPEN FILE DESCRIPTION</p><h2 id="deep-15b-title">同一个文件，fork 继承和重新 open 的偏移为何不同？</h2>
+<figure class="deep-figure" tabindex="0" role="group" aria-label="独立可横向查看的图解"><img src="chapter-assets/15-deep2.svg" width="960" height="264" loading="lazy" alt="父进程描述符表中的 fd 0/1 与子进程继承项指向同一个 open file description，共享文件偏移；子进程另外 open 得到的 fd 3 指向一个新的 open file description，偏移独立；带 FD_CLOEXEC 的 fd 4 在 exec 后自动关闭。"><figcaption>「共享」的不是 fd 整数，而是它们指向的 <strong>open file description</strong>；<code>exec</code> 只决定哪些描述符在新映像中继续存在。</figcaption></figure>
+<p>上一节说继承的描述符共享文件偏移。这不是因为两个进程拥有“同一个 fd”，而是因为两个描述符表项<strong>指向同一个内核 open file description（OFD）</strong>。OFD 保存当前偏移与状态标志；只要引用同一个 OFD，偏移就联动。而如果在子进程里对同一路径<strong>重新 <code>open()</code></strong>，内核会创建一个<strong>新的 OFD</strong>，即使底层文件相同，偏移也彼此独立。</p>
+<table class="deep-table"><thead><tr><th>操作</th><th>OFD 关系</th><th>偏移行为</th></tr></thead><tbody><tr><td>fork 继承 fd</td><td>父子表项指向<strong>同一</strong> OFD</td><td>一方读后另一方从新偏移继续</td></tr><tr><td>子进程再 <code>open</code> 同一文件</td><td>新建<strong>独立</strong> OFD</td><td>两个偏移互不影响</td></tr><tr><td><code>dup</code>/<code>dup2</code></td><td>新 fd 指向<strong>同一</strong> OFD</td><td>与继承同理，偏移共享</td></tr><tr><td>带 <code>O_CLOEXEC</code> 的 fd</td><td>exec 后表项被关闭</td><td>不再传给新程序</td></tr></tbody></table>
+<p><strong>与 exec 的交界：</strong><code>execve</code> 用新程序映像替换进程，但默认<strong>保留</strong>未设 close-on-exec 的描述符；这既是功能（重定向 stdin/stdout）也是泄露风险。在 <code>open</code> 时使用 <code>O_CLOEXEC</code>，或事后 <code>fcntl(fd, F_SETFD, FD_CLOEXEC)</code>，可让该 fd 在 exec 成功后自动关闭。注意这与「关闭文件」不同：它只是在跨越 exec 时移除这一引用。</p>
+<div class="warning"><p><strong>顺序不能靠打印或延时“验证”：</strong>父子谁先跑取决于调度。要确定推进顺序，用 pipe（写端关闭作为 EOF 信号）或 waitpid 等<strong>同步原语</strong>，不要依赖 <code>sleep</code> 或输出先后。多线程进程中 fork 后，子进程只保留调用线程的副本；在子进程内再次调用非 async-signal-safe 函数（例如碰锁的 <code>malloc</code>）存在风险，通常只应 <code>exec</code> 或 <code>_exit</code>。</p></div>
+<pre><code>cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pedantic examples/deep-ch13-18-posix.c -o /tmp/deep-posix
+/tmp/deep-posix fork        # 父子通过 pipe 协调，而非依赖打印顺序
+python3 examples/deep-ch13-18-b.py 15b</code></pre>
+<p>本节限于 POSIX/Linux 普通可定位文件与单线程、无其它并发访问的情形；管道、终端和网络套接字不保证相同的定位语义。依据 <a href="https://man7.org/linux/man-pages/man2/open.2.html">open(2)：open file description 与 O_CLOEXEC</a>、<a href="https://man7.org/linux/man-pages/man2/fork.2.html">fork(2)</a> 与 <a href="https://man7.org/linux/man-pages/man2/fcntl.2.html">fcntl(2)：FD_CLOEXEC</a>。</p></section>
 
 <p>异常控制流为内核提供了介入执行的入口；而 <code>fork</code>、<code>execve</code> 与 <code>waitpid</code> 分别处理创建、替换与回收。掌握这三个职责，就能解释大多数 shell 启动命令时的进程生命周期。下一章我们将继续深入 ECF 的另一个核心话题——<strong>信号</strong>，它允许内核和进程之间进行异步通信，是我们在用户态处理"事件"的主要手段。</p>
 
