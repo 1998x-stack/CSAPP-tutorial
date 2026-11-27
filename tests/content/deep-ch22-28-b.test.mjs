@@ -8,7 +8,7 @@ const root = resolve(import.meta.dirname, '../..');
 const read = p => readFileSync(resolve(root, p), 'utf8');
 
 // Fifth-round deep dives: chapters carry a "deep-NNb" section with a figure.
-const implemented = [22, 23, 24, 25];
+const implemented = [22, 23, 24, 25, 26];
 
 test('22-28 fifth-round deep dives keep section, TOC link, figure and runnable case', () => {
   for (const n of implemented) {

@@ -123,7 +123,39 @@ def ch25b():
     assert stat["hit"] + stat["miss"] == stat["access"]
 
 
-cases = {"22b": ch22b, "23b": ch23b, "24b": ch24b, "25b": ch25b}
+def ch26b():
+    """RFC 9111 4.2: freshness lifetime and current age decide reuse.
+
+    A stored response may be reused without validation while current_age is less
+    than the freshness lifetime, where the lifetime comes from
+    Cache-Control: max-age, else Expires - Date, else a heuristic. The current
+    age derives from the Age header, response delay and resident time for the
+    corrected initial age, taking the max with the apparent age. Vary and
+    Authorization gate whether the stored response even matches. This is a
+    deterministic arithmetic model, not a proxy measurement.
+    """
+    def lifetime(max_age, expires_minus_date, heuristic):
+        if max_age is not None:
+            return max_age
+        if expires_minus_date is not None:
+            return expires_minus_date
+        return heuristic
+
+    def current_age(age_value, apparent_age, response_delay, resident_time):
+        corrected = age_value + response_delay
+        return max(apparent_age, corrected) + resident_time
+
+    def decide(lifetime_s, age):
+        return "fresh" if age < lifetime_s else "stale"
+
+    assert lifetime(60, 900, 300) == 60                       # max-age wins
+    assert lifetime(None, 900, 300) == 900                    # Expires - Date
+    assert current_age(10, 2, 2, 30) == 42                   # max(2,12)+30
+    assert decide(lifetime(60, None, None), current_age(10, 2, 2, 30)) == "fresh"
+    assert decide(lifetime(None, 900, 300), current_age(0, 0, 0, 901)) == "stale"
+
+
+cases = {"22b": ch22b, "23b": ch23b, "24b": ch24b, "25b": ch25b, "26b": ch26b}
 if __name__ == "__main__":
     selected = list(cases) if len(sys.argv) == 1 or sys.argv[1] == "all" else sys.argv[1:]
     for chapter in selected:

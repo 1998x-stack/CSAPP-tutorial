@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" role="img" aria-labelledby="d26b-t d26b-d">
+<title id="d26b-t">RFC 9111 新鲜度判定：新鲜期来源与当前年龄的构成</title>
+<desc id="d26b-d">上半部分给出新鲜期的优先来源：Cache-Control: max-age 优先；否则用 Expires 减 Date；都没有时才可用启发式。下半部分把当前年龄拆成初始年龄（取表观年龄与校正年龄的较大者，其中校正年龄为 Age 首部加响应延迟）再加上驻留时间。判定规则是当前年龄小于新鲜期则可直接复用，否则需要再验证。Vary 要求请求首部匹配，Authorization 默认阻止共享缓存复用，除非明确允许。</desc>
+<rect x="0" y="0" width="960" height="300" fill="#fbfaf7"/>
+<g font-family="system-ui,sans-serif">
+<text x="24" y="30" font-size="16" font-weight="700" fill="#24433f">新鲜期从哪来？当前年龄怎么算？</text>
+
+<rect x="24" y="48" width="292" height="52" rx="8" fill="#e8f3f0" stroke="#97c6bf"/>
+<text x="170" y="70" text-anchor="middle" font-size="13" fill="#1d5b5e">Cache-Control: max-age（优先）</text>
+<rect x="330" y="48" width="292" height="52" rx="8" fill="#f3f6fb" stroke="#4a6fa5"/>
+<text x="476" y="70" text-anchor="middle" font-size="13" fill="#27395a">否则：Expires − Date</text>
+<rect x="636" y="48" width="300" height="52" rx="8" fill="#fff2e9" stroke="#dcb8a6"/>
+<text x="786" y="70" text-anchor="middle" font-size="13" fill="#955335">都无：可用启发式</text>
+
+<rect x="24" y="118" width="912" height="70" rx="10" fill="#f0edfa" stroke="#b9aedf"/>
+<text x="40" y="144" font-size="13.5" font-weight="700" fill="#5b4d94">当前年龄 = max(表观年龄, Age + 响应延迟) + 驻留时间</text>
+<text x="40" y="170" font-size="12.5" fill="#4a3d78">表观年龄 = 响应时间 − Date；驻留时间 = 现在 − 响应时间</text>
+
+<rect x="24" y="204" width="912" height="52" rx="10" fill="#e8f3f0" stroke="#97c6bf"/>
+<text x="40" y="230" font-size="13.5" fill="#1d5b5e">当前年龄 &lt; 新鲜期 ⇒ 可直接复用；否则需再验证（条件请求）</text>
+<text x="40" y="248" font-size="12" fill="#53676d">另两道关：Vary 要求请求首部匹配；带 Authorization 的请求默认不可被共享缓存复用，除非明确允许</text>
+</g>
+<text x="24" y="286" font-size="12.5" fill="#53676d" font-family="system-ui,sans-serif">教学示意：为 RFC 9111 §4.2 的确定性算术模型，非代理服务器实测。</text>
+</svg>

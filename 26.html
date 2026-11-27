@@ -58,7 +58,7 @@
 <p class="lede">Proxy Lab 把三个子系统接在一起：网络 I/O 负责传递字节，线程池负责并发，缓存负责复用响应。单看每一部分都不难，困难在于<strong>客户端断开、缓存过期和多个线程命中同一键</strong>时还能不能保持语义正确。</p>
 <p class="chapter-scope">先实现 HTTP/1.0 风格的最小转发路径，再讨论并发与教学缓存。真实 HTTP 共享缓存需满足 RFC 9111 的条件，不能把“GET + URI 相同”当成通用可缓存判据。</p>
 </header>
-<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c26-flow">01 请求流</a><a href="#c26-queue">02 有界队列</a><a href="#c26-cache">03 缓存判定</a><a href="#c26-test">04 压测与检查</a><a href="#deep-26">深入推导</a></nav>
+<nav class="chapter-toc" aria-label="本章阅读路线"><strong>阅读路线</strong><a href="#c26-flow">01 请求流</a><a href="#c26-queue">02 有界队列</a><a href="#c26-cache">03 缓存判定</a><a href="#c26-test">04 压测与检查</a><a href="#deep-26">深入推导</a><a href="#deep-26b">新鲜度</a></nav>
 <section id="c26-flow">
 <h2>26.1 一个请求要穿过哪些边界？</h2>
 <p>浏览器向正向代理发送目标 URI；代理一面接收客户端请求，一面作为客户端连接源站。最小实现需要按字节处理<strong>请求行、首部、响应头、响应体</strong>，不能假设一次 <code>read</code> 就读完，也不能假设一次 <code>write</code> 就发完。头部有解析上限，响应体可能包含零字节，不能用 <code>strlen()</code> 推断其大小。</p>
@@ -154,6 +154,14 @@ ab -n 1000 -c 20 -X 127.0.0.1:8888 http://127.0.0.1:8000/fixture.bin
 <p>该模型把同一段报文按 1/7/20/全长字节的不同分块重新拼回，断言只能得到完整且唯一的体；又验证两条流水线消息能按声明长度依次拆开、截断时<strong>不交付任何内容</strong>、chunked 解码在大小为 0 的分块停止并把尾部字节留给后续。依据 RFC 9112 的报文定界规则与 RFC 9111 的存放条件，模型只检验定界逻辑，不代表已处理完所有首部与状态码规则。</p>
 <p>需要强调两点：其一，“可读/可写”只表示一次操作可被尝试，不保证交付正数字节或完整回复，所以真实代码要把 <code>EINTR</code>、<code>EAGAIN</code> 与 0（EOF）分开处理；其二，报文在进入共享缓存前必须先完整、未被截断，否则错误会被放大给更多后续请求者。</p>
 </section>
+
+<section class="deep-study" id="deep-26b" aria-labelledby="deep-26b-title"><p class="deep-kicker">逐步核验 · 26b / FRESHNESS</p><h2 id="deep-26b-title">报文能完整转发之后：存储的响应什么时候可以不再问源站？</h2><figure class="deep-figure" tabindex="0" role="group" aria-label="可横向滚动的独立图解"><img src="chapter-assets/26-deep2.svg" width="960" height="300" loading="lazy" alt="上半部分给出新鲜期来源优先级：Cache-Control: max-age 优先，否则 Expires 减 Date，都无才用启发式。下半部分把当前年龄拆成 max(表观年龄, Age 加响应延迟) 加驻留时间。判定为当前年龄小于新鲜期则直接复用，否则再验证；Vary 要求请求首部匹配，带 Authorization 的请求默认不可被共享缓存复用。"><figcaption>“能完整读出一条报文”不等于“可以不问源站”。能否直接复用，取决于<strong>新鲜期</strong>与<strong>当前年龄</strong>的比较，以及 <code>Vary</code>、<code>Authorization</code> 这两道门。</figcaption></figure>
+<p>上一节解决的是“一条报文到哪里结束”。定界正确之后，代理还要决定：<strong>存下来的响应能不能直接给别人？</strong>共享缓存的规则在 <a href="https://www.rfc-editor.org/rfc/rfc9111.html">RFC 9111 §4.2</a>：能直接复用（fresh）当且仅当<strong>当前年龄 &lt; 新鲜期</strong>，否则必须再验证。</p>
+<table class="deep-table"><thead><tr><th>量</th><th>来源（按优先级）</th></tr></thead><tbody><tr><td>新鲜期</td><td><code>Cache-Control: max-age</code> → 否则 <code>Expires − Date</code> → 否则启发式</td></tr><tr><td>当前年龄</td><td><code>max(表观年龄, Age + 响应延迟) + 驻留时间</code>，表观年龄 <code>= 响应时间 − Date</code></td></tr></tbody></table>
+<p>两条额外的门必须单独检查，不能只算年龄：带 <code>Vary</code> 的响应只有在<strong>请求首部匹配</strong>时才可复用；带 <code>Authorization</code> 的请求，共享缓存默认<strong>不可</strong>复用其响应，除非响应显式允许（如 <code>public</code>）。把“字节定界”与“可复用性”混为一谈，是代理给出错误内容的另一类根源。</p>
+<div class="deep-math"><strong>可复用 ⇔ 当前年龄 &lt; 新鲜期，且 Vary/Authorization 门通过</strong><span>max-age 优先于 Expires；Age 首部计入校正年龄，避免二级缓存重复计算新鲜期。</span></div>
+<pre><code>python3 examples/deep-ch22-28-b.py 26b</code></pre>
+<p>模型按 §4.2.3 的算式把新鲜期与当前年龄算成数值，断言“max-age 优先于 Expires”“当前年龄 = 取大后的初始年龄 + 驻留时间”，并给出 fresh/stale 判定。它是对 RFC 9111 算术的确定性复算，不是对某台代理服务器的实测；启发式新鲜期、时钟偏差与逐出策略都是实现选择。</p></section>
 
 <aside class="concept-bridge" aria-label="跨章节关联"><p class="concept-bridge-kicker">连接知识 · CHAPTER 26</p><h2>把这一章放回系统全景</h2><p class="concept-bridge-intro">掌握本章机制后，再沿着下面两个问题追踪它在完整计算机系统中的作用。</p><div class="concept-bridge-links"><a href="20.html"><small>延伸到第 20 章</small><span>TCP 字节流怎样影响代理报文定界？</span><b aria-hidden="true">↗</b></a><a href="28.html"><small>延伸到第 28 章</small><span>连接状态和缓存对象如何拥有生命周期？</span><b aria-hidden="true">↗</b></a></div></aside>
 </article>
